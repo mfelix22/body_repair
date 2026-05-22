@@ -138,6 +138,7 @@ Route::middleware('auth')->group(function () {
     // Purchase Orders
     Route::resource('purchase-orders', PurchaseOrderController::class)->names('purchase_orders');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('purchase_orders.approve');
+    Route::post('purchase-orders/{purchaseOrder}/revoke-approval', [PurchaseOrderController::class, 'revokeApproval'])->name('purchase_orders.revoke_approval');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->name('purchase_orders.receive');
     Route::post('purchase-orders/{purchaseOrder}/close-remaining', [PurchaseOrderController::class, 'closeRemaining'])->name('purchase_orders.close_remaining');
     Route::post('purchase-orders/{purchaseOrder}/record-invoice', [PurchaseOrderController::class, 'recordInvoice'])->name('purchase_orders.record_invoice');

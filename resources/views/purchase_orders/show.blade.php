@@ -122,6 +122,21 @@
                                 <i class="fas fa-ban"></i> Cancel
                             </button>
                         @endif
+                        @php
+                            $canRevoke =
+                                $purchaseOrder->status === 'approved' &&
+                                !$purchaseOrder->receivables()->exists() &&
+                                !$purchaseOrder->purchaseInvoices()->exists() &&
+                                auth()
+                                    ->user()
+                                    ->hasAnyRole(['admin', 'super_admin', 'purchasing']);
+                        @endphp
+                        @if ($canRevoke)
+                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
+                                data-target="#revokeApprovalModal">
+                                <i class="fas fa-undo-alt"></i> Send Back for Revision
+                            </button>
+                        @endif
                         @if (in_array($purchaseOrder->status, ['approved', 'partial']) && $hasOpenReceiptLines)
                             @if (auth()->user()->hasAnyRole(['warehouse', 'admin', 'super_admin']))
                                 @if ($purchaseOrder->po_type === 'purchase_order')
@@ -457,6 +472,24 @@
                                 @endif
                             </td>
                         </tr>
+                        @if (
+                            $purchaseOrder->revoked_at &&
+                                auth()->user()->hasAnyRole(['admin', 'super_admin', 'manager', 'director', 'audit']))
+                            <tr class="table-warning">
+                                <td><strong>Sent Back for Revision:</strong></td>
+                                <td colspan="2">
+                                    <span class="text-warning font-weight-bold">
+                                        <i class="fas fa-undo-alt"></i>
+                                        {{ optional($purchaseOrder->revoker)->name ?? '—' }}
+                                    </span>
+                                    <br>
+                                    <small
+                                        class="text-muted">{{ $purchaseOrder->revoked_at->format('M d, Y H:i') }}</small>
+                                    <br>
+                                    <small><em>Reason: {{ $purchaseOrder->revocation_reason }}</em></small>
+                                </td>
+                            </tr>
+                        @endif
 
                     </table>
 
@@ -713,6 +746,40 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-danger"><i class="fas fa-ban"></i> Confirm Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Revoke Approval Modal --}}
+    <div class="modal fade" id="revokeApprovalModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{{ route('purchase_orders.revoke_approval', $purchaseOrder) }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title"><i class="fas fa-undo-alt"></i> Send Back for Revision</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i>
+                            This will <strong>revoke the approval</strong> and return
+                            <strong>{{ $purchaseOrder->po_number }}</strong> to purchasing for editing.
+                            The PO number and PPB link are kept. A new approval will be required after revision.
+                        </div>
+                        <div class="form-group">
+                            <label for="revocation_reason">Reason for Revision <span class="text-danger">*</span></label>
+                            <textarea name="revocation_reason" id="revocation_reason" class="form-control" rows="3"
+                                placeholder="e.g., Vendor says item unavailable, price mismatch, wrong quantity, etc." minlength="5" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-undo-alt"></i> Confirm — Send Back for Revision
+                        </button>
                     </div>
                 </form>
             </div>

@@ -290,6 +290,7 @@ class PurchaseOrderController extends Controller
             'supplier',
             'creator',
             'approver',
+            'revoker',
             'details.item',
             'details.uom',
             'details.purchaseOrderInvoiceLines',
@@ -603,6 +604,71 @@ class PurchaseOrderController extends Controller
 
         return redirect()->route('purchase_orders.show', $purchaseOrder)
             ->with('success', 'Purchase Order approved successfully!');
+    }
+
+    public function revokeApproval(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $user = auth()->user();
+
+        if ($purchaseOrder->status !== 'approved') {
+            return redirect()->route('purchase_orders.show', $purchaseOrder)
+                ->with('error', 'Only approved POs can have their approval revoked.');
+        }
+
+        // Only Purchasing or Admin can send back for revision
+        if (!$user->hasAnyRole(['admin', 'super_admin', 'purchasing'])) {
+            return redirect()->route('purchase_orders.show', $purchaseOrder)
+                ->with('error', 'Only Purchasing or Admin can send a PO back for revision.');
+        }
+
+        // Block if receiving or invoice has already started
+        $hasDownstream = $purchaseOrder->receivables()->exists()
+            || $purchaseOrder->purchaseInvoices()->exists();
+
+        if ($hasDownstream) {
+            return redirect()->route('purchase_orders.show', $purchaseOrder)
+                ->with('error', 'Cannot revoke approval — receiving or invoice recording has already started for this PO.');
+        }
+
+        $request->validate([
+            'revocation_reason' => 'required|string|min:5|max:500',
+        ]);
+
+        $purchaseOrder->update([
+            'status'             => 'on_progress',
+            'revoked_by'         => $user->id,
+            'revoked_at'         => now(),
+            'revocation_reason'  => $request->revocation_reason,
+            // Clear approval fields so it must be re-approved
+            'approved_by'        => null,
+            'approved_at'        => null,
+        ]);
+
+        $poLabel = $purchaseOrder->po_type === 'service_order' ? 'SO' : 'PO';
+
+        // Notify the PO creator
+        if ($purchaseOrder->created_by !== $user->id) {
+            NotificationService::send(
+                $purchaseOrder->created_by,
+                'po_revoked',
+                "{$poLabel} Sent Back for Revision",
+                "{$poLabel} {$purchaseOrder->po_number} has been sent back for revision by {$user->name}. Reason: {$request->revocation_reason}",
+                route('purchase_orders.show', $purchaseOrder)
+            );
+        }
+
+        // Notify purchasing team
+        NotificationService::sendToRole(
+            ['purchasing', 'admin', 'super_admin'],
+            'po_revoked',
+            "{$poLabel} Requires Revision",
+            "{$poLabel} {$purchaseOrder->po_number} was sent back for revision by {$user->name}. Please edit and re-submit for approval.",
+            route('purchase_orders.show', $purchaseOrder),
+            $user->id
+        );
+
+        return redirect()->route('purchase_orders.show', $purchaseOrder)
+            ->with('success', 'Approval revoked. The PO has been sent back to purchasing for revision.');
     }
 
     public function cancel(Request $request, PurchaseOrder $purchaseOrder)

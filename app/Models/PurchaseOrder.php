@@ -45,6 +45,9 @@ class PurchaseOrder extends Model
         'created_by',
         'approved_by',
         'approved_at',
+        'revoked_by',
+        'revoked_at',
+        'revocation_reason',
         'printed_at',
         'printed_by',
     ];
@@ -56,6 +59,7 @@ class PurchaseOrder extends Model
         'invoice_due_date' => 'date',
         'total_amount' => 'decimal:2',
         'approved_at' => 'datetime',
+        'revoked_at'  => 'datetime',
         'invoice_recorded_at' => 'datetime',
         'printed_at' => 'datetime',
     ];
@@ -78,6 +82,11 @@ class PurchaseOrder extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function revoker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 
     public function invoiceRecorder(): BelongsTo
