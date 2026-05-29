@@ -54,6 +54,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
         xml \
         dom \
+        simplexml \
+        xmlreader \
+        xmlwriter \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -65,7 +68,7 @@ WORKDIR /var/www/html
 
 # Step 1: install dependencies (no autoloader yet — app source not copied yet)
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --ignore-platform-reqs
 
 # Step 2: copy full source
 COPY . .
