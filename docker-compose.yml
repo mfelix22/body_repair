@@ -51,7 +51,7 @@ services:
       - db_data:/var/lib/mysql
       - ./body_repair.sql:/docker-entrypoint-initdb.d/body_repair.sql:ro
     ports:
-      - "3308:3306"
+      - "4307:4306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
       interval: 10s
