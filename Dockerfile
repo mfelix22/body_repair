@@ -54,9 +54,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
         xml \
         dom \
-        simplexml \
-        xmlreader \
-        xmlwriter \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
