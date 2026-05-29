@@ -526,10 +526,15 @@ class ReceivableController extends Controller
                     ? $po->details()->where('item_id', $item->id)->where('uom_id', $uom->id)->first()
                     : null;
 
-                // Use PO-level conversion if set (supplier-specific), otherwise fall back to item master
-                $conversionFactor = ($poDetail && $poDetail->conversion_to_smallest)
-                    ? (float) $poDetail->conversion_to_smallest
-                    : (float) $itemUom->conversion_to_smallest;
+                // Use item master as the authoritative conversion source.
+                // Only override with PO detail when it's explicitly > 1, meaning the user entered
+                // a supplier-specific conversion (e.g. supplier carton ≠ item master carton).
+                // A value of 1 on the PO detail means it was never properly set — do not use it.
+                $itemMasterConversion = (float) $itemUom->conversion_to_smallest;
+                $poDetailConversion   = $poDetail ? (float) $poDetail->conversion_to_smallest : 0;
+                $conversionFactor     = ($poDetailConversion > 1)
+                    ? $poDetailConversion
+                    : $itemMasterConversion;
 
                 $quantityInSmallestUom = $receivableItem->quantity_received * $conversionFactor;
 

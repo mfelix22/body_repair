@@ -25,6 +25,18 @@ class PurchaseRequestController extends Controller
             $query->where('type', request('type'));
         }
 
+        // Filter by item name (searches item name, custom item name, and service description)
+        if (request('item_search')) {
+            $search = request('item_search');
+            $query->whereHas('details', function ($q) use ($search) {
+                $q->where('custom_item_name', 'like', "%{$search}%")
+                    ->orWhere('service_description', 'like', "%{$search}%")
+                    ->orWhereHas('item', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $prs = $query->orderBy('created_at', 'desc')->get();
         return view('purchase_requests.index', compact('prs'));
     }

@@ -376,11 +376,14 @@
                                                                 class="form-control conv-input" step="0.000001"
                                                                 min="0.000001"
                                                                 value="{{ old('items.' . $dIdx . '.conversion_to_smallest', $detail->conversion_to_smallest) }}"
+                                                                data-item-master-conversion="{{ $detail->item?->itemUoms?->firstWhere('uom_id', $detail->uom_id)?->conversion_to_smallest ?? '' }}"
                                                                 required>
                                                             <small class="text-muted conv-hint">
                                                                 1 {{ $detail->uom->code ?? 'UOM' }} = ?
                                                                 {{ $detail->item?->smallestUom?->code ?? 'unit' }}
                                                             </small>
+                                                            <small class="conv-warning"
+                                                                style="display:none;color:#e65c00;font-weight:600;"></small>
                                                         </div>
                                                         <div class="col-md-1">
                                                             <label>Qty</label>
@@ -556,8 +559,9 @@
                                     <label>Isi/Kemasan</label>
                                     <input type="number" name="items[${itemIndex}][conversion_to_smallest]"
                                         class="form-control conv-input" step="0.000001" min="0.000001"
-                                        placeholder="e.g. 100" required>
+                                        placeholder="e.g. 100" required data-item-master-conversion="">
                                     <small class="text-muted conv-hint">1 UOM = ? unit terkecil</small>
+                                    <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
                                 </div>
                                 <div class="col-md-1">
                                     <label>Qty</label>
@@ -604,6 +608,11 @@
                 btn.removeEventListener('click', handleRemoveItem);
                 btn.addEventListener('click', handleRemoveItem);
             });
+
+            document.querySelectorAll('.conv-input').forEach(input => {
+                input.removeEventListener('input', handleConversionInput);
+                input.addEventListener('input', handleConversionInput);
+            });
         }
 
         function handleItemChange() {
@@ -633,7 +642,10 @@
                 totalInput.value = (qty * price).toFixed(2);
                 const selectedUom = uoms.find(u => String(u.uom_id) === String(uomSelect.value));
                 if (selectedUom && convInput) {
-                    convInput.value = parseFloat(selectedUom.conversion_to_smallest || 1);
+                    const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
+                    convInput.value = masterConv;
+                    convInput.dataset.itemMasterConversion = masterConv;
+                    checkConversionWarning(convInput);
                     if (convHint) convHint.textContent = '1 ' + selectedUom.uom.code + ' = ? ' + smallestUomCode;
                 }
             }
@@ -655,7 +667,10 @@
             totalInput.value = (qty * price).toFixed(2);
             const selectedUom = uoms.find(u => String(u.uom_id) === String(this.value));
             if (selectedUom && convInput) {
-                convInput.value = parseFloat(selectedUom.conversion_to_smallest || 1);
+                const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
+                convInput.value = masterConv;
+                convInput.dataset.itemMasterConversion = masterConv;
+                checkConversionWarning(convInput);
                 if (convHint) convHint.textContent = '1 ' + selectedUom.uom.code + ' = ? ' + smallestUomCode;
             }
         }
@@ -667,6 +682,24 @@
             row.querySelector('.total').value = (qty * price).toFixed(2);
         }
 
+        function handleConversionInput() {
+            checkConversionWarning(this);
+        }
+
+        function checkConversionWarning(convInput) {
+            const masterConv = parseFloat(convInput.dataset.itemMasterConversion || 0);
+            const entered = parseFloat(convInput.value || 0);
+            const warning = convInput.parentElement.querySelector('.conv-warning');
+            if (!warning) return;
+            if (masterConv > 0 && entered !== masterConv) {
+                warning.textContent = '\u26a0 Item master: ' + masterConv + '. Override intentional?';
+                warning.style.display = '';
+            } else {
+                warning.textContent = '';
+                warning.style.display = 'none';
+            }
+        }
+
         function handleRemoveItem() {
             if (document.querySelectorAll('.item-row').length > 1) {
                 this.closest('.item-row').remove();
@@ -676,6 +709,27 @@
         }
 
         attachItemEventListeners();
+
+        // Flag any pre-loaded rows whose saved conversion differs from item master
+        document.querySelectorAll('.conv-input').forEach(function(input) {
+            checkConversionWarning(input);
+        });
+
+        // Warn on submit if any conversion overrides are active
+        document.querySelector('form[action*="purchase_orders"]')
+            .addEventListener('submit', function(e) {
+                const overrides = Array.from(document.querySelectorAll('.conv-warning'))
+                    .filter(el => el.style.display !== 'none' && el.textContent !== '');
+                if (overrides.length > 0) {
+                    const msg = overrides.length === 1 ?
+                        'One item has a conversion that differs from the item master.\nAre you sure the override is correct?' :
+                        overrides.length +
+                        ' items have conversions that differ from the item master.\nAre you sure all overrides are correct?';
+                    if (!confirm(msg)) {
+                        e.preventDefault();
+                    }
+                }
+            });
 
         // Auto-fill supplier details when supplier is selected
         document.getElementById('supplier_id').addEventListener('change', function() {
@@ -787,8 +841,9 @@
                                     <label>Isi/Kemasan</label>
                                     <input type="number" name="items[${index}][conversion_to_smallest]"
                                         class="form-control conv-input" step="0.000001" min="0.000001"
-                                        value="${conversion}" required>
+                                        value="${conversion}" required data-item-master-conversion="${conversion}">
                                     <small class="text-muted conv-hint">1 ${uomCode} = ? ${smallestCode}</small>
+                                    <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
                                 </div>
                                 <div class="col-md-1">
                                     <label>Qty</label>

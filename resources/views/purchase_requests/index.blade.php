@@ -20,9 +20,9 @@
 
                 <div class="card-body">
 
-                    <!-- Filter by Type -->
+                    <!-- Filters -->
                     <div class="mb-3">
-                        <form method="GET" class="form-inline">
+                        <form method="GET" class="form-inline flex-wrap" style="gap: 8px;">
                             <label class="mr-2">Filter by Type:</label>
                             <select name="type" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
                                 <option value="">All Types</option>
@@ -31,6 +31,20 @@
                                 <option value="Barang" {{ request('type') === 'Barang' ? 'selected' : '' }}>PPB (Items)
                                 </option>
                             </select>
+                            <div class="input-group input-group-sm mr-2" style="width: 260px;">
+                                <input type="text" name="item_search" class="form-control"
+                                    placeholder="Search by item name..." value="{{ request('item_search') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @if (request('type') || request('item_search'))
+                                <a href="{{ route('purchase_requests.index') }}" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-times"></i> Clear
+                                </a>
+                            @endif
                         </form>
                     </div>
 
