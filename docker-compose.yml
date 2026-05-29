@@ -9,8 +9,6 @@ services:
       dockerfile: Dockerfile
     container_name: body_repair_app
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       DB_CONNECTION: mysql
       DB_HOST: db
