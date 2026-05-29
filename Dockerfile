@@ -74,7 +74,7 @@ COPY . .
 COPY --from=node-build /app/public/build ./public/build
 
 # Step 4: generate optimised autoloader now that all classes exist
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
