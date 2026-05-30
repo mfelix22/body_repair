@@ -154,15 +154,16 @@ class WorkOrderController extends Controller
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'    => 'nullable|string|max:255',
             'labors'                  => 'nullable|array',
+            'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.description'    => 'nullable|string|max:255',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
+            'labors.*.rate'           => 'nullable|numeric|min:0',
+            'labors.*.total_price'    => 'nullable|numeric|min:0',
             'labors.*.remarks'        => 'nullable|string',
         ]);
 
-        $laborFixed    = 75000;
         $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
-        $laborTotal   = $paketGrandTotal > 0 ? $laborFixed : 0;
-        $materialTotal = $paketGrandTotal > 0 ? $paketGrandTotal - $laborFixed : 0;
+        $materialTotal   = $paketGrandTotal;
         $addonLaborTotal = 0;
 
         // Auto-generate WO number: YYMM/HAS/SEQ (monthly reset)
@@ -217,7 +218,7 @@ class WorkOrderController extends Controller
             'sa_sales'          => $validated['sa_sales'] ?? null,
             'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
             'status'            => 'on_progress',
-            'labor_total'       => $laborTotal,
+            'labor_total'       => 0,
             'material_total'    => $materialTotal,
             'grand_total'       => $paketGrandTotal,
             'created_by'        => auth()->id(),
@@ -238,18 +239,32 @@ class WorkOrderController extends Controller
 
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
-                if (empty(trim($laborData['description'] ?? ''))) continue;
+                $laborId = $laborData['labor_id'] ?? null;
+                $desc    = $laborData['description'] ?? null;
+                if (!$laborId && empty(trim($desc ?? ''))) continue;
+                // Auto-fill description from master if labor_id provided
+                if ($laborId && empty($desc)) {
+                    $masterLabor = Labor::find($laborId);
+                    $desc = $masterLabor ? $masterLabor->description : null;
+                }
+                $qty   = $laborData['qty'] ?? 1;
+                $rate  = $laborData['rate'] ?? null;
+                $total = ($rate !== null) ? round($qty * $rate) : ($laborData['total_price'] ?? null);
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
-                    'description'   => $laborData['description'],
-                    'qty'           => $laborData['qty'] ?? 1,
+                    'labor_id'      => $laborId,
+                    'description'   => $desc,
+                    'qty'           => $qty,
+                    'rate'          => $rate,
+                    'total_price'   => $total,
                     'remarks'       => $laborData['remarks'] ?? null,
                 ]);
+                $addonLaborTotal += $total ?? 0;
             }
         }
 
         $wo->update([
-            'labor_total'    => $laborTotal + $addonLaborTotal,
+            'labor_total'    => $addonLaborTotal,
             'material_total' => $materialTotal,
             'grand_total'    => $paketGrandTotal + $addonLaborTotal,
         ]);
@@ -351,15 +366,16 @@ class WorkOrderController extends Controller
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'    => 'nullable|string|max:255',
             'labors'                  => 'nullable|array',
+            'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.description'    => 'nullable|string|max:255',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
+            'labors.*.rate'           => 'nullable|numeric|min:0',
+            'labors.*.total_price'    => 'nullable|numeric|min:0',
             'labors.*.remarks'        => 'nullable|string',
         ]);
 
-        $laborFixed      = 75000;
         $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
-        $laborTotal      = $paketGrandTotal > 0 ? $laborFixed : 0;
-        $materialTotal   = $paketGrandTotal > 0 ? $paketGrandTotal - $laborFixed : 0;
+        $materialTotal   = $paketGrandTotal;
         $addonLaborTotal = 0;
 
         // Auto-save vehicle to master data if checkbox is ticked
@@ -402,7 +418,7 @@ class WorkOrderController extends Controller
             'notes'             => $validated['notes'] ?? null,
             'sa_sales'          => $validated['sa_sales'] ?? null,
             'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
-            'labor_total'       => $laborTotal,
+            'labor_total'       => 0,
             'material_total'    => $materialTotal,
             'grand_total'       => $paketGrandTotal,
         ]);
@@ -428,19 +444,32 @@ class WorkOrderController extends Controller
         // Add new labors
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
-                if (empty(trim($laborData['description'] ?? ''))) continue;
+                $laborId = $laborData['labor_id'] ?? null;
+                $desc    = $laborData['description'] ?? null;
+                if (!$laborId && empty(trim($desc ?? ''))) continue;
+                if ($laborId && empty($desc)) {
+                    $masterLabor = Labor::find($laborId);
+                    $desc = $masterLabor ? $masterLabor->description : null;
+                }
+                $qty   = $laborData['qty'] ?? 1;
+                $rate  = $laborData['rate'] ?? null;
+                $total = ($rate !== null) ? round($qty * $rate) : ($laborData['total_price'] ?? null);
                 WorkOrderLabor::create([
                     'work_order_id' => $workOrder->id,
-                    'description'   => $laborData['description'],
-                    'qty'           => $laborData['qty'] ?? 1,
+                    'labor_id'      => $laborId,
+                    'description'   => $desc,
+                    'qty'           => $qty,
+                    'rate'          => $rate,
+                    'total_price'   => $total,
                     'remarks'       => $laborData['remarks'] ?? null,
                 ]);
+                $addonLaborTotal += $total ?? 0;
             }
         }
 
         $workOrder->update([
             'material_total' => $materialTotal,
-            'labor_total'    => $laborTotal + $addonLaborTotal,
+            'labor_total'    => $addonLaborTotal,
             'grand_total'    => $paketGrandTotal + $addonLaborTotal,
         ]);
 

@@ -218,17 +218,12 @@
                             @php
                                 $extraLabor = $workOrder->labors->whereNotNull('total_price')->sum('total_price');
                                 $extraMaterial = $workOrder->items->whereNotNull('total_price')->sum('total_price');
-                                $baseLabor = ($workOrder->paket_grand_total ?? 0) > 0 ? 75000 : 0;
-                                $baseMaterial = max(0, ($workOrder->paket_grand_total ?? 0) - $baseLabor);
                             @endphp
                             <table class="table table-sm table-bordered">
                                 <tr>
                                     <th>Jasa Paket:</th>
-                                    <td class="text-right">Rp {{ number_format($baseMaterial, 0, ',', '.') }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Labor (Fixed):</th>
-                                    <td class="text-right">Rp {{ number_format($baseLabor, 0, ',', '.') }}</td>
+                                    <td class="text-right">Rp
+                                        {{ number_format($workOrder->paket_grand_total ?? 0, 0, ',', '.') }}</td>
                                 </tr>
                                 @if ($extraMaterial > 0)
                                     <tr>
@@ -239,7 +234,7 @@
                                 @endif
                                 @if ($extraLabor > 0)
                                     <tr>
-                                        <th>Extra Labor:</th>
+                                        <th>Labor:</th>
                                         <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}
                                         </td>
                                     </tr>

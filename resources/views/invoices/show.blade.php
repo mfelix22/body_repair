@@ -177,6 +177,8 @@
                             <tr>
                                 <th>Description</th>
                                 <th>Qty</th>
+                                <th>Rate</th>
+                                <th>Total</th>
                                 <th>Remarks</th>
                             </tr>
                         </thead>
@@ -186,13 +188,13 @@
                                     <td>{{ $labor->description }}</td>
                                     <td>{{ rtrim(rtrim(number_format((float) ($labor->qty ?? 1), 2, '.', ''), '0'), '.') }}
                                     </td>
+                                    <td>Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
+                                    <td>Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ $labor->remarks ?? '-' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
-                    <small class="text-muted">Labor fee is fixed at Rp 75.000 per paket and already included in
-                        total.</small>
 
                     <hr>
                     <div class="row">

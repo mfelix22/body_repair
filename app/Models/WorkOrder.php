@@ -156,22 +156,18 @@ class WorkOrder extends Model
 
     /**
      * Calculate totals from items and labor.
-     * Base package price and fixed Rp 75,000 labor are preserved.
-     * Extra billed materials (from Bon Out) and extra priced labors are added on top.
+     * Package price goes into material_total; actual labor rows sum into labor_total.
      */
     public function calculateTotals(): void
     {
         // Extra billed materials added via Bon Out completions
         $extraMaterial = $this->items()->whereNotNull('total_price')->sum('total_price');
-        // Extra priced labors added by SA
-        $extraLabor = $this->labors()->whereNotNull('total_price')->sum('total_price');
+        // Labor total from actual labor rows
+        $laborTotal = $this->labors()->whereNotNull('total_price')->sum('total_price');
 
-        $baseLabor    = ($this->paket_grand_total ?? 0) > 0 ? 75000 : 0;
-        $baseMaterial = max(0, (float)($this->paket_grand_total ?? 0) - $baseLabor);
-
-        $this->material_total = $baseMaterial + (float)$extraMaterial;
-        $this->labor_total    = $baseLabor + (float)$extraLabor;
-        $this->grand_total    = $this->material_total + $this->labor_total;
+        $this->material_total = (float)($this->paket_grand_total ?? 0) + (float)$extraMaterial;
+        $this->labor_total    = (float)$laborTotal;
+        $this->grand_total    = (float)($this->paket_grand_total ?? 0) + (float)$laborTotal + (float)$extraMaterial;
         $this->save();
     }
 }
