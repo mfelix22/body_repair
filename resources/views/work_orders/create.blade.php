@@ -971,7 +971,6 @@
                     row.querySelector('.uom-display').textContent = opt.dataset.uom || '-';
                 };
             });
-            }
 
             // ===== REMOVE BUTTONS =====
             document.addEventListener('click', function(e) {
