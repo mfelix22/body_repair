@@ -1126,6 +1126,12 @@
                     allowClear: true,
                     theme: 'bootstrap4'
                 });
+
+                // Must run inside document.ready so layout's global $('.select2').select2()
+                // has already fired — otherwise the containers created here get picked up
+                // by that global init and marked select2-hidden-accessible (1×1px invisible).
+                initItemSelect2();
+                initLaborSelect2();
             });
 
             function initItemSelect2() {
@@ -1203,7 +1209,5 @@
                     });
                 });
             }
-            initItemSelect2();
-            initLaborSelect2();
         </script>
     @endsection
