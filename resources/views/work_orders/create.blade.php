@@ -962,15 +962,18 @@
                     row.querySelector('.labor-rate').addEventListener('input', recalcRow);
                 });
             }
-            document.querySelectorAll('.item-select').forEach(select => {
-                select.onchange = function() {
-                    const row = this.closest('.item-row');
-                    const opt = this.options[this.selectedIndex];
-                    row.querySelector('.item-stock').textContent = opt.value ?
-                        `Stock: ${opt.dataset.stock} ${opt.dataset.uom}` : '';
-                    row.querySelector('.uom-display').textContent = opt.dataset.uom || '-';
-                };
-            });
+
+            function attachItemListeners() {
+                document.querySelectorAll('.item-select').forEach(select => {
+                    select.onchange = function() {
+                        const row = this.closest('.item-row');
+                        const opt = this.options[this.selectedIndex];
+                        row.querySelector('.item-stock').textContent = opt.value ?
+                            `Stock: ${opt.dataset.stock} ${opt.dataset.uom}` : '';
+                        row.querySelector('.uom-display').textContent = opt.dataset.uom || '-';
+                    };
+                });
+            }
 
             // ===== REMOVE BUTTONS =====
             document.addEventListener('click', function(e) {
