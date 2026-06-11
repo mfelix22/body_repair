@@ -28,13 +28,13 @@ class PurchaseOrderController extends Controller
         $purchaseOrders = PurchaseOrder::with(['purchaseRequest', 'creator', 'details.item'])
             ->where('po_type', 'purchase_order')
             ->withCount('details')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('order_date', 'desc')
             ->get();
 
         $serviceOrders = PurchaseOrder::with(['purchaseRequest', 'creator', 'details'])
             ->where('po_type', 'service_order')
             ->withCount('details')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('order_date', 'desc')
             ->get();
 
         return view('purchase_orders.index', compact('purchaseOrders', 'serviceOrders'));
@@ -323,7 +323,7 @@ class PurchaseOrderController extends Controller
                 $q->whereHas('details', fn($d) => $d->whereRaw('ordered_quantity < quantity'))
                     ->orWhere('id', $purchaseOrder->purchase_request_id);
             })
-            ->with(['details.item.itemUoms.uom', 'details.uom'])
+            ->with(['details.item.itemUoms.uom', 'details.item.smallestUom', 'details.uom'])
             ->get();
         $items = Item::where('is_active', true)->with(['itemUoms.uom', 'smallestUom'])->get();
         $suppliers = Supplier::orderBy('name')->get();

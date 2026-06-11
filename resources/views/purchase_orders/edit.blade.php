@@ -87,9 +87,9 @@
                                     <select name="purchase_request_id" id="purchase_request_id" class="form-control">
                                         <option value="">None</option>
                                         @foreach ($prs as $pr)
-                                            <option value="{{ $pr->id }}" data-pr='@json($pr)'
-                                                data-type='{{ $pr->type }}'
-                                                data-ack='{{ $pr->require_acknowledgement ? '1' : '0' }}'
+                                            <option value="{{ $pr->id }}"
+                                                data-type="{{ $pr->type }}"
+                                                data-ack="{{ $pr->require_acknowledgement ? '1' : '0' }}"
                                                 {{ old('purchase_request_id', $purchaseOrder->purchase_request_id) == $pr->id ? 'selected' : '' }}>
                                                 {{ $pr->pr_number }} ({{ $pr->type }})
                                             </option>
@@ -461,6 +461,10 @@
                                 @endforeach
                             </div>
                             <button type="button" class="btn btn-success btn-sm" id="add-item">Add Item</button>
+                            <button type="button" class="btn btn-info btn-sm ml-2" id="add-from-pr"
+                                style="{{ $purchaseOrder->purchase_request_id ? '' : 'display:none;' }}">
+                                <i class="fas fa-list"></i> Add Item from PR
+                            </button>
                         </fieldset>
                     </div>
 
@@ -472,6 +476,25 @@
                             class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal: pick items from linked PR --}}
+    <div class="modal fade" id="prItemsModal" tabindex="-1" role="dialog" aria-labelledby="prItemsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="prItemsModalLabel">Add Items from PR</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2">Select items to append to the current PO. Already-added items are greyed out.</p>
+                    <div id="pr-items-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -495,8 +518,10 @@
             return match ? match.uom.code : '';
         }
 
-        document.getElementById('add-item').addEventListener('click', function() {
+        const addItemBtn = document.getElementById('add-item');
+        if (addItemBtn) addItemBtn.addEventListener('click', function() {
             const container = document.getElementById('items-container');
+            if (!container) return;
             const newItemRow = document.createElement('div');
             newItemRow.className = 'item-row border p-3 mb-2';
 
@@ -586,7 +611,7 @@
                     </div>`;
             }
 
-            container.appendChild(newItemRow);
+            if (container) container.appendChild(newItemRow);
             itemIndex++;
             attachItemEventListeners();
         });
@@ -716,8 +741,8 @@
         });
 
         // Warn on submit if any conversion overrides are active
-        document.querySelector('form[action*="purchase_orders"]')
-            .addEventListener('submit', function(e) {
+        const conversionForm = document.querySelector('form[action*="purchase_orders"]');
+        if (conversionForm) conversionForm.addEventListener('submit', function(e) {
                 const overrides = Array.from(document.querySelectorAll('.conv-warning'))
                     .filter(el => el.style.display !== 'none' && el.textContent !== '');
                 if (overrides.length > 0) {
@@ -732,12 +757,16 @@
             });
 
         // Auto-fill supplier details when supplier is selected
-        document.getElementById('supplier_id').addEventListener('change', function() {
+        const supplierSelect = document.getElementById('supplier_id');
+        if (supplierSelect) supplierSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             if (this.value) {
-                document.getElementById('supplier_name').value = selectedOption.dataset.name || '';
-                document.getElementById('supplier_phone').value = selectedOption.dataset.phone || '';
-                document.getElementById('supplier_address').value = selectedOption.dataset.address || '';
+                const nameInput = document.getElementById('supplier_name');
+                const phoneInput = document.getElementById('supplier_phone');
+                const addressInput = document.getElementById('supplier_address');
+                if (nameInput) nameInput.value = selectedOption.dataset.name || '';
+                if (phoneInput) phoneInput.value = selectedOption.dataset.phone || '';
+                if (addressInput) addressInput.value = selectedOption.dataset.address || '';
             }
         });
 
@@ -745,141 +774,208 @@
         const prSelect = document.getElementById('purchase_request_id');
         const prAckNotice = document.getElementById('pr-ack-notice');
         const itemsData = @json($items);
+        const addFromPrBtn = document.getElementById('add-from-pr');
 
         function togglePrAckNotice() {
             if (!prAckNotice) return;
             const selected = prSelect.options[prSelect.selectedIndex];
             prAckNotice.style.display = (selected && selected.dataset.ack === '1') ? 'block' : 'none';
         }
-        togglePrAckNotice(); // run on page load for existing selection
 
-        prSelect.addEventListener('change', function() {
-            togglePrAckNotice();
-            const selectedOption = this.options[this.selectedIndex];
-            if (!this.value) return;
+        function updateAddFromPrButton() {
+            if (!addFromPrBtn) return;
+            addFromPrBtn.style.display = prSelect.value ? 'inline-block' : 'none';
+        }
 
-            const prData = JSON.parse(selectedOption.dataset.pr || '{}');
-            if (!prData.details || prData.details.length === 0) return;
+        togglePrAckNotice();
+        updateAddFromPrButton();
 
-            if (!confirm('Loading items from PR will replace the current item list. Continue?')) return;
+        function buildPrItemRow(detail, idx) {
+            const newItemRow = document.createElement('div');
+            newItemRow.className = 'item-row border p-3 mb-2';
+            const isPPJ = poType === 'service_order';
 
-            const itemsContainer = document.getElementById('items-container');
-            itemsContainer.innerHTML = '';
-            itemIndex = 0;
+            if (isPPJ) {
+                newItemRow.innerHTML = `
+                <input type="hidden" name="items[${idx}][purchase_request_detail_id]" value="${detail.id || ''}">
+                <div class="row"><div class="service-section" style="width:100%;"><div class="row">
+                    <div class="col-md-4">
+                        <label>Service Description <span class="text-danger">*</span></label>
+                        <input type="text" name="items[${idx}][service_description]" class="form-control service-description" value="${detail.service_description || ''}" required>
+                    </div>
+                    <div class="col-md-1"><label>Qty</label>
+                        <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
+                    </div>
+                    <div class="col-md-2"><label>Unit Price (Rp)</label>
+                        <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
+                    </div>
+                    <div class="col-md-2"><label>Total</label>
+                        <input type="text" class="form-control total" readonly disabled value="0.00">
+                    </div>
+                    <div class="col-md-1"><label>&nbsp;</label><br>
+                        <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                    </div>
+                </div></div></div>`;
+            } else {
+                const itemUoms = detail.item && detail.item.item_uoms ? detail.item.item_uoms : [];
+                const conversion = getConversionForUom(itemUoms, detail.uom_id);
+                const uomCode = detail.uom ? detail.uom.code : getUomCodeFromList(itemUoms, detail.uom_id);
+                const smallestCode = detail.item && detail.item.smallest_uom ? detail.item.smallest_uom.code : '';
 
-            const isPPJ = prData.type === 'Jasa';
+                let itemOptions = '<option value="">Select Item</option>';
+                itemsData.forEach(item => {
+                    const sel = detail.item_id == item.id ? 'selected' : '';
+                    const sUom = item.smallest_uom ? item.smallest_uom.code : '';
+                    itemOptions += `<option value="${item.id}" data-uoms='${JSON.stringify(item.item_uoms || [])}' data-smallest-uom="${sUom}" ${sel}>${item.name} (${item.code})</option>`;
+                });
 
-            prData.details.forEach((detail, index) => {
-                const newItemRow = document.createElement('div');
-                newItemRow.className = 'item-row border p-3 mb-2';
+                newItemRow.innerHTML = `
+                <input type="hidden" name="items[${idx}][purchase_request_detail_id]" value="${detail.id || ''}">
+                <div class="row"><div class="item-section" style="width:100%;"><div class="row">
+                    <div class="col-md-3"><label>Item</label>
+                        <select name="items[${idx}][item_id]" class="form-control item-select" required>${itemOptions}</select>
+                    </div>
+                    <div class="col-md-2"><label>UOM</label>
+                        <select name="items[${idx}][uom_id]" class="form-control uom-select" required>
+                            <option value="${detail.uom_id || ''}" selected>${detail.uom ? detail.uom.name + ' (' + detail.uom.code + ')' : ''}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2"><label>Isi/Kemasan</label>
+                        <input type="number" name="items[${idx}][conversion_to_smallest]" class="form-control conv-input" step="0.000001" min="0.000001" value="${conversion}" required data-item-master-conversion="${conversion}">
+                        <small class="text-muted conv-hint">1 ${uomCode} = ? ${smallestCode}</small>
+                        <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
+                    </div>
+                    <div class="col-md-1"><label>Qty</label>
+                        <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
+                    </div>
+                    <div class="col-md-2"><label>Unit Price</label>
+                        <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
+                    </div>
+                    <div class="col-md-1"><label>Total</label>
+                        <input type="text" class="form-control total" readonly disabled value="0.00">
+                    </div>
+                    <div class="col-md-1"><label>&nbsp;</label><br>
+                        <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                    </div>
+                </div></div></div>`;
+            }
+            return newItemRow;
+        }
 
-                if (isPPJ) {
-                    newItemRow.innerHTML = `
-                    <div class="row">
-                        <div class="service-section" style="width: 100%;">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label>Service Description <span class="text-danger">*</span></label>
-                                    <input type="text" name="items[${index}][service_description]"
-                                        class="form-control service-description"
-                                        value="${detail.service_description || ''}" required>
-                                </div>
-                                <div class="col-md-1">
-                                    <label>Qty</label>
-                                    <input type="number" name="items[${index}][quantity]" class="form-control qty"
-                                        step="0.01" min="0.01" value="${detail.quantity || 0}" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Unit Price (Rp)</label>
-                                    <input type="number" name="items[${index}][unit_price]" class="form-control price"
-                                        step="0.01" min="0" value="0" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Total</label>
-                                    <input type="text" class="form-control total" readonly disabled value="0.00">
-                                </div>
-                                <div class="col-md-1">
-                                    <label>&nbsp;</label><br>
-                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                } else {
-                    const itemUoms = detail.item && detail.item.item_uoms ? detail.item.item_uoms : [];
-                    const conversion = getConversionForUom(itemUoms, detail.uom_id);
-                    const uomCode = detail.uom ? detail.uom.code : getUomCodeFromList(itemUoms, detail
-                        .uom_id);
-                    const smallestCode = detail.item && detail.item.smallest_uom ? detail.item.smallest_uom
-                        .code : '';
+        // "Add from PR" button: open modal showing PR items to pick from
+        if (addFromPrBtn) addFromPrBtn.addEventListener('click', function() {
+            console.log('Add from PR clicked');
+            console.log('prSelect.value:', prSelect.value);
+            if (!prSelect.value) {
+                console.log('No PR selected');
+                return;
+            }
 
-                    let itemOptions = '<option value="">Select Item</option>';
-                    itemsData.forEach(item => {
-                        const sel = detail.item_id == item.id ? 'selected' : '';
-                        const sUom = item.smallest_uom ? item.smallest_uom.code : '';
-                        itemOptions +=
-                            `<option value="${item.id}" data-uoms='${JSON.stringify(item.item_uoms || [])}' data-smallest-uom="${sUom}" ${sel}>${item.name} (${item.code})</option>`;
+            // Fetch PR data via AJAX
+            fetch(`{{ route('purchase_requests.json', ['purchaseRequest' => ':id']) }}`.replace(':id', prSelect.value))
+                .then(response => response.json())
+                .then(prData => {
+                    console.log('prData:', prData);
+                    if (!prData.details || prData.details.length === 0) {
+                        console.log('PR has no details');
+                        alert('This PR has no items.');
+                        return;
+                    }
+
+                    // Collect pr_detail IDs already in the items container
+                    const existingPrDetailIds = Array.from(
+                        document.querySelectorAll('#items-container input[name*="purchase_request_detail_id"]')
+                    ).map(el => String(el.value)).filter(v => v);
+
+                    const listEl = document.getElementById('pr-items-list');
+                    if (!listEl) return;
+                    listEl.innerHTML = '';
+
+                    prData.details.forEach(detail => {
+                        const alreadyAdded = existingPrDetailIds.includes(String(detail.id));
+                        const label = poType === 'service_order'
+                            ? (detail.service_description || 'Service')
+                            : ((detail.item ? detail.item.name : '') + ' — ' + (detail.uom ? detail.uom.name : '') + ' × ' + detail.quantity);
+
+                        const row = document.createElement('div');
+                        row.className = 'd-flex align-items-center justify-content-between border-bottom py-2';
+                        row.innerHTML = `
+                            <span class="${alreadyAdded ? 'text-muted' : ''}">
+                                ${alreadyAdded ? '<i class="fas fa-check-circle text-success mr-1"></i>' : ''}
+                                ${label}
+                                ${alreadyAdded ? '<em class="small">(already added)</em>' : ''}
+                            </span>
+                            <button type="button" class="btn btn-sm btn-${alreadyAdded ? 'secondary' : 'primary'} ml-3 btn-add-pr-item"
+                                ${alreadyAdded ? 'disabled' : ''}>
+                                <i class="fas fa-plus"></i> Add
+                            </button>`;
+
+                        row.querySelector('.btn-add-pr-item').addEventListener('click', function() {
+                            const container = document.getElementById('items-container');
+                            if (!container) return;
+                            const newRow = buildPrItemRow(detail, itemIndex);
+                            container.appendChild(newRow);
+                            itemIndex++;
+                            attachItemEventListeners();
+
+                            // Mark as added in the modal
+                            this.disabled = true;
+                            this.classList.replace('btn-primary', 'btn-secondary');
+                            const span = row.querySelector('span');
+                            span.classList.add('text-muted');
+                            span.innerHTML = '<i class="fas fa-check-circle text-success mr-1"></i>' + label + ' <em class="small">(already added)</em>';
+                        });
+
+                        listEl.appendChild(row);
                     });
 
-                    newItemRow.innerHTML = `
-                    <div class="row">
-                        <div class="item-section" style="width: 100%;">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <label>Item</label>
-                                    <select name="items[${index}][item_id]" class="form-control item-select" required>
-                                        ${itemOptions}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>UOM</label>
-                                    <select name="items[${index}][uom_id]" class="form-control uom-select" required>
-                                        <option value="${detail.uom_id || ''}" selected>${detail.uom ? detail.uom.name + ' (' + detail.uom.code + ')' : ''}</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Isi/Kemasan</label>
-                                    <input type="number" name="items[${index}][conversion_to_smallest]"
-                                        class="form-control conv-input" step="0.000001" min="0.000001"
-                                        value="${conversion}" required data-item-master-conversion="${conversion}">
-                                    <small class="text-muted conv-hint">1 ${uomCode} = ? ${smallestCode}</small>
-                                    <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
-                                </div>
-                                <div class="col-md-1">
-                                    <label>Qty</label>
-                                    <input type="number" name="items[${index}][quantity]" class="form-control qty"
-                                        step="0.01" min="0.01" value="${detail.quantity || 0}" required>
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Unit Price</label>
-                                    <input type="number" name="items[${index}][unit_price]" class="form-control price"
-                                        step="0.01" min="0" value="0" required>
-                                </div>
-                                <div class="col-md-1">
-                                    <label>Total</label>
-                                    <input type="text" class="form-control total" readonly disabled value="0.00">
-                                </div>
-                                <div class="col-md-1">
-                                    <label>&nbsp;</label><br>
-                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                }
+                    $('#prItemsModal').modal('show');
+                })
+                .catch(error => {
+                    console.error('Error fetching PR data:', error);
+                    alert('Failed to load PR data. Please try again.');
+                });
+        });
 
-                itemsContainer.appendChild(newItemRow);
-                itemIndex++;
-            });
+        if (prSelect) prSelect.addEventListener('change', function() {
+            togglePrAckNotice();
+            updateAddFromPrButton();
 
-            attachItemEventListeners();
+            if (!this.value) return;
+
+            // Fetch PR data via AJAX
+            fetch(`{{ route('purchase_requests.json', ['purchaseRequest' => ':id']) }}`.replace(':id', this.value))
+                .then(response => response.json())
+                .then(prData => {
+                    if (!prData || !prData.details || prData.details.length === 0) return;
+
+                    if (!confirm('Loading items from PR will replace the current item list. Continue?')) return;
+
+                    const itemsContainer = document.getElementById('items-container');
+                    if (!itemsContainer) return;
+                    itemsContainer.innerHTML = '';
+                    itemIndex = 0;
+
+                    prData.details.forEach((detail) => {
+                        itemsContainer.appendChild(buildPrItemRow(detail, itemIndex));
+                        itemIndex++;
+                    });
+
+                    attachItemEventListeners();
+                })
+                .catch(error => {
+                    console.error('Error fetching PR data:', error);
+                    alert('Failed to load PR data. Please try again.');
+                });
         });
 
         // Misc costs dynamic rows
         let miscIndex = {{ $purchaseOrder->miscCosts->count() > 0 ? $purchaseOrder->miscCosts->count() : 1 }};
 
-        document.getElementById('add-misc').addEventListener('click', function() {
+        const addMiscBtn = document.getElementById('add-misc');
+        if (addMiscBtn) addMiscBtn.addEventListener('click', function() {
             const container = document.getElementById('misc-costs-container');
+            if (!container) return;
             const row = document.createElement('div');
             row.className = 'misc-row d-flex mb-1 align-items-center';
             row.innerHTML = `
@@ -893,7 +989,8 @@
             miscIndex++;
         });
 
-        document.getElementById('misc-costs-container').addEventListener('click', function(e) {
+        const miscCostsContainer = document.getElementById('misc-costs-container');
+        if (miscCostsContainer) miscCostsContainer.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-misc')) {
                 if (document.querySelectorAll('.misc-row').length > 1) {
                     e.target.closest('.misc-row').remove();
@@ -912,32 +1009,35 @@
         const bankAccountRow = document.getElementById('bank_account_row');
 
         function updateBankAccountRow() {
+            if (!bankAccountRow || !pembayaranSelect) return;
             bankAccountRow.style.display = pembayaranSelect.value === 'non_tunai' ? 'flex' : 'none';
         }
 
         function updatePaymentFields() {
+            if (!paymentMethodSelect) return;
             const method = paymentMethodSelect.value;
             if (!method) {
-                pembayaranField.style.display = 'none';
-                bankAccountRow.style.display = 'none';
+                if (pembayaranField) pembayaranField.style.display = 'none';
+                if (bankAccountRow) bankAccountRow.style.display = 'none';
                 return;
             }
             if (method === 'credit') {
-                pembayaranSelect.value = 'non_tunai';
-                pembayaranField.style.display = 'none';
-                bankAccountRow.style.display = 'flex';
+                if (pembayaranSelect) pembayaranSelect.value = 'non_tunai';
+                if (pembayaranField) pembayaranField.style.display = 'none';
+                if (bankAccountRow) bankAccountRow.style.display = 'flex';
             } else {
-                pembayaranField.style.display = 'block';
+                if (pembayaranField) pembayaranField.style.display = 'block';
                 updateBankAccountRow();
             }
         }
 
-        paymentMethodSelect.addEventListener('change', updatePaymentFields);
-        pembayaranSelect.addEventListener('change', updateBankAccountRow);
+        if (paymentMethodSelect) paymentMethodSelect.addEventListener('change', updatePaymentFields);
+        if (pembayaranSelect) pembayaranSelect.addEventListener('change', updateBankAccountRow);
         updatePaymentFields();
 
         // Warn on zero prices before submit
-        document.querySelector('form').addEventListener('submit', function(e) {
+        const formEl = document.querySelector('form');
+        if (formEl) formEl.addEventListener('submit', function(e) {
             const zeroPriceInputs = Array.from(document.querySelectorAll('.item-row .price'))
                 .filter(input => parseFloat(input.value) === 0);
             if (zeroPriceInputs.length > 0) {

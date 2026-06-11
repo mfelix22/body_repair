@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
     Route::post('purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase_requests.cancel');
     Route::post('purchase-requests/{purchaseRequest}/close', [PurchaseRequestController::class, 'close'])->name('purchase_requests.close');
     Route::get('purchase-requests/{purchaseRequest}/print', [PurchaseRequestController::class, 'print'])->name('purchase_requests.print')->middleware('signed');
+    Route::get('purchase-requests/{purchaseRequest}/json', [PurchaseRequestController::class, 'getJson'])->name('purchase_requests.json');
 
     // Purchase Orders
     Route::resource('purchase-orders', PurchaseOrderController::class)->names('purchase_orders');

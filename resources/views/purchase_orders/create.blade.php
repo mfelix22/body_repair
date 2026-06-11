@@ -678,7 +678,7 @@
         attachItemEventListeners();
 
         // Warn on submit if any conversion overrides are active
-        document.querySelector('form[action="{{ route(\'purchase_orders.store\') }}"]')
+        document.querySelector('form[action="{{ route("purchase_orders.store") }}"]')
             .addEventListener('submit', function(e) {
                 const overrides = Array.from(document.querySelectorAll('.conv-warning'))
                     .filter(el => el.style.display !== 'none' && el.textContent !== '');

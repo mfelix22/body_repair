@@ -226,10 +226,16 @@
                             }
                         }
                     ],
-                    columnDefs: [{
-                        orderable: false,
-                        targets: 7
-                    }]
+                    columnDefs: [
+                        {
+                            type: 'date',
+                            targets: 2
+                        },
+                        {
+                            orderable: false,
+                            targets: 7
+                        }
+                    ]
                 };
             }
 

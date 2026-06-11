@@ -217,6 +217,16 @@ class PurchaseRequestController extends Controller
         return view('purchase_requests.show', compact('purchaseRequest'));
     }
 
+    public function getJson(PurchaseRequest $purchaseRequest)
+    {
+        $purchaseRequest->load([
+            'details.item.itemUoms.uom',
+            'details.item.smallestUom',
+            'details.uom'
+        ]);
+        return response()->json($purchaseRequest);
+    }
+
     public function edit(PurchaseRequest $purchaseRequest)
     {
         $user = auth()->user();
