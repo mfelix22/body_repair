@@ -17,6 +17,11 @@ use App\Models\AuditLog;
 use App\Models\StockTransaction;
 use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use App\Helpers\PermissionHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -1156,6 +1161,104 @@ class PurchaseOrderController extends Controller
         $safeFilename = str_replace('/', '-', $purchaseOrder->po_number);
         AuditLog::logPrint($purchaseOrder, $purchaseOrder->po_number);
         return $pdf->download('PO-' . $safeFilename . '.pdf');
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $poType = $request->query('type', 'purchase_order');
+
+        $orders = PurchaseOrder::with(['details.item', 'details.uom', 'creator', 'approver'])
+            ->where('po_type', $poType)
+            ->orderBy('order_date', 'desc')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle($poType === 'service_order' ? 'Service Orders' : 'Purchase Orders');
+
+        // Header row
+        $headers = ['PO Number', 'Supplier', 'Order Date', 'Status', 'Total Amount', 'Item #', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total Price'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $headerStyle = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2E4053']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
+        ];
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(18);
+
+        $poRowStyle = [
+            'font' => ['bold' => true],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D6EAF8']],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'AEB6BF']]],
+        ];
+        $detailRowStyle = [
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8F9FA']],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D5D8DC']]],
+        ];
+
+        $statusLabels = [
+            'on_progress'     => 'On Progress',
+            'approved'        => 'Approved',
+            'partial'         => 'Partial',
+            'received'        => 'Received',
+            'completed'       => 'Completed',
+            'closed_shortage' => 'Closed w/ Shortage',
+            'cancelled'       => 'Cancelled',
+        ];
+
+        $row = 2;
+        foreach ($orders as $po) {
+            $poRow = $row;
+            $sheet->setCellValue("A{$row}", $po->po_number);
+            $sheet->setCellValue("B{$row}", $po->supplier_name);
+            $sheet->setCellValue("C{$row}", $po->order_date->format('d M Y'));
+            $sheet->setCellValue("D{$row}", $statusLabels[$po->status] ?? ucfirst($po->status));
+            $sheet->setCellValue("E{$row}", 'Rp ' . number_format($po->total_amount, 0, ',', '.'));
+            $sheet->getStyle("A{$row}:K{$row}")->applyFromArray($poRowStyle);
+            $row++;
+
+            foreach ($po->details as $i => $detail) {
+                $name = $poType === 'service_order'
+                    ? ($detail->service_description ?? '-')
+                    : ($detail->item->name ?? 'N/A');
+                $uom = $poType === 'service_order' ? '-' : ($detail->uom->code ?? '-');
+
+                $sheet->setCellValue("F{$row}", $i + 1);
+                $sheet->setCellValue("G{$row}", $name);
+                $sheet->setCellValue("H{$row}", number_format($detail->quantity, 0, ',', '.'));
+                $sheet->setCellValue("I{$row}", $uom);
+                $sheet->setCellValue("J{$row}", 'Rp ' . number_format($detail->unit_price, 0, ',', '.'));
+                $sheet->setCellValue("K{$row}", 'Rp ' . number_format($detail->total_price, 0, ',', '.'));
+                $sheet->getStyle("A{$row}:K{$row}")->applyFromArray($detailRowStyle);
+                $sheet->getStyle("F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("H{$row}:I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $row++;
+            }
+        }
+
+        // Column widths
+        $colWidths = ['A' => 22, 'B' => 28, 'C' => 14, 'D' => 18, 'E' => 18,
+                      'F' => 6,  'G' => 38, 'H' => 8,  'I' => 8,  'J' => 16, 'K' => 16];
+        foreach ($colWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+
+        $typeLabel = $poType === 'service_order' ? 'Service-Orders' : 'Purchase-Orders';
+        $filename  = $typeLabel . '-' . now()->format('Ymd') . '.xlsx';
+
+        $writer = new Xlsx($spreadsheet);
+        $response = response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control'       => 'max-age=0',
+        ]);
+
+        return $response;
     }
 
     private function refreshPurchaseOrderStatus(PurchaseOrder $purchaseOrder): void

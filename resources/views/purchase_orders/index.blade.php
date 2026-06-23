@@ -45,9 +45,13 @@
                     <div class="tab-content" id="poTabsContent">
                         {{-- PPB Tab --}}
                         <div class="tab-pane fade show active" id="ppb" role="tabpanel">
-                            <div class="mt-3 mb-2">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
                                 <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
                                     placeholder="Filter by item name..." style="max-width:320px">
+                                <a href="{{ route('purchase_orders.export_excel', ['type' => 'purchase_order']) }}"
+                                   class="btn btn-sm btn-success ml-2">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
                             </div>
                             <div class="table-responsive">
                                 <table id="ppb-table" class="table table-bordered table-striped">
@@ -74,9 +78,7 @@
                                                 <td>{{ $po->order_date->format('M d, Y') }}</td>
                                                 <td>{{ $po->details_count }} items</td>
                                                 @if (\App\Helpers\PermissionHelper::canViewPrices())
-                                                    <td><strong>Rp
-                                                            {{ number_format($po->total_amount, 0, ',', '.') }}</strong>
-                                                    </td>
+                                                    <td><strong>Rp {{ number_format($po->total_amount, 0, ',', '.') }}</strong></td>
                                                 @endif
                                                 <td>
                                                     <span
@@ -117,9 +119,13 @@
 
                         {{-- PPJ Tab --}}
                         <div class="tab-pane fade" id="ppj" role="tabpanel">
-                            <div class="mt-3 mb-2">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
                                 <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
                                     placeholder="Filter by service description..." style="max-width:320px">
+                                <a href="{{ route('purchase_orders.export_excel', ['type' => 'service_order']) }}"
+                                   class="btn btn-sm btn-success ml-2">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
                             </div>
                             <div class="table-responsive">
                                 <table id="ppj-table" class="table table-bordered table-striped">
@@ -146,9 +152,7 @@
                                                 <td>{{ $so->order_date->format('M d, Y') }}</td>
                                                 <td>{{ $so->details_count }} services</td>
                                                 @if (\App\Helpers\PermissionHelper::canViewPrices())
-                                                    <td><strong>Rp
-                                                            {{ number_format($so->total_amount, 0, ',', '.') }}</strong>
-                                                    </td>
+                                                    <td><strong>Rp {{ number_format($so->total_amount, 0, ',', '.') }}</strong></td>
                                                 @endif
                                                 <td>
                                                     <span
@@ -212,13 +216,6 @@
                     ],
                     dom: 'Bfrtip',
                     buttons: [{
-                            extend: 'excel',
-                            className: 'btn btn-sm btn-success',
-                            exportOptions: {
-                                columns: [0, 1, 2, 3, 4, 5]
-                            }
-                        },
-                        {
                             extend: 'print',
                             className: 'btn btn-sm btn-secondary',
                             exportOptions: {

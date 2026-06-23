@@ -137,6 +137,7 @@ Route::middleware('auth')->group(function () {
     Route::get('purchase-requests/{purchaseRequest}/json', [PurchaseRequestController::class, 'getJson'])->name('purchase_requests.json');
 
     // Purchase Orders
+    Route::get('purchase-orders/export-excel', [PurchaseOrderController::class, 'exportExcel'])->name('purchase_orders.export_excel');
     Route::resource('purchase-orders', PurchaseOrderController::class)->names('purchase_orders');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('purchase_orders.approve');
     Route::post('purchase-orders/{purchaseOrder}/revoke-approval', [PurchaseOrderController::class, 'revokeApproval'])->name('purchase_orders.revoke_approval');
