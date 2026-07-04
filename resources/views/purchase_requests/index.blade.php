@@ -66,7 +66,14 @@
                                     $canCancelPr = false;
                                 @endphp
                                 <tr>
-                                    <td>{{ $pr->pr_number }}</td>
+                                    <td>
+                                        {{ $pr->pr_number }}
+                                        @if ($pr->status !== 'cancelled' && !$pr->isFullyOrdered() && $pr->type === 'Barang')
+                                            <span class="badge badge-warning ml-1" title="Some items are not fully ordered yet">
+                                                <i class="fas fa-exclamation-circle"></i> Pending Order
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <span class="badge badge-{{ $pr->type === 'Jasa' ? 'info' : 'primary' }}">
                                             {{ $pr->type === 'Jasa' ? 'PPJ' : 'PPB' }}

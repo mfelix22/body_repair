@@ -127,12 +127,18 @@
 
                 <div class="card-body">
                     <table class="table table-bordered table-striped">
+                        @php
+                            $canViewCost = auth()->user() && auth()->user()->hasAnyRole(['accounting', 'director','viewer', 'super_admin']);
+                        @endphp
                         <thead>
                             <tr>
                                 <th>Date</th>
                                 <th>Item</th>
                                 <th>Type</th>
                                 <th>Quantity</th>
+                                @if ($canViewCost)
+                                    <th>Unit Cost</th>
+                                @endif
                                 <th>Calculation</th>
                                 <th>Balance</th>
                                 <th>Reference</th>
@@ -161,6 +167,15 @@
                                     <td>
                                         <strong>{{ $transaction->quantity > 0 ? '+' : '' }}{{ number_format($transaction->quantity, 2) }}</strong>
                                     </td>
+                                    @if ($canViewCost)
+                                        <td>
+                                            @if ($transaction->unit_cost > 0)
+                                                <span class="text-monospace">Rp {{ number_format($transaction->unit_cost, 2) }}</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td class="font-italic text-muted">
                                         {{ number_format($previousBalance, 2) }}
                                         {{ $transaction->quantity > 0 ? '+' : '-' }}

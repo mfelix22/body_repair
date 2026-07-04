@@ -469,6 +469,7 @@ class BonOutController extends Controller
                         'item_id'          => $item->id,
                         'transaction_type' => 'out',
                         'quantity'         => -$actualQty,
+                        'unit_cost'        => $avgCostAtIssue,
                         'balance_after'    => $stock->quantity,
                         'location'         => 'default',
                         'reference_type'   => $isStandalone ? 'ADJUSTMENT_OUT' : 'BON_OUT',

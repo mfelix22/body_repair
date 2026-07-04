@@ -14,7 +14,7 @@
                             <i class="fas fa-arrow-left"></i> Back
                         </a>
                         @if ($invoice->status !== 'cancelled')
-                            @if (\App\Helpers\PermissionHelper::canPrint('invoices'))
+                            @if (\App\Helpers\PermissionHelper::canPrint('invoices') || auth()->user()->hasAnyRole(['accounting']))
                                 <a href="{{ \URL::temporarySignedRoute('invoices.print', now()->addMinutes(5), $invoice) }}"
                                     target="_blank" class="btn btn-default btn-sm">
                                     <i class="fas fa-print"></i> Print
@@ -177,8 +177,6 @@
                             <tr>
                                 <th>Description</th>
                                 <th>Qty</th>
-                                <th>Rate</th>
-                                <th>Total</th>
                                 <th>Remarks</th>
                             </tr>
                         </thead>
@@ -188,13 +186,15 @@
                                     <td>{{ $labor->description }}</td>
                                     <td>{{ rtrim(rtrim(number_format((float) ($labor->qty ?? 1), 2, '.', ''), '0'), '.') }}
                                     </td>
-                                    <td>Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
-                                    <td>Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ $labor->remarks ?? '-' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                    @php $baseLabor = $invoice->workOrder->labors->where('is_extra', false)->sum('total_price'); @endphp
+                    @if ($baseLabor > 0)
+                        <small class="text-muted">Base labor: Rp {{ number_format($baseLabor, 0, ',', '.') }} (included in total).</small>
+                    @endif
 
                     <hr>
                     <div class="row">

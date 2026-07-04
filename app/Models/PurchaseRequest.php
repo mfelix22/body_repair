@@ -23,6 +23,7 @@ class PurchaseRequest extends Model
         'gm_at',
         'purchasing_received_by',
         'purchasing_received_at',
+        'attachment_path',
     ];
 
     protected $casts = [
@@ -65,6 +66,11 @@ class PurchaseRequest extends Model
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(PurchaseRequestAttachment::class);
     }
 
     /**

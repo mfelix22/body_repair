@@ -167,7 +167,7 @@
                                 <div class="form-group">
                                     <div class="custom-control custom-checkbox">
                                         <input type="checkbox" name="include_ppn" id="include_ppn"
-                                            class="custom-control-input" {{ old('include_ppn', true) ? 'checked' : '' }}
+                                            class="custom-control-input" {{ old('include_ppn') ? 'checked' : '' }}
                                             value="1">
                                         <label class="custom-control-label" for="include_ppn">
                                             Include PPN 11%
@@ -391,6 +391,9 @@
                     </div>
 
                     <div class="card-footer">
+                        <button type="button" class="btn btn-info" id="preview-print">
+                            <i class="fas fa-eye"></i> Preview Print
+                        </button>
                         <button type="submit" class="btn btn-primary">Create PO</button>
                         <a href="{{ route('purchase_orders.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
@@ -576,6 +579,7 @@
         function handleItemChange(e) {
             const row = this.closest('.item-row');
             const uomSelect = row.querySelector('.uom-select');
+            const previousUomId = uomSelect.value;
             const priceInput = row.querySelector('.price');
             const totalInput = row.querySelector('.total');
             const convInput = row.querySelector('.conv-input');
@@ -585,11 +589,17 @@
             const smallestUomCode = option.dataset.smallestUom || '';
 
             uomSelect.innerHTML = '<option value="">Select UOM</option>';
+            let matchedPrevious = false;
             uoms.forEach(uom => {
                 const opt = document.createElement('option');
                 opt.value = uom.uom_id;
                 opt.textContent = uom.uom.name + ' (' + uom.uom.code + ')';
-                if (uom.is_default) opt.selected = true;
+                if (String(uom.uom_id) === String(previousUomId)) {
+                    opt.selected = true;
+                    matchedPrevious = true;
+                } else if (uom.is_default && !matchedPrevious) {
+                    opt.selected = true;
+                }
                 uomSelect.appendChild(opt);
             });
 
@@ -1089,6 +1099,92 @@
             const originalAddItem = document.getElementById('add-item').onclick;
             document.getElementById('add-item').addEventListener('click', function() {
                 setTimeout(initItemSelect2, 100);
+            });
+
+            // Preview Print button handler
+            document.getElementById('preview-print').addEventListener('click', function() {
+                const poType = document.getElementById('po_type').value;
+                const supplierName = document.getElementById('supplier_name').value;
+                const itemRows = document.querySelectorAll('.item-row');
+
+                if (!poType) { alert('Please select PO Type first.'); return; }
+                if (!supplierName) { alert('Please enter Supplier Name.'); return; }
+                if (itemRows.length === 0) { alert('Please add at least one item.'); return; }
+
+                const button = this;
+                const originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
+
+                // Build form data manually to ensure items are captured
+                const formData = new FormData();
+                const form = document.querySelector('form');
+
+                // Add all basic form fields
+                for (const element of form.elements) {
+                    if (element.name && !element.disabled && !element.name.startsWith('items[')) {
+                        if (element.type === 'checkbox' || element.type === 'radio') {
+                            if (element.checked) {
+                                formData.append(element.name, element.value);
+                            }
+                        } else if (element.type === 'select-multiple') {
+                            for (const option of element.selectedOptions) {
+                                formData.append(element.name, option.value);
+                            }
+                        } else if (element.type !== 'submit' && element.type !== 'button') {
+                            formData.append(element.name, element.value);
+                        }
+                    }
+                }
+
+                // Add items manually from the DOM
+                itemRows.forEach((row, index) => {
+                    const itemId = row.querySelector(`[name*="[item_id]"]`);
+                    const uomId = row.querySelector(`[name*="[uom_id]"]`);
+                    const serviceDesc = row.querySelector(`[name*="[service_description]"]`);
+                    const quantity = row.querySelector(`[name*="[quantity]"]`);
+                    const unitPrice = row.querySelector(`[name*="[unit_price]"]`);
+                    const conversion = row.querySelector(`[name*="[conversion_to_smallest]"]`);
+                    const remarks = row.querySelector(`[name*="[remarks]"]`);
+                    const prDetailId = row.querySelector(`[name*="[purchase_request_detail_id]"]`);
+
+                    if (itemId) formData.append(`items[${index}][item_id]`, itemId.value);
+                    if (uomId) formData.append(`items[${index}][uom_id]`, uomId.value);
+                    if (serviceDesc) formData.append(`items[${index}][service_description]`, serviceDesc.value);
+                    if (quantity) formData.append(`items[${index}][quantity]`, quantity.value);
+                    if (unitPrice) formData.append(`items[${index}][unit_price]`, unitPrice.value);
+                    if (conversion) formData.append(`items[${index}][conversion_to_smallest]`, conversion.value);
+                    if (remarks) formData.append(`items[${index}][remarks]`, remarks.value);
+                    if (prDetailId) formData.append(`items[${index}][purchase_request_detail_id]`, prDetailId.value);
+                });
+
+                fetch('{{ route("purchase_orders.preview") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/pdf',
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(text);
+                        });
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                })
+                .catch(error => {
+                    alert('Error generating preview: ' + error.message);
+                })
+                .finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
             });
         });
     </script>

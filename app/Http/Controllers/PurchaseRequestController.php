@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestDetail;
+use App\Models\PurchaseRequestAttachment;
 use App\Models\Item;
 use App\Models\UOM;
 use App\Models\User;
@@ -12,12 +13,13 @@ use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PurchaseRequestController extends Controller
 {
     public function index()
     {
-        $query = PurchaseRequest::with(['requestor', 'deptHeadApprover', 'gmApprover'])
+        $query = PurchaseRequest::with(['requestor', 'deptHeadApprover', 'gmApprover', 'details'])
             ->withCount('details');
 
         // Filter by type if requested
@@ -82,6 +84,8 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.service_description'] = 'required|string|min:3';
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'nullable|exists:uoms,id';
+            $baseRules['attachments'] = 'nullable|array';
+            $baseRules['attachments.*'] = 'file|mimes:jpg,jpeg,png,pdf|max:5120';
         } else {
             // Barang (Items)
             $baseRules['items.*.is_custom_item'] = 'nullable|boolean';
@@ -131,6 +135,20 @@ class PurchaseRequestController extends Controller
             'require_acknowledgement' => $request->boolean('require_acknowledgement', true),
             'status' => 'on_progress',
         ]);
+
+        // Handle multiple attachments for Jasa type
+        if ($type === 'Jasa' && $request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('ppj_attachments', 'public');
+                PurchaseRequestAttachment::create([
+                    'purchase_request_id' => $pr->id,
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_type' => $file->getClientMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
 
         foreach ($validated['items'] as $itemData) {
             $detailData = [
@@ -505,6 +523,8 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.service_description'] = 'required|string|min:3';
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'nullable|exists:uoms,id';
+            $baseRules['attachments'] = 'nullable|array';
+            $baseRules['attachments.*'] = 'file|mimes:jpg,jpeg,png,pdf|max:5120';
         } else {
             // Barang (Items)
             $baseRules['items.*.is_custom_item'] = 'nullable|boolean';
@@ -530,12 +550,37 @@ class PurchaseRequestController extends Controller
             }
         }
 
-        $purchaseRequest->update([
+        $updateData = [
             'request_date' => $validated['request_date'],
             'notes' => $validated['notes'],
             'type' => $validated['type'],
             'require_acknowledgement' => $request->boolean('require_acknowledgement', true),
-        ]);
+        ];
+
+        $purchaseRequest->update($updateData);
+
+        // Handle multiple attachments for Jasa type
+        if ($type === 'Jasa') {
+            // Delete old attachments
+            foreach ($purchaseRequest->attachments as $oldAttachment) {
+                Storage::disk('public')->delete($oldAttachment->file_path);
+                $oldAttachment->delete();
+            }
+
+            // Add new attachments if provided
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $path = $file->store('ppj_attachments', 'public');
+                    PurchaseRequestAttachment::create([
+                        'purchase_request_id' => $purchaseRequest->id,
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_type' => $file->getClientMimeType(),
+                        'file_size' => $file->getSize(),
+                    ]);
+                }
+            }
+        }
 
         // Delete old details and create new
         $purchaseRequest->details()->delete();
@@ -632,7 +677,7 @@ class PurchaseRequestController extends Controller
 
     public function print(PurchaseRequest $purchaseRequest)
     {
-        if (!PermissionHelper::canPrint('purchase_requests')) {
+        if (!PermissionHelper::canPrint('purchase_requests') && !auth()->user()->hasAnyRole(['purchasing'])) {
             return PermissionHelper::denyAccess('purchase_requests', 'view');
         }
 
@@ -680,6 +725,20 @@ class PurchaseRequestController extends Controller
 
         return redirect()->route('purchase_requests.show', $purchaseRequest)
             ->with('success', 'PPB/PPJ has been closed. No further POs will be created from this request.');
+    }
+
+    public function attachment(PurchaseRequest $purchaseRequest)
+    {
+        if (!$purchaseRequest->attachment_path || $purchaseRequest->type !== 'Jasa') {
+            abort(404);
+        }
+
+        $path = Storage::disk('public')->path($purchaseRequest->attachment_path);
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        return response()->file($path);
     }
 
     private function canCancelPurchaseRequest(?User $user, PurchaseRequest $purchaseRequest): bool

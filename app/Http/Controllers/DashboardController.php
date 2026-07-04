@@ -21,7 +21,7 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasAnyRole(['super_admin', 'admin', 'director'])) {
+        if ($user->hasAnyRole(['super_admin', 'admin', 'director', 'viewer'])) {
             return $this->adminDashboard();
         }
 
@@ -129,13 +129,76 @@ class DashboardController extends Controller
         $revenueThisMonth      = $monthlyRevenue[$currentMonth] ?? 0;
         $materialCostThisMonth = $monthlyMaterialCost[$currentMonth] ?? 0;
 
+        // Active WOs created this month, excluding invoiced & cancelled
+        $monthStart = now()->startOfMonth();
+        $monthEnd   = now()->endOfMonth();
+        $activeWorkOrdersThisMonth = WorkOrder::with('customer')
+            ->whereNotIn('status', ['invoiced', 'cancelled'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return view('dashboard', compact(
             'summary', 'entityCounts', 'statusSections',
             'recentWorkOrders', 'recentPurchaseOrders',
             'recentInvoices', 'recentStockTransactions', 'lowStockItems',
             'monthNames', 'monthlyRevenue', 'monthlyMaterialCost',
-            'revenueThisMonth', 'materialCostThisMonth', 'currentYear'
+            'revenueThisMonth', 'materialCostThisMonth', 'currentYear',
+            'activeWorkOrdersThisMonth'
         ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Dashboard: Active WOs JSON (AJAX filter)
+    // -------------------------------------------------------------------------
+    public function activeWorkOrdersJson(\Illuminate\Http\Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'director', 'viewer'])) {
+            abort(403);
+        }
+
+        $month = (int) $request->input('month', now()->month);
+        $year  = (int) $request->input('year',  now()->year);
+
+        $month = max(1, min(12, $month));
+        $year  = max(2020, min((int) now()->year + 1, $year));
+
+        $start = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $end   = $start->clone()->endOfMonth();
+
+        $wos = WorkOrder::with('customer')
+            ->whereNotIn('status', ['invoiced', 'cancelled'])
+            ->whereBetween('created_at', [$start, $end])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($wo) {
+                return [
+                    'id'               => $wo->id,
+                    'wo_number'        => $wo->wo_number,
+                    'wo_url'           => route('work_orders.show', $wo),
+                    'customer_name'    => $wo->customer->name ?? '-',
+                    'vehicle_plate'    => $wo->vehicle_plate ?? '-',
+                    'vehicle_merk'     => $wo->vehicle_merk ?? '',
+                    'vehicle_type_year'=> $wo->vehicle_type_year ?? '',
+                    'paket_name'       => $wo->paket_name ?? '',
+                    'paket_size'       => $wo->paket_size ?? '',
+                    'description'      => $wo->description ?? '',
+                    'grand_total'      => (float) $wo->grand_total,
+                    'status'           => $wo->status,
+                    'created_at'       => $wo->created_at->format('d M'),
+                    'deadline'         => $wo->deadline ? $wo->deadline->format('d M Y') : null,
+                    'deadline_past'    => $wo->deadline ? $wo->deadline->isPast() : false,
+                ];
+            });
+
+        return response()->json([
+            'month'      => $month,
+            'year'       => $year,
+            'label'      => $start->format('F Y'),
+            'count'      => $wos->count(),
+            'work_orders'=> $wos,
+        ]);
     }
 
     // -------------------------------------------------------------------------

@@ -82,6 +82,26 @@
                                             <span class="invalid-feedback">{{ $message }}</span>
                                         @enderror
                                     </div>
+
+                                    <div class="form-group">
+                                        <label for="billing_customer_id">Ditujukan Kepada
+                                            <small class="text-muted">(opsional — nama customer di Invoice)</small>
+                                        </label>
+                                        <select name="billing_customer_id" id="billing_customer_id"
+                                            class="form-control select2 @error('billing_customer_id') is-invalid @enderror">
+                                            <option value="">-- Sama dengan Customer --</option>
+                                            @foreach ($customers as $customer)
+                                                <option value="{{ $customer->id }}"
+                                                    {{ old('billing_customer_id') == $customer->id ? 'selected' : '' }}>
+                                                    {{ $customer->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('billing_customer_id')
+                                            <span class="invalid-feedback">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+
                                     <div class="form-group">
                                         <label for="work_date">Work Date <span class="text-danger">*</span></label>
                                         <input type="date" name="work_date" id="work_date"
@@ -238,8 +258,12 @@
                                                 <td>Jasa Paket</td>
                                                 <td class="text-right"><strong id="display_material">Rp 0</strong></td>
                                             </tr>
+                                            <tr id="display_base_labor_row">
+                                                <td>Base Labors</td>
+                                                <td class="text-right"><strong id="display_base_labor">Rp 0</strong></td>
+                                            </tr>
                                             <tr id="display_addon_row" style="display:none;">
-                                                <td>Labor</td>
+                                                <td>Addon Labors</td>
                                                 <td class="text-right"><strong id="display_addon_labor">Rp 0</strong></td>
                                             </tr>
                                             <tr class="table-success">
@@ -279,57 +303,24 @@
                             <hr>
                             <h5><i class="fas fa-user-tie"></i> Labor</h5>
 
-                            {{-- Hidden labor options source for JS --}}
-                            <select id="labor-options-source" class="d-none">
-                                <option value="">— Select Labor —</option>
-                                @foreach ($masterLabors as $ml)
-                                    <option value="{{ $ml->id }}" data-description="{{ $ml->description }}"
-                                        data-price_0_300="{{ (float) ($ml->price_0_300 ?? 0) }}"
-                                        data-price_300_500="{{ (float) ($ml->price_300_500 ?? 0) }}"
-                                        data-price_500_800="{{ (float) ($ml->price_500_800 ?? 0) }}"
-                                        data-price_800_2000="{{ (float) ($ml->price_800_2000 ?? 0) }}">
-                                        {{ $ml->labor_code }} — {{ $ml->description }}
-                                    </option>
-                                @endforeach
-                            </select>
-
                             <div id="labors-container">
                                 <div class="labor-row card mb-2 border-left-success">
                                     <div class="card-body py-2">
-                                        <div class="row align-items-end mb-2">
+                                        <div class="row align-items-end">
                                             <div class="col-md-5">
                                                 <div class="form-group mb-0">
                                                     <label><strong>Labor</strong></label>
-                                                    <select name="labors[0][labor_id]" class="form-control labor-select">
-                                                        <option value="">— Select Labor —</option>
+                                                    <select name="labors[0][labor_id]" class="form-control labor-select" required>
+                                                        <option value="">-- Select Labor --</option>
                                                         @foreach ($masterLabors as $ml)
-                                                            <option value="{{ $ml->id }}"
-                                                                data-description="{{ $ml->description }}"
-                                                                data-price_0_300="{{ (float) ($ml->price_0_300 ?? 0) }}"
-                                                                data-price_300_500="{{ (float) ($ml->price_300_500 ?? 0) }}"
-                                                                data-price_500_800="{{ (float) ($ml->price_500_800 ?? 0) }}"
-                                                                data-price_800_2000="{{ (float) ($ml->price_800_2000 ?? 0) }}">
+                                                            <option value="{{ $ml->id }}" data-price="{{ $ml->price }}">
                                                                 {{ $ml->labor_code }} — {{ $ml->description }}
                                                             </option>
                                                         @endforeach
                                                     </select>
-                                                    <input type="hidden" name="labors[0][description]"
-                                                        class="labor-description">
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-group mb-0">
-                                                    <label><strong>Price Tier</strong></label>
-                                                    <select class="form-control labor-tier">
-                                                        <option value="">— Tier —</option>
-                                                        <option value="price_0_300">0–300 jt</option>
-                                                        <option value="price_300_500">300–500 jt</option>
-                                                        <option value="price_500_800">500–800 jt</option>
-                                                        <option value="price_800_2000">800 jt–2M</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-1">
                                                 <div class="form-group mb-0">
                                                     <label><strong>Qty</strong></label>
                                                     <input type="number" name="labors[0][qty]"
@@ -340,31 +331,19 @@
                                             <div class="col-md-2">
                                                 <div class="form-group mb-0">
                                                     <label><strong>Rate (Rp)</strong></label>
-                                                    <input type="number" name="labors[0][rate]"
-                                                        class="form-control labor-rate" min="0" step="1"
-                                                        placeholder="0">
+                                                    <input type="number" class="form-control labor-rate" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-group mb-0">
+                                                    <label><strong>Total (Rp)</strong></label>
+                                                    <input type="text" class="form-control labor-total-display" readonly>
                                                 </div>
                                             </div>
                                             <div class="col-md-1">
-                                                <div class="form-group mb-0">
-                                                    <label><strong>Total</strong></label>
-                                                    <div
-                                                        class="font-weight-bold text-success small pt-1 labor-total-display">
-                                                        Rp 0</div>
-                                                    <input type="hidden" name="labors[0][total_price]"
-                                                        class="labor-total-price" value="0">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-1 d-flex align-items-end pb-1">
                                                 <button type="button" class="btn btn-danger btn-sm remove-labor">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-11">
-                                                <input type="text" name="labors[0][remarks]"
-                                                    class="form-control form-control-sm" placeholder="Remarks (optional)">
                                             </div>
                                         </div>
                                     </div>
@@ -655,35 +634,28 @@
                 }
             }
 
-            function updatePriceDisplay(grandTotal) {
-                document.getElementById('display_material').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
-                document.getElementById('display_grand_total').textContent = 'Rp ' + (grandTotal + getAddonLaborTotal())
-                    .toLocaleString('id-ID');
-                document.getElementById('paket_price_display').style.display = 'block';
-            }
-
-            function getAddonLaborTotal() {
+            function getBaseLaborTotal() {
                 let total = 0;
-                document.querySelectorAll('.labor-total-price').forEach(function(el) {
-                    total += parseFloat(el.value) || 0;
+                document.querySelectorAll('.labor-row').forEach(function(row) {
+                    const select = row.querySelector('.labor-select');
+                    const qtyInput = row.querySelector('.labor-qty');
+                    if (select && select.value && qtyInput) {
+                        const opt = select.options[select.selectedIndex];
+                        const price = parseFloat(opt.dataset.price) || 0;
+                        const qty = parseFloat(qtyInput.value) || 0;
+                        total += price * qty;
+                    }
                 });
                 return total;
             }
 
-            function refreshGrandTotal() {
-                const paketTotal = parseFloat(document.getElementById('paket_grand_total').value) || 0;
-                if (!paketTotal) return;
-                const addonTotal = getAddonLaborTotal();
-                document.getElementById('display_material').textContent = 'Rp ' + paketTotal.toLocaleString('id-ID');
-                const addonRow = document.getElementById('display_addon_row');
-                if (addonTotal > 0) {
-                    document.getElementById('display_addon_labor').textContent = 'Rp ' + addonTotal.toLocaleString('id-ID');
-                    addonRow.style.display = '';
-                } else {
-                    addonRow.style.display = 'none';
-                }
-                document.getElementById('display_grand_total').textContent = 'Rp ' + (paketTotal + addonTotal).toLocaleString(
-                    'id-ID');
+            function updatePriceDisplay(paketTotal) {
+                const baseLabor = getBaseLaborTotal();
+                const material = Math.max(0, paketTotal - baseLabor);
+                const grandTotal = paketTotal > 0 ? paketTotal : baseLabor;
+                document.getElementById('display_material').textContent = 'Rp ' + material.toLocaleString('id-ID');
+                document.getElementById('display_base_labor').textContent = 'Rp ' + baseLabor.toLocaleString('id-ID');
+                document.getElementById('display_grand_total').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
                 document.getElementById('paket_price_display').style.display = 'block';
             }
 
@@ -850,119 +822,52 @@
                 const container = document.getElementById('labors-container');
                 const newRow = document.createElement('div');
                 newRow.className = 'labor-row card mb-2 border-left-success';
-                newRow.innerHTML = buildLaborRowHtml(laborIndex);
-                container.appendChild(newRow);
-                laborIndex++;
-                attachLaborListeners();
-                initLaborSelect2();
-            });
-
-            // ===== LABOR ROW BUILDER =====
-            function buildLaborOptions(selectedId = null) {
-                const src = document.getElementById('labor-options-source');
-                if (!src) return '<option value="">— Select Labor —</option>';
-                let html = '<option value="">— Select Labor —</option>';
-                Array.from(src.options).forEach(opt => {
-                    if (!opt.value) return;
-                    const sel = selectedId && String(opt.value) === String(selectedId) ? ' selected' : '';
-                    html += `<option value="${opt.value}"
-                        data-description="${opt.dataset.description}"
-                        data-price_0_300="${opt.dataset.price_0_300}"
-                        data-price_300_500="${opt.dataset.price_300_500}"
-                        data-price_500_800="${opt.dataset.price_500_800}"
-                        data-price_800_2000="${opt.dataset.price_800_2000}"${sel}>${opt.textContent.trim()}</option>`;
-                });
-                return html;
-            }
-
-            function buildLaborRowHtml(idx, laborId = null, qty = 1, rate = '', totalPrice = 0, remarks = '') {
-                return `<div class="card-body py-2">
-                    <div class="row align-items-end mb-2">
+                newRow.innerHTML = `
+                <div class="card-body py-2">
+                    <div class="row align-items-end">
                         <div class="col-md-5">
                             <div class="form-group mb-0">
                                 <label><strong>Labor</strong></label>
-                                <select name="labors[${idx}][labor_id]" class="form-control labor-select">
-                                    ${buildLaborOptions(laborId)}
+                                <select name="labors[${laborIndex}][labor_id]" class="form-control labor-select" required>
+                                    <option value="">-- Select Labor --</option>
+                                    @foreach ($masterLabors as $ml)
+                                        <option value="{{ $ml->id }}" data-price="{{ $ml->price }}">
+                                            {{ $ml->labor_code }} — {{ $ml->description }}
+                                        </option>
+                                    @endforeach
                                 </select>
-                                <input type="hidden" name="labors[${idx}][description]" class="labor-description">
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="form-group mb-0">
-                                <label><strong>Price Tier</strong></label>
-                                <select class="form-control labor-tier">
-                                    <option value="">— Tier —</option>
-                                    <option value="price_0_300">0–300 jt</option>
-                                    <option value="price_300_500">300–500 jt</option>
-                                    <option value="price_500_800">500–800 jt</option>
-                                    <option value="price_800_2000">800 jt–2M</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-1">
-                            <div class="form-group mb-0">
                                 <label><strong>Qty</strong></label>
-                                <input type="number" name="labors[${idx}][qty]" class="form-control labor-qty" step="1" min="1" value="${qty}">
+                                <input type="number" name="labors[${laborIndex}][qty]" class="form-control labor-qty" step="1" min="1" value="1">
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="form-group mb-0">
                                 <label><strong>Rate (Rp)</strong></label>
-                                <input type="number" name="labors[${idx}][rate]" class="form-control labor-rate" min="0" step="1" value="${rate}" placeholder="0">
+                                <input type="number" class="form-control labor-rate" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-0">
+                                <label><strong>Total (Rp)</strong></label>
+                                <input type="text" class="form-control labor-total-display" readonly>
                             </div>
                         </div>
                         <div class="col-md-1">
-                            <div class="form-group mb-0">
-                                <label><strong>Total</strong></label>
-                                <div class="font-weight-bold text-success small pt-1 labor-total-display">Rp ${totalPrice.toLocaleString('id-ID')}</div>
-                                <input type="hidden" name="labors[${idx}][total_price]" class="labor-total-price" value="${totalPrice}">
-                            </div>
-                        </div>
-                        <div class="col-md-1 d-flex align-items-end pb-1">
                             <button type="button" class="btn btn-danger btn-sm remove-labor"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-11">
-                            <input type="text" name="labors[${idx}][remarks]" class="form-control form-control-sm" placeholder="Remarks (optional)" value="${remarks}">
-                        </div>
-                    </div>
                 </div>`;
-            }
+                container.appendChild(newRow);
+                laborIndex++;
+                attachLaborListeners();
+                if (typeof initLaborSelect2 === 'function') initLaborSelect2();
+            });
 
-            // ===== LABOR FUNCTIONS =====
-            function attachLaborListeners() {
-                document.querySelectorAll('.labor-row').forEach(function(row) {
-                    if (row.dataset.laborListened) return;
-                    row.dataset.laborListened = '1';
-
-                    function recalcRow() {
-                        const qty = parseFloat(row.querySelector('.labor-qty').value) || 0;
-                        const rate = parseFloat(row.querySelector('.labor-rate').value) || 0;
-                        const total = Math.round(qty * rate);
-                        row.querySelector('.labor-total-display').textContent = 'Rp ' + total.toLocaleString('id-ID');
-                        row.querySelector('.labor-total-price').value = total;
-                        refreshGrandTotal();
-                    }
-
-                    function fillPrice() {
-                        const tierSel = row.querySelector('.labor-tier');
-                        const laborSel = row.querySelector('.labor-select');
-                        const tier = tierSel ? tierSel.value : '';
-                        const opt = laborSel ? laborSel.options[laborSel.selectedIndex] : null;
-                        if (tier && opt && opt.value) {
-                            const price = parseFloat(opt.dataset[tier]) || 0;
-                            row.querySelector('.labor-rate').value = price;
-                        }
-                        recalcRow();
-                    }
-
-                    row.querySelector('.labor-tier').addEventListener('change', fillPrice);
-                    row.querySelector('.labor-qty').addEventListener('input', recalcRow);
-                    row.querySelector('.labor-rate').addEventListener('input', recalcRow);
-                });
-            }
-
+            // ===== ITEM SELECT LISTENERS =====
             function attachItemListeners() {
                 document.querySelectorAll('.item-select').forEach(select => {
                     select.onchange = function() {
@@ -992,15 +897,48 @@
 
             attachItemListeners();
 
+            // ===== LABOR FUNCTIONS =====
+            function attachLaborListeners() {
+                document.querySelectorAll('.labor-select').forEach(select => {
+                    if (select.dataset.hasListener) return;
+                    select.dataset.hasListener = '1';
+                    select.onchange = function() {
+                        const row = this.closest('.labor-row');
+                        const opt = this.options[this.selectedIndex];
+                        const price = parseFloat(opt.dataset.price) || 0;
+                        const qtyInput = row.querySelector('.labor-qty');
+                        const qty = parseFloat(qtyInput.value) || 0;
+                        row.querySelector('.labor-rate').value = price;
+                        row.querySelector('.labor-total-display').value = (price * qty).toLocaleString('id-ID');
+                        const paketTotal = parseFloat(document.getElementById('paket_grand_total').value) || 0;
+                        updatePriceDisplay(paketTotal);
+                    };
+                });
+                document.querySelectorAll('.labor-qty').forEach(input => {
+                    if (input.dataset.hasListener) return;
+                    input.dataset.hasListener = '1';
+                    input.oninput = function() {
+                        const row = this.closest('.labor-row');
+                        const select = row.querySelector('.labor-select');
+                        if (!select || !select.value) return;
+                        const opt = select.options[select.selectedIndex];
+                        const price = parseFloat(opt.dataset.price) || 0;
+                        const qty = parseFloat(this.value) || 0;
+                        row.querySelector('.labor-total-display').value = (price * qty).toLocaleString('id-ID');
+                        const paketTotal = parseFloat(document.getElementById('paket_grand_total').value) || 0;
+                        updatePriceDisplay(paketTotal);
+                    };
+                });
+            }
+
             attachLaborListeners();
 
             // ===== STRIP BLANK ROWS BEFORE SUBMIT =====
             document.querySelector('form').addEventListener('submit', function() {
-                // Remove labor rows with no labor selected and no description
+                // Remove labor rows with no labor selected
                 document.querySelectorAll('.labor-row').forEach(function(row) {
                     const sel = row.querySelector('.labor-select');
-                    const desc = row.querySelector('.labor-description');
-                    if ((!sel || !sel.value) && (!desc || !desc.value.trim())) {
+                    if (!sel || !sel.value) {
                         row.remove();
                     }
                 });
@@ -1128,12 +1066,6 @@
                     allowClear: true,
                     theme: 'bootstrap4'
                 });
-
-                // Must run inside document.ready so layout's global $('.select2').select2()
-                // has already fired — otherwise the containers created here get picked up
-                // by that global init and marked select2-hidden-accessible (1×1px invisible).
-                initItemSelect2();
-                initLaborSelect2();
             });
 
             function initItemSelect2() {
@@ -1182,34 +1114,22 @@
 
             function initLaborSelect2() {
                 $('.labor-select').not('.select2-hidden-accessible').each(function() {
+                    const savedVal = $(this).val();
                     $(this).select2({
-                        placeholder: '— Select Labor —',
-                        allowClear: true,
                         theme: 'bootstrap4',
+                        placeholder: '-- Select Labor --',
+                        allowClear: true,
                         width: '100%'
-                    }).on('select2:select select2:clear', function() {
-                        const row = this.closest('.labor-row');
-                        const opt = this.options[this.selectedIndex];
-                        if (row) {
-                            const descInput = row.querySelector('.labor-description');
-                            if (descInput) descInput.value = (opt && opt.value) ? (opt.dataset.description ||
-                                '') : '';
-                            // Auto-fill price based on current tier
-                            const tierSel = row.querySelector('.labor-tier');
-                            const tier = tierSel ? tierSel.value : '';
-                            if (tier && opt && opt.value) {
-                                const price = parseFloat(opt.dataset[tier]) || 0;
-                                row.querySelector('.labor-rate').value = price;
-                                const qty = parseFloat(row.querySelector('.labor-qty').value) || 0;
-                                const total = Math.round(qty * price);
-                                row.querySelector('.labor-total-display').textContent = 'Rp ' + total
-                                    .toLocaleString('id-ID');
-                                row.querySelector('.labor-total-price').value = total;
-                                refreshGrandTotal();
-                            }
-                        }
+                    }).on('change', function() {
+                        if (this.onchange) this.onchange();
                     });
+                    if (savedVal) {
+                        $(this).val(savedVal).trigger('change');
+                    }
                 });
             }
+
+            initItemSelect2();
+            initLaborSelect2();
         </script>
     @endsection

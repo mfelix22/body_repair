@@ -15,7 +15,7 @@
                     <h3 class="card-title">PPB/PPJ Details</h3>
                 </div>
 
-                <form action="{{ route('purchase_requests.store') }}" method="POST" novalidate>
+                <form action="{{ route('purchase_requests.store') }}" method="POST" enctype="multipart/form-data" novalidate>
                     @csrf
                     <div class="card-body">
                         @if ($errors->any())
@@ -98,6 +98,26 @@
                             </div>
                         </div>
 
+                        <div id="ppj-attachment-section" style="display:none;">
+                            <hr>
+                            <h5>Attachments <small class="text-muted">(PPJ only)</small></h5>
+                            <div class="form-group">
+                                <label for="attachments">Service Banner / Reference Files</label>
+                                <div class="input-group">
+                                    <div class="custom-file">
+                                        <input type="file" name="attachments[]" id="attachments"
+                                            class="custom-file-input @error('attachments') is-invalid @enderror"
+                                            accept=".jpg,.jpeg,.png,.pdf" multiple>
+                                        <label class="custom-file-label" for="attachments">Choose files (jpg, png, pdf — max 5MB each)</label>
+                                    </div>
+                                </div>
+                                @error('attachments')
+                                    <span class="text-danger small">{{ $message }}</span>
+                                @enderror
+                                <small class="form-text text-muted">Optional. Attach service banners, quotation images, or reference documents for this PPJ. You can select multiple files.</small>
+                            </div>
+                        </div>
+
                         <hr>
                         <h5>Items</h5>
                         <div id="no-type-msg" class="alert alert-warning" style="display:none;">
@@ -110,7 +130,7 @@
                                 <option value="{{ $item->id }}" data-uoms='@json($item->itemUoms)'
                                     data-stock="{{ $item->stocks->sum('quantity') }}"
                                     data-smallest-uom="{{ $item->smallestUom->code }}">
-                                    {{ $item->name }} ({{ $item->code }})
+                                    {{ $item->code }} - {{ $item->name }} [{{ $item->getItemTypeNameAttribute() }}]
                                 </option>
                             @endforeach
                         </select>
@@ -312,6 +332,7 @@
         // Initialize on page load
         $(document).ready(function() {
             const type = $('#type').val();
+            toggleAttachmentSection(type);
             if (type) {
                 clearAndAddFirstRow(type);
             } else {
@@ -319,10 +340,28 @@
             }
         });
 
+        function toggleAttachmentSection(type) {
+            if (type === 'Jasa') {
+                $('#ppj-attachment-section').show();
+            } else {
+                $('#ppj-attachment-section').hide();
+                $('#attachments').val('');
+                $('#attachments').next('label').text('Choose files (jpg, png, pdf — max 5MB each)');
+            }
+        }
+
+        // Update file label when files are chosen
+        $('#attachments').on('change', function() {
+            const count = this.files.length;
+            const label = count > 0 ? `${count} file(s) selected` : 'Choose files (jpg, png, pdf — max 5MB each)';
+            $(this).next('label').text(label);
+        });
+
         // When type changes, reset item rows - use jQuery .on() for Select2 compatibility
         $('#type').on('change', function() {
             const type = $(this).val();
             console.log('[TYPE] Type changed:', type);
+            toggleAttachmentSection(type);
             if (type) {
                 clearAndAddFirstRow(type);
             } else {

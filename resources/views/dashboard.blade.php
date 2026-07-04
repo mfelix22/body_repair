@@ -99,7 +99,7 @@
     </div>
 
     {{-- ===== REVENUE & MATERIAL COST (Director / Admin) ===== --}}
-    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin']))
+    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin', 'viewer']))
         <div class="row mt-2">
             <div class="col-12">
                 <div class="card card-outline card-success mb-0">
@@ -147,6 +147,211 @@
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- ===== ACTIVE WORK ORDERS THIS MONTH (Director / Admin) ===== --}}
+    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin', 'viewer']))
+        <div class="row mt-2">
+            <div class="col-12">
+                <div class="card card-outline card-warning mb-0">
+                    <div class="card-header d-flex align-items-center flex-wrap" style="gap:8px;">
+                        <h3 class="card-title mb-0 mr-2">
+                            <i class="fas fa-tools mr-1"></i>
+                            Active Work Orders — <span id="wo-period-label">{{ now()->format('F Y') }}</span>
+                        </h3>
+                        {{-- Month / Year filter --}}
+                        <div class="d-flex align-items-center ml-auto" style="gap:6px;">
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="wo-prev-month" title="Previous month">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <select id="wo-filter-month" class="form-control form-control-sm" style="width:110px;">
+                                @foreach(['January','February','March','April','May','June','July','August','September','October','November','December'] as $mi => $mn)
+                                    <option value="{{ $mi + 1 }}" {{ ($mi + 1) == now()->month ? 'selected' : '' }}>{{ $mn }}</option>
+                                @endforeach
+                            </select>
+                            <select id="wo-filter-year" class="form-control form-control-sm" style="width:80px;">
+                                @for($y = now()->year; $y >= 2024; $y--)
+                                    <option value="{{ $y }}" {{ $y == now()->year ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="wo-next-month" title="Next month">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <span class="badge badge-warning ml-1" id="wo-active-count">{{ $activeWorkOrdersThisMonth->count() }} active</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="wo-table-wrapper">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>WO #</th>
+                                            <th>Customer</th>
+                                            <th>Vehicle</th>
+                                            <th>Package / Description</th>
+                                            <th class="text-right">Total (Rp)</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+                                            <th>Deadline</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wo-table-body">
+                                        @forelse ($activeWorkOrdersThisMonth as $wo)
+                                            <tr>
+                                                <td><a href="{{ route('work_orders.show', $wo) }}">{{ $wo->wo_number }}</a></td>
+                                                <td>{{ $wo->customer->name ?? '-' }}</td>
+                                                <td>
+                                                    {{ $wo->vehicle_plate ?? '-' }}
+                                                    @if ($wo->vehicle_merk)
+                                                        <br><small class="text-muted">{{ $wo->vehicle_merk }} {{ $wo->vehicle_type_year }}</small>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if ($wo->paket_name)
+                                                        {{ $wo->paket_name }}
+                                                        @if ($wo->paket_size)<span class="badge badge-light ml-1">{{ $wo->paket_size }}</span>@endif
+                                                    @else
+                                                        <span class="text-muted">{{ Str::limit($wo->description, 40) }}</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-right">{{ $wo->grand_total > 0 ? number_format($wo->grand_total, 0, ',', '.') : '-' }}</td>
+                                                <td>@include('partials.wo_status_badge', ['status' => $wo->status])</td>
+                                                <td><small>{{ $wo->created_at->format('d M') }}</small></td>
+                                                <td>
+                                                    @if ($wo->deadline)
+                                                        @php $isOverdue = $wo->deadline->isPast(); @endphp
+                                                        <small class="{{ $isOverdue ? 'text-danger font-weight-bold' : 'text-muted' }}">
+                                                            {{ $wo->deadline->format('d M') }}@if($isOverdue) <i class="fas fa-exclamation-circle"></i>@endif
+                                                        </small>
+                                                    @else
+                                                        <small class="text-muted">-</small>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="8" class="text-center text-muted py-3">No active work orders this month.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer py-2">
+                        <a href="{{ route('work_orders.index') }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-list"></i> View All Work Orders
+                        </a>
+                        <span class="text-muted small ml-2">Excludes invoiced &amp; cancelled</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @push('scripts')
+        <script>
+        (function () {
+            var ajaxUrl  = '{{ route('dashboard.active_wo_json') }}';
+            var $month   = $('#wo-filter-month');
+            var $year    = $('#wo-filter-year');
+            var $body    = $('#wo-table-body');
+            var $count   = $('#wo-active-count');
+            var $label   = $('#wo-period-label');
+            var loading  = '<tr><td colspan="8" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+            var statusMap = {
+                on_progress : { label: 'Pending',   cls: 'warning'   },
+                in_progress : { label: 'Working',   cls: 'primary'   },
+                completed   : { label: 'Completed', cls: 'success'   },
+                invoiced    : { label: 'Invoiced',  cls: 'success'   },
+                cancelled   : { label: 'Cancelled', cls: 'danger'    }
+            };
+
+            function badge(status) {
+                var s = statusMap[status] || { label: status, cls: 'secondary' };
+                return '<span class="badge badge-' + s.cls + '">' + s.label + '</span>';
+            }
+
+            function fmt(num) {
+                if (!num || num <= 0) return '-';
+                return num.toLocaleString('id-ID');
+            }
+
+            function load() {
+                $body.html(loading);
+                $.get(ajaxUrl, { month: $month.val(), year: $year.val() }, function (data) {
+                    $label.text(data.label);
+                    $count.text(data.count + ' active');
+
+                    if (data.work_orders.length === 0) {
+                        $body.html('<tr><td colspan="8" class="text-center text-muted py-3">No active work orders for ' + data.label + '.</td></tr>');
+                        return;
+                    }
+
+                    var rows = '';
+                    $.each(data.work_orders, function (i, wo) {
+                        var vehicle = wo.vehicle_plate;
+                        if (wo.vehicle_merk) vehicle += '<br><small class="text-muted">' + wo.vehicle_merk + ' ' + wo.vehicle_type_year + '</small>';
+
+                        var pkg = wo.paket_name
+                            ? wo.paket_name + (wo.paket_size ? ' <span class="badge badge-light">' + wo.paket_size + '</span>' : '')
+                            : '<span class="text-muted">' + (wo.description ? wo.description.substring(0, 40) + (wo.description.length > 40 ? '…' : '') : '-') + '</span>';
+
+                        var deadline = '-';
+                        if (wo.deadline) {
+                            var parts = wo.deadline.split(' ');
+                            var short = parts[0] + ' ' + parts[1];
+                            deadline = wo.deadline_past
+                                ? '<small class="text-danger font-weight-bold">' + short + ' <i class="fas fa-exclamation-circle"></i></small>'
+                                : '<small class="text-muted">' + short + '</small>';
+                        }
+
+                        rows += '<tr>'
+                            + '<td><a href="' + wo.wo_url + '">' + wo.wo_number + '</a></td>'
+                            + '<td>' + wo.customer_name + '</td>'
+                            + '<td>' + vehicle + '</td>'
+                            + '<td>' + pkg + '</td>'
+                            + '<td class="text-right">' + fmt(wo.grand_total) + '</td>'
+                            + '<td>' + badge(wo.status) + '</td>'
+                            + '<td><small>' + wo.created_at + '</small></td>'
+                            + '<td>' + deadline + '</td>'
+                            + '</tr>';
+                    });
+                    $body.html(rows);
+                }).fail(function () {
+                    $body.html('<tr><td colspan="8" class="text-center text-danger py-3">Failed to load data.</td></tr>');
+                });
+            }
+
+            $month.on('change', load);
+            $year.on('change', load);
+
+            $('#wo-prev-month').on('click', function () {
+                var m = parseInt($month.val());
+                var y = parseInt($year.val());
+                if (m === 1) { m = 12; y--; } else { m--; }
+                $month.val(m);
+                // ensure year option exists
+                if ($year.find('option[value="' + y + '"]').length === 0) {
+                    $year.append('<option value="' + y + '">' + y + '</option>');
+                }
+                $year.val(y);
+                load();
+            });
+
+            $('#wo-next-month').on('click', function () {
+                var m = parseInt($month.val());
+                var y = parseInt($year.val());
+                if (m === 12) { m = 1; y++; } else { m++; }
+                $month.val(m);
+                if ($year.find('option[value="' + y + '"]').length === 0) {
+                    $year.prepend('<option value="' + y + '">' + y + '</option>');
+                }
+                $year.val(y);
+                load();
+            });
+        })();
+        </script>
+        @endpush
     @endif
 
     <div class="row">
@@ -427,7 +632,7 @@
         </div>
     </div>
 
-    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin']))
+    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin', 'viewer']))
         @push('scripts')
             <script src="{{ asset('admin/plugins/chart.js/Chart.bundle.min.js') }}"></script>
             <script>

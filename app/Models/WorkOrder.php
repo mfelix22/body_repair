@@ -12,6 +12,7 @@ class WorkOrder extends Model
     protected $fillable = [
         'wo_number',
         'customer_id',
+        'billing_customer_id',
         'vehicle_id',
         'package_id',
         'package_size_id',
@@ -61,6 +62,11 @@ class WorkOrder extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function billingCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'billing_customer_id');
     }
 
     public function vehicle(): BelongsTo
@@ -156,18 +162,23 @@ class WorkOrder extends Model
 
     /**
      * Calculate totals from items and labor.
-     * Package price goes into material_total; actual labor rows sum into labor_total.
+     * Base labor comes from master labors selected at WO creation.
+     * Extra billed materials (from Bon Out) and extra priced labors are added on top.
      */
     public function calculateTotals(): void
     {
         // Extra billed materials added via Bon Out completions
         $extraMaterial = $this->items()->whereNotNull('total_price')->sum('total_price');
-        // Labor total from actual labor rows
-        $laborTotal = $this->labors()->whereNotNull('total_price')->sum('total_price');
+        // Base labors selected from master at WO creation
+        $baseLabor = (float) $this->labors()->where('is_extra', false)->sum('total_price');
+        // Extra priced labors added by SA after creation
+        $extraLabor = (float) $this->labors()->where('is_extra', true)->sum('total_price');
 
-        $this->material_total = (float)($this->paket_grand_total ?? 0) + (float)$extraMaterial;
-        $this->labor_total    = (float)$laborTotal;
-        $this->grand_total    = (float)($this->paket_grand_total ?? 0) + (float)$laborTotal + (float)$extraMaterial;
+        $baseMaterial = max(0, (float)($this->paket_grand_total ?? 0) - $baseLabor);
+
+        $this->material_total = $baseMaterial + (float)$extraMaterial;
+        $this->labor_total    = $baseLabor + $extraLabor;
+        $this->grand_total    = $this->material_total + $this->labor_total;
         $this->save();
     }
 }

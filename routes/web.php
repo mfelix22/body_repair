@@ -43,11 +43,13 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/active-work-orders', [DashboardController::class, 'activeWorkOrdersJson'])->name('dashboard.active_wo_json');
 
     // User Profile & Signature
     Route::get('/profile', [UserController::class, 'profile'])->name('users.profile');
     Route::post('/profile/signature', [UserController::class, 'updateSignature'])->name('users.updateSignature');
     Route::post('/profile/change-password', [UserController::class, 'changePassword'])->name('users.changePassword');
+    Route::post('/profile/change-email', [UserController::class, 'changeEmail'])->name('users.changeEmail');
     Route::get('/users/{user}/signature', [UserController::class, 'getSignature'])->name('users.signature');
 
     // User Management (Admin only)
@@ -126,18 +128,22 @@ Route::middleware('auth')->group(function () {
     });
 
     // Purchase Requests
-    Route::resource('purchase-requests', PurchaseRequestController::class)->names('purchase_requests');
-    Route::post('purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->name('purchase_requests.approve');
-    Route::post('purchase-requests/{purchaseRequest}/gm-approve', [PurchaseRequestController::class, 'gmApprove'])->name('purchase_requests.gm_approve');
-    Route::post('purchase-requests/{purchaseRequest}/received', [PurchaseRequestController::class, 'receivedByPurchasing'])->name('purchase_requests.received');
-    Route::post('purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->name('purchase_requests.reject');
-    Route::post('purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase_requests.cancel');
-    Route::post('purchase-requests/{purchaseRequest}/close', [PurchaseRequestController::class, 'close'])->name('purchase_requests.close');
-    Route::get('purchase-requests/{purchaseRequest}/print', [PurchaseRequestController::class, 'print'])->name('purchase_requests.print')->middleware('signed');
-    Route::get('purchase-requests/{purchaseRequest}/json', [PurchaseRequestController::class, 'getJson'])->name('purchase_requests.json');
+    Route::middleware('role.permission:purchase_requests,view')->group(function () {
+        Route::resource('purchase-requests', PurchaseRequestController::class)->names('purchase_requests');
+        Route::get('purchase-requests/{purchaseRequest}/json', [PurchaseRequestController::class, 'getJson'])->name('purchase_requests.json');
+        Route::post('purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->name('purchase_requests.approve');
+        Route::post('purchase-requests/{purchaseRequest}/gm-approve', [PurchaseRequestController::class, 'gmApprove'])->name('purchase_requests.gm_approve');
+        Route::post('purchase-requests/{purchaseRequest}/received', [PurchaseRequestController::class, 'receivedByPurchasing'])->name('purchase_requests.received');
+        Route::post('purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->name('purchase_requests.reject');
+        Route::post('purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase_requests.cancel');
+        Route::post('purchase-requests/{purchaseRequest}/close', [PurchaseRequestController::class, 'close'])->name('purchase_requests.close');
+        Route::get('purchase-requests/{purchaseRequest}/print', [PurchaseRequestController::class, 'print'])->name('purchase_requests.print')->middleware('signed');
+        Route::get('purchase-requests/{purchaseRequest}/attachment', [PurchaseRequestController::class, 'attachment'])->name('purchase_requests.attachment');
+    });
 
     // Purchase Orders
     Route::get('purchase-orders/export-excel', [PurchaseOrderController::class, 'exportExcel'])->name('purchase_orders.export_excel');
+    Route::post('purchase-orders/preview', [PurchaseOrderController::class, 'preview'])->name('purchase_orders.preview');
     Route::resource('purchase-orders', PurchaseOrderController::class)->names('purchase_orders');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->name('purchase_orders.approve');
     Route::post('purchase-orders/{purchaseOrder}/revoke-approval', [PurchaseOrderController::class, 'revokeApproval'])->name('purchase_orders.revoke_approval');

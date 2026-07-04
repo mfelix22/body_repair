@@ -25,6 +25,7 @@
                             <tr>
                                 <th>WO Number</th>
                                 <th>Customer</th>
+                                <th>Nomor Polisi</th>
                                 <th>Work Date</th>
                                 <th>Items</th>
                                 <th>Labor</th>
@@ -38,6 +39,7 @@
                                 <tr>
                                     <td><strong>{{ $wo->wo_number }}</strong></td>
                                     <td>{{ $wo->customer->name }}</td>
+                                    <td>{{ $wo->vehicle_plate ?? '-' }}</td>
                                     <td>{{ $wo->work_date->format('M d, Y') }}</td>
                                     <td>{{ $wo->items_count }}</td>
                                     <td>{{ $wo->labors_count }}</td>

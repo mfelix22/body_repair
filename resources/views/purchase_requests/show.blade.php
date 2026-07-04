@@ -8,10 +8,17 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">{{ $purchaseRequest->pr_number }}</h3>
+                    <h3 class="card-title">
+                        {{ $purchaseRequest->pr_number }}
+                        @if ($purchaseRequest->status !== 'cancelled' && !$purchaseRequest->isFullyOrdered() && $purchaseRequest->type === 'Barang')
+                            <span class="badge badge-warning ml-2" title="Some items are not fully ordered yet">
+                                <i class="fas fa-exclamation-circle"></i> Pending Order
+                            </span>
+                        @endif
+                    </h3>
                     <div class="card-tools">
                         @if (in_array($purchaseRequest->status, ['completed', 'printed']))
-                            @if (\App\Helpers\PermissionHelper::canPrint('purchase_requests'))
+                            @if (\App\Helpers\PermissionHelper::canPrint('purchase_requests') || auth()->user()->hasAnyRole(['purchasing']))
                                 <a href="{{ \URL::temporarySignedRoute('purchase_requests.print', now()->addMinutes(5), $purchaseRequest) }}"
                                     class="btn btn-secondary btn-sm" target="_blank">
                                     <i class="fas fa-print"></i> Print
@@ -283,8 +290,11 @@
                                     <th>Item Code</th>
                                     <th>Current Stock</th>
                                     <th>Request Qty</th>
+                                    <th>Ordered Qty</th>
+                                    <th>Remaining Qty</th>
                                     <th>UOM</th>
                                     <th>Notes</th>
+                                    <th>Status</th>
                                 @endif
                             </tr>
                         </thead>
@@ -324,8 +334,31 @@
                                             @endif
                                         </td>
                                         <td><strong>{{ number_format($detail->quantity, 2) }}</strong></td>
+                                        <td>{{ number_format($detail->ordered_quantity, 2) }}</td>
+                                        <td>
+                                            @if ($detail->getRemainingQuantity() > 0)
+                                                <span class="text-danger font-weight-bold">{{ number_format($detail->getRemainingQuantity(), 2) }}</span>
+                                            @else
+                                                <span class="text-success">0</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $detail->uom->code ?? '-' }}</td>
                                         <td>{{ $detail->notes ?? '-' }}</td>
+                                        <td>
+                                            @if ($detail->isFullyOrdered())
+                                                <span class="badge badge-success" title="Fully ordered">
+                                                    <i class="fas fa-check-circle"></i> Complete
+                                                </span>
+                                            @elseif ($detail->isPartiallyOrdered())
+                                                <span class="badge badge-warning" title="Partially ordered">
+                                                    <i class="fas fa-exclamation-circle"></i> Partial
+                                                </span>
+                                            @else
+                                                <span class="badge badge-secondary" title="Not ordered yet">
+                                                    <i class="fas fa-minus-circle"></i> Not Ordered
+                                                </span>
+                                            @endif
+                                        </td>
                                     @endif
                                 </tr>
                             @endforeach
@@ -336,6 +369,38 @@
                         <hr>
                         <h6>Notes</h6>
                         <p>{{ $purchaseRequest->notes }}</p>
+                    @endif
+
+                    @if ($purchaseRequest->type === 'Jasa' && $purchaseRequest->attachments && $purchaseRequest->attachments->count() > 0)
+                        <hr>
+                        <h6>Attachments</h6>
+                        <div class="row">
+                            @foreach ($purchaseRequest->attachments as $attachment)
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ $attachment->file_name }}</h6>
+                                            <small class="text-muted">{{ number_format($attachment->file_size / 1024, 2) }} KB</small>
+                                            @php
+                                                $ext = strtolower(pathinfo($attachment->file_name, PATHINFO_EXTENSION));
+                                            @endphp
+                                            @if (in_array($ext, ['jpg', 'jpeg', 'png']))
+                                                <div class="mt-2">
+                                                    <img src="{{ asset('storage/' . $attachment->file_path) }}"
+                                                        alt="PPJ Attachment"
+                                                        style="max-width: 100%; max-height: 300px; border: 1px solid #dee2e6; border-radius: 4px;">
+                                                </div>
+                                            @endif
+                                            <div class="mt-2">
+                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-paperclip"></i> {{ $ext === 'pdf' ? 'View PDF' : 'View/Download' }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     @endif
 
                     @if ($purchaseRequest->purchaseOrders->isNotEmpty())

@@ -10,6 +10,7 @@ use App\Models\PurchaseRequestDetail;
 use App\Models\Supplier;
 use App\Models\Item;
 use App\Models\ItemUOM;
+use App\Models\UOM;
 use App\Models\PurchaseOrderInvoice;
 use App\Models\PurchaseOrderInvoiceLine;
 use App\Models\Stock;
@@ -25,6 +26,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use App\Helpers\PermissionHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 class PurchaseOrderController extends Controller
 {
@@ -823,13 +825,18 @@ class PurchaseOrderController extends Controller
                     ->first();
 
                 $oldQuantity = $stock->quantity;
+                $oldAvgCost = (float) $stock->avg_cost;
                 $stock->addQuantity($quantityInSmallest);
+
+                $taxMultiplier = ($purchaseOrder->include_ppn && $purchaseOrder->po_type === 'purchase_order') ? 1.11 : 1.0;
+                $receivedUnitCost = ($pod->unit_price * $taxMultiplier) / (float) $itemUom->conversion_to_smallest;
 
                 // Create transaction record
                 StockTransaction::create([
                     'item_id' => $pod->item_id,
                     'transaction_type' => 'in',
                     'quantity' => $quantityInSmallest,
+                    'unit_cost' => $receivedUnitCost,
                     'balance_after' => $stock->quantity,
                     'location' => 'default',
                     'reference_type' => 'PO',
@@ -1135,6 +1142,101 @@ class PurchaseOrderController extends Controller
             'status' => 'closed',
             'cancellation_reason' => 'Auto-closed: all items fully ordered. Last completed PO: '.$purchaseOrder->po_number.'.',
         ]);
+    }
+
+    public function preview(Request $request)
+    {
+        \Log::info('Preview method called', ['method' => $request->method(), 'all' => $request->all()]);
+
+        // Check if user has purchasing role
+        $user = auth()->user();
+        if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
+            return back()->with('error', 'Only purchasing staff can preview POs.');
+        }
+
+        // Get data without strict validation for preview
+        $poType = $request->input('po_type', 'purchase_order');
+        $orderDate = $request->input('order_date', now()->format('Y-m-d'));
+        $supplierName = $request->input('supplier_name', 'Supplier Name');
+        $items = $request->input('items', []);
+
+        if (empty($items)) {
+            return back()->with('error', 'Please add at least one item to preview. Items received: ' . json_encode($items));
+        }
+
+        // Create a temporary PO object for preview
+        $tempPo = new \stdClass();
+        $tempPo->po_number = 'PREVIEW-' . strtoupper(substr(uniqid(), -6));
+        $tempPo->po_type = $poType;
+        $tempPo->order_date = \Carbon\Carbon::parse($orderDate);
+        $tempPo->expected_delivery_date = $request->input('expected_delivery_date') ? \Carbon\Carbon::parse($request->input('expected_delivery_date')) : null;
+        $tempPo->supplier_name = $supplierName;
+        $tempPo->supplier_address = $request->input('supplier_address');
+        $tempPo->supplier_phone = $request->input('supplier_phone');
+        $tempPo->supplier_contact_person = $request->input('supplier_contact_person');
+        $tempPo->lokasi_pengerjaan = $request->input('lokasi_pengerjaan');
+        $tempPo->lokasi_pengiriman = $request->input('lokasi_pengiriman');
+        $tempPo->waktu_pengerjaan = $request->input('waktu_pengerjaan');
+        $tempPo->payment_method = $request->input('payment_method');
+        $tempPo->pembayaran = $request->input('pembayaran');
+        $tempPo->bank_account = $request->input('bank_account');
+        $tempPo->jatuh_tempo = $request->input('jatuh_tempo');
+        $tempPo->payment_terms = $request->input('payment_terms');
+        $tempPo->notes = $request->input('notes');
+        $tempPo->include_ppn = $request->input('include_ppn', false);
+        $tempPo->pph_type = $request->input('pph_type', 'none');
+        $tempPo->status = 'on_progress';
+        $tempPo->total_amount = 0;
+
+        // Load related data
+        $tempPo->creator = $user;
+        $tempPo->approver = null;
+        $tempPo->purchaseRequest = null;
+        $tempPo->supplier = null;
+
+        // Build details collection
+        $details = collect();
+        foreach ($items as $itemData) {
+            $detail = new \stdClass();
+            $detail->quantity = (float)$itemData['quantity'];
+            $detail->unit_price = (float)$itemData['unit_price'];
+            $detail->total_price = $detail->quantity * $detail->unit_price;
+            $detail->remarks = $itemData['remarks'] ?? null;
+            $tempPo->total_amount += $detail->total_price;
+
+            if ($poType === 'service_order') {
+                $detail->service_description = $itemData['service_description'];
+                $detail->item = null;
+                $detail->uom = null;
+            } else {
+                $detail->item = Item::find($itemData['item_id']);
+                $detail->uom = UOM::find($itemData['uom_id']);
+                $detail->service_description = null;
+            }
+
+            $details->push($detail);
+        }
+        $tempPo->details = $details;
+
+        // Handle misc costs — use Eloquent-like objects with 'amount' key for ->sum('amount') to work
+        $miscCosts = collect();
+        if ($request->input('misc_costs')) {
+            foreach ($request->input('misc_costs') as $misc) {
+                if (!empty($misc['description']) && !empty($misc['amount'])) {
+                    $miscCosts->push((object)[
+                        'description' => $misc['description'],
+                        'amount'      => (float)$misc['amount'],
+                    ]);
+                }
+            }
+        }
+        $tempPo->miscCosts = $miscCosts;
+
+        // Generate PDF and return directly
+        $pdf = Pdf::loadView('purchase_orders.print', ['purchaseOrder' => $tempPo]);
+        $filename = 'PREVIEW-' . $tempPo->po_number . '.pdf';
+        
+        return $pdf->stream($filename);
     }
 
     public function print(PurchaseOrder $purchaseOrder)

@@ -11,6 +11,7 @@ class StockTransaction extends Model
         'item_id',
         'transaction_type',
         'quantity',
+        'unit_cost',
         'balance_after',
         'location',
         'reference_type',
@@ -21,6 +22,7 @@ class StockTransaction extends Model
 
     protected $casts = [
         'quantity' => 'decimal:2',
+        'unit_cost' => 'decimal:2',
         'balance_after' => 'decimal:2',
     ];
 

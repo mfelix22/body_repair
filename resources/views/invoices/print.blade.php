@@ -615,11 +615,31 @@
             </tr>
         </thead>
         <tbody>
-            @if ($hasLines && $laborLines->isNotEmpty())
-                {{-- Labor lines from proforma (with discount info) --}}
+            @foreach ($wo->labors->where('is_extra', false) as $baseLaborRow)
+            <tr>
+                <td>{{ $baseLaborRow->labor?->labor_code ?? 'LAB' }}</td>
+                <td>{{ $baseLaborRow->description }}</td>
+                <td class="text-right">Rp {{ number_format($baseLaborRow->rate ?? 0, 0, ',', '.') }}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">{{ number_format($baseLaborRow->qty, 0) }}</td>
+                <td class="text-right">Rp {{ number_format($baseLaborRow->total_price ?? 0, 0, ',', '.') }}</td>
+            </tr>
+            @endforeach
+            @if ($wo->labors->where('is_extra', false)->isEmpty())
+            <tr>
+                <td>LAB</td>
+                <td>Jasa Pengerjaan</td>
+                <td class="text-right">-</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td class="text-right">-</td>
+            </tr>
+            @endif
+            @if ($hasLines)
+                {{-- Extra labor lines from proforma --}}
                 @foreach ($laborLines as $line)
                     <tr>
-                        <td>{{ $line->description }}</td>
+                        <td>LAB</td>
                         <td>{{ $line->description }}</td>
                         <td class="text-right">Rp {{ number_format($line->original_price, 0, ',', '.') }}</td>
                         <td class="text-center">
@@ -633,7 +653,7 @@
                         <td class="text-right">Rp {{ number_format($line->final_price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
-                @for ($i = $laborLines->count(); $i < 3; $i++)
+                @for ($i = 1 + $laborLines->count(); $i < 3; $i++)
                     <tr class="empty-row">
                         <td>&nbsp;</td>
                         <td></td>
@@ -644,19 +664,7 @@
                     </tr>
                 @endfor
             @else
-                {{-- Fallback: WO labor rows --}}
-                @foreach ($wo->labors as $wol)
-                    <tr>
-                        <td>{{ $wol->labor?->labor_code ?? 'LAB' }}</td>
-                        <td>{{ $wol->description }}</td>
-                        <td class="text-right">Rp {{ number_format($wol->rate ?? 0, 0, ',', '.') }}</td>
-                        <td class="text-center">-</td>
-                        <td class="text-center">
-                            {{ rtrim(rtrim(number_format((float) ($wol->qty ?? 1), 2, '.', ''), '0'), '.') }}</td>
-                        <td class="text-right">Rp {{ number_format($wol->total_price ?? 0, 0, ',', '.') }}</td>
-                    </tr>
-                @endforeach
-                @for ($i = $wo->labors->count(); $i < 3; $i++)
+                @for ($i = 1; $i < 3; $i++)
                     <tr class="empty-row">
                         <td>&nbsp;</td>
                         <td></td>

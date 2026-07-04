@@ -272,6 +272,7 @@ class PermissionHelper
                 'accounting' => 'read',
                 'staff' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
             'customers' => [
                 'warehouse' => 'crud',
@@ -281,6 +282,7 @@ class PermissionHelper
                 'finance' => 'read',
                 'accounting' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
             'labors' => [
                 'service_advisor' => 'crud',
@@ -290,6 +292,7 @@ class PermissionHelper
                 'audit'           => 'read',
                 'finance'         => 'read',
                 'accounting'      => 'read',
+                'viewer'          => 'read',
             ],
             'suppliers' => [
                 'purchasing' => 'crud',
@@ -299,6 +302,7 @@ class PermissionHelper
                 'finance' => 'read',
                 'accounting' => 'read',
                 'warehouse' => 'read',
+                'viewer' => 'read',
             ],
             'packages' => [
                 'warehouse' => 'crud',
@@ -308,6 +312,7 @@ class PermissionHelper
                 'finance' => 'read',
                 'accounting' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
             'vehicles' => [
                 'warehouse' => 'crud',
@@ -317,6 +322,7 @@ class PermissionHelper
                 'finance' => 'read',
                 'accounting' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
             'stocks' => [
                 'warehouse' => 'adjust',
@@ -326,6 +332,7 @@ class PermissionHelper
                 'finance' => 'read',
                 'accounting' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
 
             // Procurement & Inventory
@@ -338,6 +345,7 @@ class PermissionHelper
                 'finance' => 'crud',
                 'audit' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
             'purchase_orders' => [
                 'purchasing' => 'crud',
@@ -347,6 +355,7 @@ class PermissionHelper
                 'audit' => 'read',
                 'finance' => 'read',
                 'accounting' => 'read',
+                'viewer' => 'read',
             ],
             'receivables' => [
                 'warehouse' => 'crud',
@@ -356,6 +365,7 @@ class PermissionHelper
                 'audit' => 'read',
                 'finance' => 'read',
                 'purchasing' => 'read',
+                'viewer' => 'read',
             ],
 
             // Operations
@@ -367,6 +377,7 @@ class PermissionHelper
                 'audit' => 'read',
                 'finance' => 'read',
                 'accounting' => 'read',
+                'viewer' => 'read',
             ],
             'sales_orders' => [
                 'service_advisor' => 'crud',
@@ -375,6 +386,7 @@ class PermissionHelper
                 'accounting'      => 'read',
                 'finance'         => 'read',
                 'audit'           => 'read',
+                'viewer'          => 'read',
             ],
             'bon_outs' => [
                 'warehouse' => 'crud',
@@ -383,6 +395,7 @@ class PermissionHelper
                 'accounting' => 'crud',
                 'audit' => 'read',
                 'finance' => 'read',
+                'viewer' => 'read',
             ],
 
             // Finance
@@ -393,6 +406,7 @@ class PermissionHelper
                 'accounting'      => 'read',
                 'finance'         => 'read',
                 'audit'           => 'read',
+                'viewer'          => 'read',
             ],
             'invoices' => [
                 'finance' => 'crud',
@@ -401,6 +415,7 @@ class PermissionHelper
                 'accounting' => 'read_cogs',
                 'audit' => 'read_cogs',
                 'warehouse' => 'read',
+                'viewer' => 'read',
             ],
 
             // Master Data Review
@@ -427,6 +442,7 @@ class PermissionHelper
                 'manager' => 'crud',
                 'audit' => 'read',
                 'accounting' => 'read',
+                'viewer' => 'read',
             ],
         ];
     }

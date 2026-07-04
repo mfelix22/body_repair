@@ -56,7 +56,7 @@ class ProformaInvoiceController extends Controller
             }
 
             $extraLabors = [];
-            foreach ($wo->labors->where('total_price', '>', 0)->whereNotNull('labor_id') as $l) {
+            foreach ($wo->labors->where('total_price', '>', 0)->where('is_extra', true) as $l) {
                 $extraLabors[] = [
                     'target_id'      => $l->id,
                     'description'    => $l->description ?? 'Labor',
@@ -151,7 +151,7 @@ class ProformaInvoiceController extends Controller
             ->with([
                 'customer',
                 'items'  => fn($q) => $q->where('unit_price', '>', 0)->with('item.smallestUom'),
-                'labors' => fn($q) => $q->where('total_price', '>', 0)->whereNotNull('labor_id'),
+                'labors' => fn($q) => $q->where('total_price', '>', 0)->where('is_extra', true),
             ])
             ->get();
 
@@ -494,7 +494,7 @@ class ProformaInvoiceController extends Controller
 
         $proformaInvoice->load([
             'workOrder.customer',
-            'workOrder.labors',
+            'workOrder.labors.labor',
             'creator',
             'discountLines',
         ]);

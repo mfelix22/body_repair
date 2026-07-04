@@ -307,6 +307,7 @@ class ItemImportController extends Controller
                                 'item_id'          => $item->id,
                                 'transaction_type' => 'in',
                                 'quantity'         => $saldo,
+                                'unit_cost'        => $openingAvgCost,
                                 'balance_after'    => $saldo,
                                 'location'         => 'default',
                                 'reference_type'   => 'OPENING',

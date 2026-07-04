@@ -38,7 +38,7 @@ class CreditNoteController extends Controller
             abort(403);
         }
 
-        $creditNote->load(['invoice', 'customer', 'workOrder.proformaInvoice.discountLines', 'workOrder.items.item.smallestUom', 'workOrder.labors']);
+        $creditNote->load(['invoice', 'customer', 'workOrder.proformaInvoice.discountLines', 'workOrder.items.item.smallestUom', 'workOrder.labors.labor']);
 
         return view('credit_notes.print', compact('creditNote'));
     }

@@ -59,6 +59,39 @@
 
             <div class="card">
                 <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-envelope mr-1"></i> Change Email</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('users.changeEmail') }}" method="POST">
+                        @csrf
+                        <div class="form-group">
+                            <label for="email">New Email Address</label>
+                            <input type="email" name="email" id="email"
+                                class="form-control @error('email') is-invalid @enderror"
+                                placeholder="Enter new email address" autocomplete="email"
+                                value="{{ old('email') }}">
+                            @error('email')
+                                <span class="invalid-feedback">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label for="current_password_email">Current Password</label>
+                            <input type="password" name="current_password" id="current_password_email"
+                                class="form-control @error('current_password') is-invalid @enderror"
+                                placeholder="Enter current password to confirm" autocomplete="current-password">
+                            @error('current_password')
+                                <span class="invalid-feedback">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-paper-plane mr-1"></i> Change Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
                     <h3 class="card-title"><i class="fas fa-lock mr-1"></i> Change Password</h3>
                 </div>
                 <div class="card-body">

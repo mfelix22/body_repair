@@ -16,7 +16,7 @@
                     <h3 class="card-title">{{ $purchaseRequest->pr_number }}</h3>
                 </div>
 
-                <form action="{{ route('purchase_requests.update', $purchaseRequest) }}" method="POST" novalidate>
+                <form action="{{ route('purchase_requests.update', $purchaseRequest) }}" method="POST" enctype="multipart/form-data" novalidate>
                     @csrf
                     @method('PUT')
                     <div class="card-body">
@@ -107,6 +107,42 @@
                                 </div>
                             </div>
                         </div>
+
+                        @if ($purchaseRequest->type === 'Jasa')
+                        <div id="ppj-attachment-section">
+                            <hr>
+                            <h5>Attachments <small class="text-muted">(PPJ only)</small></h5>
+                            <div class="form-group">
+                                <label for="attachments">Service Banner / Reference Files</label>
+                                @if ($purchaseRequest->attachments && $purchaseRequest->attachments->count() > 0)
+                                    <div class="mb-2">
+                                        <p class="mb-1"><strong>Current Attachments:</strong></p>
+                                        @foreach ($purchaseRequest->attachments as $attachment)
+                                            <div class="mb-1">
+                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-paperclip"></i> {{ $attachment->file_name }}
+                                                </a>
+                                                <small class="text-muted ml-2">({{ number_format($attachment->file_size / 1024, 2) }} KB)</small>
+                                            </div>
+                                        @endforeach
+                                        <small class="text-muted">Upload new files below to replace all current attachments.</small>
+                                    </div>
+                                @endif
+                                <div class="input-group">
+                                    <div class="custom-file">
+                                        <input type="file" name="attachments[]" id="attachments"
+                                            class="custom-file-input @error('attachments') is-invalid @enderror"
+                                            accept=".jpg,.jpeg,.png,.pdf" multiple>
+                                        <label class="custom-file-label" for="attachments">Choose files (jpg, png, pdf — max 5MB each)</label>
+                                    </div>
+                                </div>
+                                @error('attachments')
+                                    <span class="text-danger small">{{ $message }}</span>
+                                @enderror
+                                <small class="form-text text-muted">Optional. Attach service banners, quotation images, or reference documents for this PPJ. You can select multiple files.</small>
+                            </div>
+                        </div>
+                        @endif
 
                         <hr>
                         <h5>Items</h5>
@@ -557,6 +593,13 @@
                 e.preventDefault();
                 alert('Please fix the following errors:\n\n' + errors.join('\n'));
             }
+        });
+
+        // Update file input label when files chosen
+        $('#attachments').on('change', function() {
+            const count = this.files.length;
+            const label = count > 0 ? `${count} file(s) selected` : 'Choose files (jpg, png, pdf — max 5MB each)';
+            $(this).next('label').text(label);
         });
     </script>
 @endpush

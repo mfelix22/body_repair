@@ -165,6 +165,14 @@
                                             href="{{ route('customers.show', $workOrder->customer) }}">{{ $workOrder->customer->name }}</a>
                                     </td>
                                 </tr>
+                                @if($workOrder->billingCustomer)
+                                    <tr>
+                                        <th>Ditujukan Kepada:</th>
+                                        <td><a
+                                                href="{{ route('customers.show', $workOrder->billingCustomer) }}">{{ $workOrder->billingCustomer->name }}</a>
+                                        </td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Sales Name:</th>
                                     <td>{{ $workOrder->sa_sales ?? '-' }}</td>
@@ -216,15 +224,22 @@
                         <div class="col-md-4">
                             <h6>Pricing</h6>
                             @php
-                                $extraLabor = $workOrder->labors->whereNotNull('total_price')->sum('total_price');
+                                $baseLabor = $workOrder->labors->where('is_extra', false)->sum('total_price');
+                                $extraLabor = $workOrder->labors->where('is_extra', true)->sum('total_price');
                                 $extraMaterial = $workOrder->items->whereNotNull('total_price')->sum('total_price');
+                                $baseMaterial = max(0, ($workOrder->paket_grand_total ?? 0) - $baseLabor);
                             @endphp
                             <table class="table table-sm table-bordered">
                                 <tr>
                                     <th>Jasa Paket:</th>
-                                    <td class="text-right">Rp
-                                        {{ number_format($workOrder->paket_grand_total ?? 0, 0, ',', '.') }}</td>
+                                    <td class="text-right">Rp {{ number_format($baseMaterial, 0, ',', '.') }}</td>
                                 </tr>
+                                @if ($baseLabor > 0)
+                                    <tr>
+                                        <th>Base Labor:</th>
+                                        <td class="text-right">Rp {{ number_format($baseLabor, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endif
                                 @if ($extraMaterial > 0)
                                     <tr>
                                         <th>Extra Materials:</th>
@@ -234,7 +249,7 @@
                                 @endif
                                 @if ($extraLabor > 0)
                                     <tr>
-                                        <th>Labor:</th>
+                                        <th>Extra Labor:</th>
                                         <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}
                                         </td>
                                     </tr>
@@ -328,7 +343,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($workOrder->labors as $wol)
-                                    <tr {{ $wol->total_price > 0 ? 'class=table-info' : '' }}>
+                                    <tr {{ $wol->is_extra ? 'class=table-warning' : '' }}>
                                         <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
                                         <td>{{ $wol->description }}</td>
                                         <td class="text-center">{{ number_format($wol->qty, 2) }}</td>
@@ -349,7 +364,7 @@
                                         <td>{{ $wol->remarks ?? '-' }}</td>
                                         @if ($canAddLabor)
                                             <td>
-                                                @if ($wol->labor_id)
+                                                @if ($wol->is_extra)
                                                     <form
                                                         action="{{ route('work_orders.remove_labor', [$workOrder, $wol]) }}"
                                                         method="POST" class="d-inline"
@@ -364,7 +379,7 @@
                                     </tr>
                                 @endforeach
                             </tbody>
-                            @php $totalExtraLabor = $workOrder->labors->whereNotNull('total_price')->sum('total_price'); @endphp
+                            @php $totalExtraLabor = $workOrder->labors->where('is_extra', true)->sum('total_price'); @endphp
                             @if ($totalExtraLabor > 0)
                                 <tfoot>
                                     <tr class="table-success">

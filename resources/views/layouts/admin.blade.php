@@ -66,6 +66,7 @@
                                 'warehouse' => 'badge-warning',
                                 'staff' => 'badge-primary',
                                 'audit' => 'badge-success',
+                                'viewer' => 'badge-info',
                             ];
                         @endphp
                         @if (empty($roles))

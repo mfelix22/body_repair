@@ -690,8 +690,8 @@
                                     <tbody>
                                         @foreach ($purchaseOrder->details->filter(fn($detail) => $detail->getOpenQuantity() > 0) as $detail)
                                             <tr>
-                                                <td>{{ $detail->item->name }}</td>
-                                                <td>{{ $detail->uom->code }}</td>
+                                                <td>{{ $detail->item->name ?? $detail->service_description }}</td>
+                                                <td>{{ $detail->uom->code ?? '-' }}</td>
                                                 <td>{{ number_format($detail->getOpenQuantity(), 2) }}</td>
                                                 <td>
                                                     <input type="hidden"

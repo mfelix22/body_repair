@@ -178,7 +178,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::create([
             'invoice_number'      => $invoiceNumber,
             'work_order_id'       => $validated['work_order_id'],
-            'customer_id'         => $workOrder->customer_id,
+            'customer_id'         => $workOrder->billing_customer_id ?? $workOrder->customer_id,
             'invoice_date'        => $validated['invoice_date'],
             'due_date'            => $validated['due_date'],
             'subtotal'            => $subtotal,
@@ -279,7 +279,7 @@ class InvoiceController extends Controller
             return PermissionHelper::denyAccess('invoices', 'view');
         }
 
-        $invoice->load(['customer', 'workOrder.labors', 'workOrder.proformaInvoice.discountLines', 'creator']);
+        $invoice->load(['customer', 'workOrder.labors.labor', 'workOrder.proformaInvoice.discountLines', 'creator']);
         return view('invoices.print', compact('invoice'));
     }
 

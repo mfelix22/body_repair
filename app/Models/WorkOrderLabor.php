@@ -16,6 +16,7 @@ class WorkOrderLabor extends Model
         'hours',
         'rate',
         'total_price',
+        'is_extra',
     ];
 
     protected $casts = [

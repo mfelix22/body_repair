@@ -526,13 +526,11 @@ class ReceivableController extends Controller
                     ? $po->details()->where('item_id', $item->id)->where('uom_id', $uom->id)->first()
                     : null;
 
-                // Use item master as the authoritative conversion source.
-                // Only override with PO detail when it explicitly differs from the item master,
-                // meaning the user entered a supplier-specific conversion for this PO line.
                 // If the received UOM is already the item's smallest UOM, conversion is always 1.
+                // Use == (not ===) to safely compare across int/string casts from DB.
+                $isSmallestUom        = (int) $item->smallest_uom_id === (int) $uom->id;
                 $itemMasterConversion = (float) $itemUom->conversion_to_smallest;
                 $poDetailConversion   = $poDetail ? (float) $poDetail->conversion_to_smallest : 0;
-                $isSmallestUom        = $item->smallest_uom_id === $uom->id;
                 $conversionFactor     = $isSmallestUom
                     ? 1.0
                     : (($poDetailConversion > 1 && $poDetailConversion !== $itemMasterConversion)
@@ -549,12 +547,14 @@ class ReceivableController extends Controller
 
                 $oldQuantity = $stock->quantity ?? 0;
                 $oldAvgCost = $stock->avg_cost ?? 0;
+                $receivedUnitCost = $oldAvgCost;
 
                 // Calculate average cost
                 if ($hasPO) {
                     // From PO: use PO unit price (converted to smallest UOM)
                     if ($poDetail && $quantityInSmallestUom > 0) {
-                        $receivedUnitCost = $poDetail->unit_price / $conversionFactor;
+                        $taxMultiplier = ($po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;
+                        $receivedUnitCost = ($poDetail->unit_price * $taxMultiplier) / $conversionFactor;
                         $newQuantity = $oldQuantity + $quantityInSmallestUom;
                         $stock->avg_cost = $newQuantity > 0
                             ? (($oldQuantity * $oldAvgCost) + ($quantityInSmallestUom * $receivedUnitCost)) / $newQuantity
@@ -575,6 +575,7 @@ class ReceivableController extends Controller
                     'item_id'          => $item->id,
                     'transaction_type' => 'in',
                     'quantity'         => $quantityInSmallestUom,
+                    'unit_cost'        => $receivedUnitCost,
                     'balance_after'    => $stock->quantity,
                     'location'         => 'default',
                     'reference_type'   => $hasPO ? 'PO' : 'BON_IN',

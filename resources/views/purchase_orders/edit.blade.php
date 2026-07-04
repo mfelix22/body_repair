@@ -59,6 +59,10 @@
                                             <option value="{{ $supplier->id }}" data-name="{{ $supplier->name }}"
                                                 data-phone="{{ $supplier->phone }}"
                                                 data-address="{{ $supplier->address }}"
+                                                data-contact_person="{{ $supplier->contact_person }}"
+                                                data-bank_name="{{ $supplier->bank_name }}"
+                                                data-bank_account_no="{{ $supplier->bank_account_no }}"
+                                                data-bank_account_name="{{ $supplier->bank_account_name }}"
                                                 {{ old('supplier_id', $purchaseOrder->supplier_id) == $supplier->id ? 'selected' : '' }}>
                                                 {{ $supplier->name }}
                                             </option>
@@ -80,6 +84,14 @@
                                     <label for="supplier_phone">Supplier Phone</label>
                                     <input type="text" name="supplier_phone" id="supplier_phone" class="form-control"
                                         value="{{ old('supplier_phone', $purchaseOrder->supplier_phone) }}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="supplier_contact_person">Contact Person</label>
+                                    <input type="text" name="supplier_contact_person" id="supplier_contact_person"
+                                        class="form-control"
+                                        value="{{ old('supplier_contact_person', $purchaseOrder->supplier_contact_person) }}"
+                                        placeholder="e.g., Budi Santoso">
                                 </div>
 
                                 <div class="form-group">
@@ -643,6 +655,7 @@
         function handleItemChange() {
             const row = this.closest('.item-row');
             const uomSelect = row.querySelector('.uom-select');
+            const previousUomId = uomSelect.value;
             const priceInput = row.querySelector('.price');
             const totalInput = row.querySelector('.total');
             const convInput = row.querySelector('.conv-input');
@@ -652,11 +665,17 @@
             const smallestUomCode = option.dataset.smallestUom || '';
 
             uomSelect.innerHTML = '<option value="">Select UOM</option>';
+            let matchedPrevious = false;
             uoms.forEach(uom => {
                 const opt = document.createElement('option');
                 opt.value = uom.uom_id;
                 opt.textContent = uom.uom.name + ' (' + uom.uom.code + ')';
-                if (uom.is_default) opt.selected = true;
+                if (String(uom.uom_id) === String(previousUomId)) {
+                    opt.selected = true;
+                    matchedPrevious = true;
+                } else if (uom.is_default && !matchedPrevious) {
+                    opt.selected = true;
+                }
                 uomSelect.appendChild(opt);
             });
 
@@ -764,9 +783,24 @@
                 const nameInput = document.getElementById('supplier_name');
                 const phoneInput = document.getElementById('supplier_phone');
                 const addressInput = document.getElementById('supplier_address');
+                const contactInput = document.getElementById('supplier_contact_person');
+                const bankField = document.getElementById('bank_account');
                 if (nameInput) nameInput.value = selectedOption.dataset.name || '';
                 if (phoneInput) phoneInput.value = selectedOption.dataset.phone || '';
                 if (addressInput) addressInput.value = selectedOption.dataset.address || '';
+                if (contactInput) contactInput.value = selectedOption.dataset.contact_person || '';
+                if (bankField) {
+                    const bankName = selectedOption.dataset.bank_name || '';
+                    const bankAccNo = selectedOption.dataset.bank_account_no || '';
+                    const bankAccName = selectedOption.dataset.bank_account_name || '';
+                    if (bankName && bankAccNo) {
+                        bankField.value = bankName + ' - ' + bankAccNo + (bankAccName ? ' a.n. ' + bankAccName : '');
+                    } else if (bankAccNo) {
+                        bankField.value = bankAccNo + (bankAccName ? ' a.n. ' + bankAccName : '');
+                    } else {
+                        bankField.value = '';
+                    }
+                }
             }
         });
 

@@ -616,14 +616,26 @@
             </tr>
         </thead>
         <tbody>
+            @foreach (($wo ? $wo->labors->where('is_extra', false) : collect()) as $baseLaborRow)
+            <tr>
+                <td>{{ $baseLaborRow->labor?->labor_code ?? 'LAB' }}</td>
+                <td>{{ $baseLaborRow->description }}</td>
+                <td class="text-right">Rp {{ number_format($baseLaborRow->rate ?? 0, 0, ',', '.') }}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">{{ number_format($baseLaborRow->qty, 0) }}</td>
+                <td class="text-right">Rp {{ number_format($baseLaborRow->total_price ?? 0, 0, ',', '.') }}</td>
+            </tr>
+            @endforeach
+            @if (!$wo || $wo->labors->where('is_extra', false)->isEmpty())
             <tr>
                 <td>LAB</td>
                 <td>Jasa Pengerjaan</td>
-                <td class="text-right">Rp {{ number_format(75000, 0, ',', '.') }}</td>
+                <td class="text-right">-</td>
                 <td class="text-center">-</td>
-                <td class="text-center">1</td>
-                <td class="text-right">Rp {{ number_format(75000, 0, ',', '.') }}</td>
+                <td class="text-center">-</td>
+                <td class="text-right">-</td>
             </tr>
+            @endif
             @if ($hasLines)
                 @foreach ($laborLines as $line)
                     <tr>
@@ -699,7 +711,7 @@
                     </tr>
                     <tr>
                         <td><strong>Total Labor</strong></td>
-                        <td class="text-right">Rp {{ number_format(75000, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($discountAmount > 0)
                         @php

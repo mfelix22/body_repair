@@ -130,41 +130,37 @@ class WorkOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'customer_id'       => 'required|exists:customers,id',
-            'vehicle_id'        => 'nullable|exists:vehicles,id',
-            'account_code'      => 'required|in:C,INT_WS,INT_W3',
-            'reference_wo_id'   => 'nullable|exists:work_orders,id',
-            'work_date'         => 'required|date',
-            'deadline'          => 'nullable|date',
-            'vehicle_info'      => 'nullable|string|max:200',
-            'vehicle_merk'      => 'nullable|string|max:100',
-            'vehicle_type_year' => 'nullable|string|max:100',
-            'vehicle_plate'     => 'nullable|string|max:100',
-            'vehicle_km'        => 'nullable|integer|min:0',
-            'chasis_no'         => 'nullable|string|max:100',
-            'paket_code'        => 'nullable|string|max:200',
-            'paket_name'        => 'nullable|string|max:500',
-            'paket_size'        => 'nullable|string|max:100',
-            'paket_grand_total' => 'nullable|numeric|min:0',
-            'description'       => 'nullable|string',
-            'notes'             => 'nullable|string',
-            'sa_sales'          => 'nullable|string|max:100',
-            'items'             => 'nullable|array',
-            'items.*.item_id'   => 'required|exists:items,id',
+            'customer_id'          => 'required|exists:customers,id',
+            'billing_customer_id'  => 'nullable|exists:customers,id',
+            'vehicle_id'           => 'nullable|exists:vehicles,id',
+            'account_code'         => 'required|in:C,INT_WS,INT_W3',
+            'reference_wo_id'      => 'nullable|exists:work_orders,id',
+            'work_date'            => 'required|date',
+            'deadline'             => 'nullable|date',
+            'vehicle_info'         => 'nullable|string|max:200',
+            'vehicle_merk'         => 'nullable|string|max:100',
+            'vehicle_type_year'    => 'nullable|string|max:100',
+            'vehicle_plate'        => 'nullable|string|max:100',
+            'vehicle_km'           => 'nullable|integer|min:0',
+            'chasis_no'            => 'nullable|string|max:100',
+            'paket_code'           => 'nullable|string|max:200',
+            'paket_name'           => 'nullable|string|max:500',
+            'paket_size'           => 'nullable|string|max:100',
+            'paket_grand_total'    => 'nullable|numeric|min:0',
+            'description'          => 'nullable|string',
+            'notes'                => 'nullable|string',
+            'sa_sales'             => 'nullable|string|max:100',
+            'items'                => 'nullable|array',
+            'items.*.item_id'      => 'required|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
-            'items.*.remark'    => 'nullable|string|max:255',
-            'labors'                  => 'nullable|array',
-            'labors.*.labor_id'       => 'nullable|exists:labors,id',
-            'labors.*.description'    => 'nullable|string|max:255',
-            'labors.*.qty'            => 'nullable|numeric|min:0.01',
-            'labors.*.rate'           => 'nullable|numeric|min:0',
-            'labors.*.total_price'    => 'nullable|numeric|min:0',
-            'labors.*.remarks'        => 'nullable|string',
+            'items.*.remark'       => 'nullable|string|max:255',
+            'labors'               => 'nullable|array',
+            'labors.*.labor_id'    => 'required|exists:labors,id',
+            'labors.*.qty'         => 'nullable|numeric|min:0.01',
+            'labors.*.remarks'     => 'nullable|string',
         ]);
 
         $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
-        $materialTotal   = $paketGrandTotal;
-        $addonLaborTotal = 0;
 
         // Auto-generate WO number: YYMM/HAS/SEQ (monthly reset)
         $yy = date('y');
@@ -197,9 +193,10 @@ class WorkOrderController extends Controller
         }
 
         $wo = WorkOrder::create([
-            'wo_number'         => $woNumber,
-            'customer_id'       => $validated['customer_id'],
-            'vehicle_id'        => $vehicleId,
+            'wo_number'            => $woNumber,
+            'customer_id'          => $validated['customer_id'],
+            'billing_customer_id'  => $validated['billing_customer_id'] ?? null,
+            'vehicle_id'           => $vehicleId,
             'account_code'      => $validated['account_code'],
             'work_date'         => $validated['work_date'],
             'deadline'          => $validated['deadline'] ?? null,
@@ -219,8 +216,8 @@ class WorkOrderController extends Controller
             'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
             'status'            => 'on_progress',
             'labor_total'       => 0,
-            'material_total'    => $materialTotal,
-            'grand_total'       => $paketGrandTotal,
+            'material_total'    => 0,
+            'grand_total'       => 0,
             'created_by'        => auth()->id(),
         ]);
 
@@ -239,35 +236,24 @@ class WorkOrderController extends Controller
 
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
-                $laborId = $laborData['labor_id'] ?? null;
-                $desc    = $laborData['description'] ?? null;
-                if (!$laborId && empty(trim($desc ?? ''))) continue;
-                // Auto-fill description from master if labor_id provided
-                if ($laborId && empty($desc)) {
-                    $masterLabor = Labor::find($laborId);
-                    $desc = $masterLabor ? $masterLabor->description : null;
-                }
-                $qty   = $laborData['qty'] ?? 1;
-                $rate  = $laborData['rate'] ?? null;
-                $total = ($rate !== null) ? round($qty * $rate) : ($laborData['total_price'] ?? null);
+                $labor = Labor::findOrFail($laborData['labor_id']);
+                $qty = (float) ($laborData['qty'] ?? 1);
+                $rate = (float) $labor->price;
+                $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
-                    'labor_id'      => $laborId,
-                    'description'   => $desc,
+                    'labor_id'      => $labor->id,
+                    'description'   => $labor->description,
                     'qty'           => $qty,
                     'rate'          => $rate,
-                    'total_price'   => $total,
+                    'total_price'   => $totalPrice,
                     'remarks'       => $laborData['remarks'] ?? null,
+                    'is_extra'      => false,
                 ]);
-                $addonLaborTotal += $total ?? 0;
             }
         }
 
-        $wo->update([
-            'labor_total'    => $addonLaborTotal,
-            'material_total' => $materialTotal,
-            'grand_total'    => $paketGrandTotal + $addonLaborTotal,
-        ]);
+        $wo->calculateTotals();
 
         return redirect()->route('work_orders.index')->with('success', 'Work Order created successfully!');
     }
@@ -342,41 +328,37 @@ class WorkOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'customer_id'       => 'required|exists:customers,id',
-            'vehicle_id'        => 'nullable|exists:vehicles,id',
-            'account_code'      => 'required|in:C,INT_WS,INT_W3',
-            'work_date'         => 'required|date',
-            'deadline'          => 'nullable|date',
-            'vehicle_info'      => 'nullable|string|max:200',
-            'vehicle_merk'      => 'nullable|string|max:100',
-            'vehicle_type_year' => 'nullable|string|max:100',
-            'vehicle_plate'     => 'nullable|string|max:20',
-            'vehicle_km'        => 'nullable|integer|min:0',
-            'chasis_no'         => 'nullable|string|max:100',
-            'paket_code'        => 'nullable|string|max:200',
-            'paket_name'        => 'nullable|string|max:500',
-            'paket_size'        => 'nullable|string|max:100',
-            'paket_grand_total' => 'nullable|numeric|min:0',
-            'description'       => 'nullable|string',
-            'notes'             => 'nullable|string',
-            'sa_sales'          => 'nullable|string|max:100',
-            'reference_wo_id'   => 'nullable|exists:work_orders,id',
+            'customer_id'          => 'required|exists:customers,id',
+            'billing_customer_id'  => 'nullable|exists:customers,id',
+            'vehicle_id'           => 'nullable|exists:vehicles,id',
+            'account_code'         => 'required|in:C,INT_WS,INT_W3',
+            'work_date'            => 'required|date',
+            'deadline'             => 'nullable|date',
+            'vehicle_info'         => 'nullable|string|max:200',
+            'vehicle_merk'         => 'nullable|string|max:100',
+            'vehicle_type_year'    => 'nullable|string|max:100',
+            'vehicle_plate'        => 'nullable|string|max:20',
+            'vehicle_km'           => 'nullable|integer|min:0',
+            'chasis_no'            => 'nullable|string|max:100',
+            'paket_code'           => 'nullable|string|max:200',
+            'paket_name'           => 'nullable|string|max:500',
+            'paket_size'           => 'nullable|string|max:100',
+            'paket_grand_total'    => 'nullable|numeric|min:0',
+            'description'          => 'nullable|string',
+            'notes'                => 'nullable|string',
+            'sa_sales'             => 'nullable|string|max:100',
+            'reference_wo_id'      => 'nullable|exists:work_orders,id',
             'items'             => 'nullable|array',
             'items.*.item_id'   => 'required|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'    => 'nullable|string|max:255',
             'labors'                  => 'nullable|array',
-            'labors.*.labor_id'       => 'nullable|exists:labors,id',
-            'labors.*.description'    => 'nullable|string|max:255',
+            'labors.*.labor_id'       => 'required|exists:labors,id',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
-            'labors.*.rate'           => 'nullable|numeric|min:0',
-            'labors.*.total_price'    => 'nullable|numeric|min:0',
             'labors.*.remarks'        => 'nullable|string',
         ]);
 
         $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
-        $materialTotal   = $paketGrandTotal;
-        $addonLaborTotal = 0;
 
         // Auto-save vehicle to master data if checkbox is ticked
         $vehicleId = $validated['vehicle_id'] ?? $workOrder->vehicle_id;
@@ -399,8 +381,9 @@ class WorkOrderController extends Controller
         }
 
         $workOrder->update([
-            'customer_id'       => $validated['customer_id'],
-            'vehicle_id'        => $vehicleId,
+            'customer_id'          => $validated['customer_id'],
+            'billing_customer_id'  => $validated['billing_customer_id'] ?? null,
+            'vehicle_id'           => $vehicleId,
             'account_code'      => $validated['account_code'],
             'work_date'         => $validated['work_date'],
             'deadline'          => $validated['deadline'] ?? null,
@@ -419,13 +402,13 @@ class WorkOrderController extends Controller
             'sa_sales'          => $validated['sa_sales'] ?? null,
             'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
             'labor_total'       => 0,
-            'material_total'    => $materialTotal,
-            'grand_total'       => $paketGrandTotal,
+            'material_total'    => 0,
+            'grand_total'       => 0,
         ]);
 
-        // Delete old items and labors
+        // Delete old items and base labors (extra labors added via addLabor are preserved)
         $workOrder->items()->delete();
-        $workOrder->labors()->delete();
+        $workOrder->labors()->where('is_extra', false)->delete();
 
         // Add new items
         if (!empty($validated['items'])) {
@@ -444,34 +427,24 @@ class WorkOrderController extends Controller
         // Add new labors
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
-                $laborId = $laborData['labor_id'] ?? null;
-                $desc    = $laborData['description'] ?? null;
-                if (!$laborId && empty(trim($desc ?? ''))) continue;
-                if ($laborId && empty($desc)) {
-                    $masterLabor = Labor::find($laborId);
-                    $desc = $masterLabor ? $masterLabor->description : null;
-                }
-                $qty   = $laborData['qty'] ?? 1;
-                $rate  = $laborData['rate'] ?? null;
-                $total = ($rate !== null) ? round($qty * $rate) : ($laborData['total_price'] ?? null);
+                $labor = Labor::findOrFail($laborData['labor_id']);
+                $qty = (float) ($laborData['qty'] ?? 1);
+                $rate = (float) $labor->price;
+                $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $workOrder->id,
-                    'labor_id'      => $laborId,
-                    'description'   => $desc,
+                    'labor_id'      => $labor->id,
+                    'description'   => $labor->description,
                     'qty'           => $qty,
                     'rate'          => $rate,
-                    'total_price'   => $total,
+                    'total_price'   => $totalPrice,
                     'remarks'       => $laborData['remarks'] ?? null,
+                    'is_extra'      => false,
                 ]);
-                $addonLaborTotal += $total ?? 0;
             }
         }
 
-        $workOrder->update([
-            'material_total' => $materialTotal,
-            'labor_total'    => $addonLaborTotal,
-            'grand_total'    => $paketGrandTotal + $addonLaborTotal,
-        ]);
+        $workOrder->calculateTotals();
 
         return redirect()->route('work_orders.show', $workOrder)
             ->with('success', 'Work Order updated successfully!');
@@ -574,6 +547,7 @@ class WorkOrderController extends Controller
             'rate'          => $rate,
             'total_price'   => $totalPrice,
             'remarks'       => $validated['remarks'] ?? null,
+            'is_extra'      => true,
         ]);
 
         // Recalculate WO totals
@@ -604,9 +578,9 @@ class WorkOrderController extends Controller
             abort(403);
         }
 
-        // Only allow removing labors that were added via labor master (have a rate/total_price)
-        if (!$labor->labor_id) {
-            return back()->with('error', 'Only extra labor items (from labor master) can be removed here. Use Edit WO to change the original labor list.');
+        // Only allow removing extra labors (not base labors selected at WO creation)
+        if (!$labor->is_extra) {
+            return back()->with('error', 'Only extra labor items can be removed here. Use Edit WO to change the original labor list.');
         }
 
         $labor->delete();

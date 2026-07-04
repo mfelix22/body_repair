@@ -47,6 +47,7 @@ class UserController extends Controller
             'finance' => 'Finance',
             'accounting' => 'Accounting',
             'audit' => 'Audit',
+            'viewer' => 'Viewer',
         ];
 
         return view('users.create', compact('availableRoles'));
@@ -68,7 +69,7 @@ class UserController extends Controller
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit',
+            'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit,viewer',
         ]);
 
         $user = User::create([
@@ -105,6 +106,7 @@ class UserController extends Controller
             'finance' => 'Finance',
             'accounting' => 'Accounting',
             'audit' => 'Audit',
+            'viewer' => 'Viewer',
         ];
 
         return view('users.edit', compact('user', 'availableRoles'));
@@ -126,7 +128,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit',
+            'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit,viewer',
         ]);
 
         $user->update([
@@ -221,5 +223,24 @@ class UserController extends Controller
 
         return redirect()->route('users.profile')
             ->with('success', 'Password changed successfully!');
+    }
+
+    public function changeEmail(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'email'            => ['required', 'email', 'max:255', Rule::unique('users')->ignore(Auth::id())],
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'The current password is incorrect.'])->withInput();
+        }
+
+        $user->update(['email' => $request->email]);
+
+        return redirect()->route('users.profile')
+            ->with('success', 'Email changed successfully!');
     }
 }

@@ -169,12 +169,22 @@
         }
 
         .items-table .price-col {
-            width: 15%;
+            width: 5%;
+            text-align: left;
+        }
+
+        .items-table .price-num-col {
+            width: 10%;
             text-align: right;
         }
 
         .items-table .total-col {
-            width: 17%;
+            width: 5%;
+            text-align: left;
+        }
+
+        .items-table .total-num-col {
+            width: 12%;
             text-align: right;
         }
 
@@ -219,19 +229,20 @@
         .totals-rows .t-label {
             text-align: left;
             font-weight: bold;
-            width: 40%;
+            width: 60%;
         }
 
         .totals-rows .t-colon {
-            width: 5%;
-            text-align: center;
+            width: 0%;
+            display: none;
         }
 
         .totals-rows .t-value {
             text-align: right;
             font-weight: bold;
             color: #000;
-            width: 55%;
+            width: 40%;
+            white-space: nowrap;
         }
 
         .totals-rows .t-misc {
@@ -386,7 +397,9 @@
                 <th class="qty-col">Qty</th>
                 <th class="unit-col">Unit</th>
                 <th class="price-col">Price/Unit</th>
+                <th class="price-num-col"></th>
                 <th class="total-col">Total Price</th>
+                <th class="total-num-col"></th>
                 <th class="rem-col">Remarks</th>
             </tr>
         </thead>
@@ -409,8 +422,10 @@
                             {{ $detail->uom->code ?? 'N/A' }}
                         @endif
                     </td>
-                    <td class="price-col red">Rp &nbsp;&nbsp;{{ number_format($detail->unit_price, 2, ',', '.') }}</td>
-                    <td class="total-col red">Rp &nbsp;{{ number_format($detail->total_price, 2, ',', '.') }}</td>
+                    <td class="price-col red">Rp.</td>
+                    <td class="price-num-col red">{{ number_format($detail->unit_price, 2, ',', '.') }}</td>
+                    <td class="total-col red">Rp.</td>
+                    <td class="total-num-col red">{{ number_format($detail->total_price, 2, ',', '.') }}</td>
                     <td class="rem-col">{{ $detail->remarks ?? '' }}</td>
                 </tr>
             @endforeach
@@ -422,7 +437,9 @@
                         <td class="qty-col">&nbsp;</td>
                         <td class="unit-col">&nbsp;</td>
                         <td class="price-col">&nbsp;</td>
+                        <td class="price-num-col">&nbsp;</td>
                         <td class="total-col">&nbsp;</td>
+                        <td class="total-num-col">&nbsp;</td>
                         <td class="rem-col">&nbsp;</td>
                     </tr>
                 @endfor
@@ -461,37 +478,36 @@
             <td class="totals-cell">
                 <table class="totals-rows">
                     <tr>
-                        <td class="t-label">Total</td>
+                        <td class="t-label">Total: Rp.</td>
                         <td class="t-colon"></td>
-                        <td class="t-value">Rp. {{ number_format($subTotal, 0, ',', '.') }}</td>
+                        <td class="t-value">{{ number_format($subTotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($purchaseOrder->po_type === 'purchase_order' && $purchaseOrder->include_ppn)
                         <tr>
-                            <td class="t-label">PPN (11%)</td>
+                            <td class="t-label">PPN (11%): Rp.</td>
                             <td class="t-colon"></td>
-                            <td class="t-value">: Rp. {{ number_format($ppn, 0, ',', '.') }}</td>
+                            <td class="t-value">{{ number_format($ppn, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     @if ($miscCost > 0)
                         <tr>
-                            <td class="t-label">Lain - lain</td>
+                            <td class="t-label">Lain - lain: Rp.</td>
                             <td class="t-colon"></td>
-                            <td class="t-value">: Rp. {{ number_format($miscCost, 0, ',', '.') }}
-                            </td>
+                            <td class="t-value">{{ number_format($miscCost, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     @if ($purchaseOrder->po_type === 'service_order' && $pph > 0)
                         <tr>
                             <td class="t-label">
-                                {{ $purchaseOrder->pph_type === 'pph_21' ? 'PPh 21 (2.5%)' : 'PPh 23 (2%)' }}</td>
+                                {{ $purchaseOrder->pph_type === 'pph_21' ? 'PPh 21 (2.5%)' : 'PPh 23 (2%)' }}: Rp.</td>
                             <td class="t-colon"></td>
-                            <td class="t-value">: Rp. {{ number_format($pph, 0, ',', '.') }}</td>
+                            <td class="t-value">{{ number_format($pph, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     <tr class="grand-total-row">
-                        <td class="t-label">Grand Total</td>
+                        <td class="t-label">Grand Total: Rp.</td>
                         <td class="t-colon"></td>
-                        <td class="t-value">: Rp. {{ number_format($grandTotal, 0, ',', '.') }}</td>
+                        <td class="t-value">{{ number_format($grandTotal, 0, ',', '.') }}</td>
                     </tr>
                 </table>
             </td>

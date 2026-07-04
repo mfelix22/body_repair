@@ -268,6 +268,30 @@
         </tbody>
     </table>
 
+    {{-- ── PPJ ATTACHMENTS ── --}
+    @if ($purchaseRequest->type === 'Jasa' && $purchaseRequest->attachments && $purchaseRequest->attachments->count() > 0)
+        <div style="margin-top: 18px; page-break-inside: avoid;">
+            <div style="font-size:11px; font-weight:bold; margin-bottom:4px;">Lampiran / Attachments:</div>
+            @foreach ($purchaseRequest->attachments as $attachment)
+                @php
+                    $attPath = Storage::disk('public')->path($attachment->file_path);
+                    $attExt  = strtolower(pathinfo($attachment->file_name, PATHINFO_EXTENSION));
+                @endphp
+                @if (file_exists($attPath) && in_array($attExt, ['jpg', 'jpeg', 'png']))
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size:10px; margin-bottom:2px;">{{ $attachment->file_name }}</div>
+                        <img src="data:{{ mime_content_type($attPath) }};base64,{{ base64_encode(file_get_contents($attPath)) }}"
+                            style="max-width:100%; max-height:200px; border:1px solid #ccc;">
+                    </div>
+                @elseif (file_exists($attPath) && $attExt === 'pdf')
+                    <div style="margin-bottom: 4px; font-size:10px;">
+                        <strong>{{ $attachment->file_name }}</strong> - File PDF terlampir (lihat file terpisah).
+                    </div>
+                @endif
+            @endforeach
+        </div>
+    @endif
+
     {{-- ── SIGNATURES ── --}}
     <table class="sig-table">
         <tr>

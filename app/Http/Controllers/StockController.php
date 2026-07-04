@@ -155,6 +155,7 @@ class StockController extends Controller
             'item_id' => $validated['item_id'],
             'transaction_type' => 'adjustment',
             'quantity' => $newQuantity - $oldQuantity,
+            'unit_cost' => (float) $stock->avg_cost,
             'balance_after' => $newQuantity,
             'location' => 'default',
             'reference_type' => 'Manual Adjustment',
