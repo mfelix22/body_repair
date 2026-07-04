@@ -165,14 +165,16 @@
                                             href="{{ route('customers.show', $workOrder->customer) }}">{{ $workOrder->customer->name }}</a>
                                     </td>
                                 </tr>
-                                @if($workOrder->billingCustomer)
-                                    <tr>
-                                        <th>Ditujukan Kepada:</th>
-                                        <td><a
-                                                href="{{ route('customers.show', $workOrder->billingCustomer) }}">{{ $workOrder->billingCustomer->name }}</a>
-                                        </td>
-                                    </tr>
-                                @endif
+                                <tr>
+                                    <th>Ditujukan Kepada:</th>
+                                    <td>
+                                        @if($workOrder->billingCustomer)
+                                            <a href="{{ route('customers.show', $workOrder->billingCustomer) }}">{{ $workOrder->billingCustomer->name }}</a>
+                                        @else
+                                            <a href="{{ route('customers.show', $workOrder->customer) }}">{{ $workOrder->customer->name }}</a>
+                                        @endif
+                                    </td>
+                                </tr>
                                 <tr>
                                     <th>Sales Name:</th>
                                     <td>{{ $workOrder->sa_sales ?? '-' }}</td>

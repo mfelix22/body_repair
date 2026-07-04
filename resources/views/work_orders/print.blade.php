@@ -362,6 +362,11 @@
                         <td class="val">{{ $workOrder->customer->name }}</td>
                     </tr>
                     <tr>
+                        <td>Ditujukan Kepada</td>
+                        <td>:</td>
+                        <td class="val">{{ $workOrder->billingCustomer->name ?? $workOrder->customer->name }}</td>
+                    </tr>
+                    <tr>
                         <td>Address</td>
                         <td>:</td>
                         <td class="val">{{ $workOrder->customer->address ?? '-' }}</td>

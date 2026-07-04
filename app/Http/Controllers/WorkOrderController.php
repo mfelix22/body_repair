@@ -260,7 +260,7 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['customer', 'creator', 'items.item.smallestUom', 'labors.labor', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice']);
+        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'labors.labor', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice']);
 
         // Pass active labors for the Add Labor modal
         $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
