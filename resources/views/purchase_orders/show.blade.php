@@ -33,6 +33,12 @@
                         );
                     @endphp
                     <div class="card-tools">
+                        @if ($purchaseOrder->status === 'on_progress' && \App\Helpers\PermissionHelper::canPrint('purchase_orders'))
+                            <a href="{{ route('purchase_orders.print_preview', $purchaseOrder) }}"
+                                class="btn btn-info btn-sm" target="_blank">
+                                <i class="fas fa-eye"></i> Preview Print
+                            </a>
+                        @endif
                         @if (in_array($purchaseOrder->status, ['approved', 'partial', 'received', 'completed', 'closed_shortage', 'printed']))
                             @if (\App\Helpers\PermissionHelper::canPrint('purchase_orders'))
                                 <a href="{{ \URL::temporarySignedRoute('purchase_orders.print', now()->addMinutes(5), $purchaseOrder) }}"

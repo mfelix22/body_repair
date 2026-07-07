@@ -90,7 +90,7 @@
                                     <input type="hidden" name="require_acknowledgement" value="0">
                                     <input type="checkbox" name="require_acknowledgement" id="require_acknowledgement"
                                         class="form-check-input" value="1"
-                                        {{ old('require_acknowledgement', true) ? 'checked' : '' }}>
+                                        {{ old('require_acknowledgement', false) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="require_acknowledgement">
                                         Require Direksi/GM Acknowledgement
                                     </label>

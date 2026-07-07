@@ -1239,6 +1239,24 @@ class PurchaseOrderController extends Controller
         return $pdf->stream($filename);
     }
 
+    public function printPreview(PurchaseOrder $purchaseOrder)
+    {
+        if (!PermissionHelper::canPrint('purchase_orders')) {
+            return PermissionHelper::denyAccess('purchase_orders', 'view');
+        }
+
+        if (!in_array($purchaseOrder->status, ['on_progress', 'approved', 'partial', 'received', 'completed', 'closed_shortage', 'printed'])) {
+            return redirect()->route('purchase_orders.show', $purchaseOrder)
+                ->with('error', 'Only POs that can be printed can be previewed.');
+        }
+
+        $purchaseOrder->load(['purchaseRequest', 'creator', 'approver', 'supplier', 'details.item', 'details.uom', 'miscCosts']);
+
+        $pdf = Pdf::loadView('purchase_orders.print', compact('purchaseOrder'));
+        $safeFilename = str_replace('/', '-', $purchaseOrder->po_number);
+        return $pdf->stream('PREVIEW-PO-' . $safeFilename . '.pdf');
+    }
+
     public function print(PurchaseOrder $purchaseOrder)
     {
         if (!PermissionHelper::canPrint('purchase_orders')) {

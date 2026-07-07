@@ -17,7 +17,7 @@
                         @endif
                     </h3>
                     <div class="card-tools">
-                        @if (in_array($purchaseRequest->status, ['completed', 'printed']))
+                        @if (in_array($purchaseRequest->status, ['completed', 'printed', 'closed']))
                             @if (\App\Helpers\PermissionHelper::canPrint('purchase_requests') || auth()->user()->hasAnyRole(['purchasing']))
                                 <a href="{{ \URL::temporarySignedRoute('purchase_requests.print', now()->addMinutes(5), $purchaseRequest) }}"
                                     class="btn btn-secondary btn-sm" target="_blank">

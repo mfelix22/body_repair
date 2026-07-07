@@ -681,9 +681,9 @@ class PurchaseRequestController extends Controller
             return PermissionHelper::denyAccess('purchase_requests', 'view');
         }
 
-        if (!in_array($purchaseRequest->status, ['completed', 'printed'])) {
+        if (!in_array($purchaseRequest->status, ['completed', 'printed', 'closed'])) {
             return redirect()->route('purchase_requests.show', $purchaseRequest)
-                ->with('error', 'Only completed PPB/PPJ can be printed.');
+                ->with('error', 'Only completed, printed, or closed PPB/PPJ can be printed.');
         }
 
         if ($purchaseRequest->status === 'completed') {
