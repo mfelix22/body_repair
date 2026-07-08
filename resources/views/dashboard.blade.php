@@ -14,7 +14,7 @@
                             <p class="text-muted mb-0">Snapshot as of {{ now()->format('d M Y H:i') }}</p>
                         </div>
                         <div class="mt-2 mt-md-0">
-                            @if (auth()->user()->hasAnyRole(['warehouse', 'admin', 'super_admin', 'director']))
+                            @if (auth()->user()->hasAnyRole(['service_advisor', 'admin', 'super_admin', 'director']))
                                 <a href="{{ route('work_orders.create') }}" class="btn btn-primary btn-sm mr-1">
                                     <i class="fas fa-plus"></i> New Work Order
                                 </a>
