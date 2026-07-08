@@ -162,7 +162,8 @@ class InvoiceController extends Controller
                 $cogmMaterial += (float) $woItem->demand_quantity * (float) ($stock?->avg_cost ?? 0);
             }
         }
-        $cogm = $cogmMaterial;
+        $cogmLabor = (float) ($workOrder->labor_total ?? 0);
+        $cogm = $cogmMaterial + $cogmLabor;
 
         // Invoice number format: 4YYMM/HAS/SEQ for WO-based invoices (resets monthly)
         $now = now();
@@ -186,7 +187,7 @@ class InvoiceController extends Controller
             'discount_amount'     => $discountAmount,
             'grand_total'         => $grandTotal,
             'cogm_material'       => round($cogmMaterial, 2),
-            'cogm_labor'          => 0,
+            'cogm_labor'          => round($cogmLabor, 2),
             'cogm'                => round($cogm, 2),
             'status'              => 'on_progress',
             'notes'               => $validated['notes'],

@@ -356,7 +356,9 @@
                                                 count($aggregatedItems) > 0
                                                     ? $totalItemCogs
                                                     : (float) ($invoice->cogm_material ?? 0);
-                                            $grossProfit = ($invoice->grand_total ?? 0) - $materialCogs;
+                                            $laborCogs = (float) ($invoice->cogm_labor ?? 0);
+                                            $totalCogs = $materialCogs + $laborCogs;
+                                            $grossProfit = ($invoice->grand_total ?? 0) - $totalCogs;
                                             $margin =
                                                 ($invoice->grand_total ?? 0) > 0
                                                     ? ($grossProfit / $invoice->grand_total) * 100
@@ -366,9 +368,13 @@
                                             <th width="50%">Materials Cost (COGS):</th>
                                             <td>Rp {{ number_format($materialCogs, 0, ',', '.') }}</td>
                                         </tr>
+                                        <tr>
+                                            <th>Labor Cost (COGS):</th>
+                                            <td>Rp {{ number_format($laborCogs, 0, ',', '.') }}</td>
+                                        </tr>
                                         <tr class="table-warning">
-                                            <th><strong>Total COGS (Material Only):</strong></th>
-                                            <td><strong>Rp {{ number_format($materialCogs, 0, ',', '.') }}</strong></td>
+                                            <th><strong>Total COGS:</strong></th>
+                                            <td><strong>Rp {{ number_format($totalCogs, 0, ',', '.') }}</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Revenue (Grand Total):</th>

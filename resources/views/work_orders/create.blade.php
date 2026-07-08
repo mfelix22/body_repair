@@ -1129,7 +1129,9 @@
                 });
             }
 
-            initItemSelect2();
-            initLaborSelect2();
+            $(document).ready(function() {
+                initItemSelect2();
+                initLaborSelect2();
+            });
         </script>
     @endsection

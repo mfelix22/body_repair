@@ -300,7 +300,8 @@
         };
 
         $cogmMaterial = (float) ($invoice->cogm_material ?? 0);
-        $totalCogs = $cogmMaterial;
+        $cogmLabor = (float) ($invoice->cogm_labor ?? 0);
+        $totalCogs = $cogmMaterial + $cogmLabor;
         $revenue = (float) ($invoice->grand_total ?? 0);
         $grossProfit = $revenue - $totalCogs;
         $margin = $revenue > 0 ? ($grossProfit / $revenue) * 100 : 0;
@@ -508,8 +509,12 @@
             <td class="label-col">Direct Materials</td>
             <td class="text-right">Rp {{ number_format($cogmMaterial, 0, ',', '.') }}</td>
         </tr>
+        <tr>
+            <td class="label-col">Labor Cost</td>
+            <td class="text-right">Rp {{ number_format($cogmLabor, 0, ',', '.') }}</td>
+        </tr>
         <tr class="total-row">
-            <td class="label-col">Total COGS (Material Only)</td>
+            <td class="label-col">Total COGS</td>
             <td class="text-right">Rp {{ number_format($totalCogs, 0, ',', '.') }}</td>
         </tr>
         <tr>
