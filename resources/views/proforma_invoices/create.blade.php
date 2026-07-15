@@ -210,12 +210,12 @@
 
             // Collect discountable lines in display order
             const lines = [];
-            if (wo.package) {
+            if (wo.panel) {
                 lines.push({
                     type: 'package',
                     target_id: '',
-                    description: wo.package.description,
-                    original_price: wo.package.original_price
+                    description: wo.panel.description,
+                    original_price: wo.panel.original_price
                 });
             }
             (wo.extra_items || []).forEach(i => lines.push({
@@ -256,7 +256,7 @@
         // ─── Card Builder ────────────────────────────────────────────────────────────
         function buildCard(idx, line) {
             const labels = {
-                package: 'Package',
+                package: 'Panel',
                 extra_item: 'Extra Item',
                 extra_labor: 'Extra Labor'
             };

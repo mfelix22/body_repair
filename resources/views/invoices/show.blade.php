@@ -155,14 +155,14 @@
                                         @if (!is_null($item->unit_price) && (float) $item->unit_price > 0)
                                             Rp {{ number_format($item->unit_price, 0, ',', '.') }}
                                         @else
-                                            <span class="text-muted">Included in Paket</span>
+                                            <span class="text-muted">—</span>
                                         @endif
                                     </td>
                                     <td>
                                         @if (!is_null($item->total_price) && (float) $item->total_price > 0)
                                             Rp {{ number_format($item->total_price, 0, ',', '.') }}
                                         @else
-                                            <span class="text-muted">Included in Paket</span>
+                                            <span class="text-muted">—</span>
                                         @endif
                                     </td>
                                 </tr>

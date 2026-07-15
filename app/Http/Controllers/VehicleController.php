@@ -62,13 +62,13 @@ class VehicleController extends Controller
 
         $vehicle->load('customer');
 
-        $workOrders = \App\Models\WorkOrder::with('invoice')
+        $workOrders = \App\Models\WorkOrder::with(['invoice', 'labors.labor'])
             ->where(function ($q) use ($vehicle) {
                 $q->where('vehicle_id', $vehicle->id)
-                  ->orWhere(function ($q2) use ($vehicle) {
-                      $q2->whereNull('vehicle_id')
-                         ->where('vehicle_plate', $vehicle->plate_number);
-                  });
+                    ->orWhere(function ($q2) use ($vehicle) {
+                        $q2->whereNull('vehicle_id')
+                            ->where('vehicle_plate', $vehicle->plate_number);
+                    });
             })
             ->orderBy('work_date', 'desc')
             ->get();

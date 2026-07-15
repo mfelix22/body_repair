@@ -259,12 +259,6 @@
             }
             return $date->day . ' ' . $monthsId[$date->month] . ' ' . $date->year;
         };
-
-        // WO Size display
-        $sizeDisplay = '';
-        if ($wo && $wo->paket_size && $wo->paket_size !== 'All') {
-            $sizeDisplay = str_replace('Size ', '', $wo->paket_size);
-        }
     @endphp
 
     {{-- ===== PRINT BUTTON ===== --}}

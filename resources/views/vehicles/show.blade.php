@@ -197,14 +197,27 @@
                                         </div>
                                     @endif
 
-                                    @if ($wo->paket_name)
+                                    @php
+                                        $panelCount = $wo->labors?->where('is_extra', false)->count() ?? 0;
+                                        $tierLabels = [
+                                            '0_300'   => '0–300jt',
+                                            '300_500' => '300–500jt',
+                                            '500_800' => '500–800jt',
+                                            '800_2000'=> '800jt–2M',
+                                        ];
+                                    @endphp
+                                    @if ($panelCount > 0 || $wo->vehicle_price_tier)
                                         <div class="mt-1">
-                                            <span class="badge badge-light border">
-                                                <i class="fas fa-box mr-1"></i>{{ $wo->paket_name }}
-                                                @if ($wo->paket_size)
-                                                    – {{ $wo->paket_size }}
-                                                @endif
-                                            </span>
+                                            @if ($panelCount > 0)
+                                                <span class="badge badge-light border mr-1">
+                                                    <i class="fas fa-tools mr-1"></i>{{ $panelCount }} Panel
+                                                </span>
+                                            @endif
+                                            @if ($wo->vehicle_price_tier)
+                                                <span class="badge badge-light border">
+                                                    <i class="fas fa-car mr-1"></i>{{ $tierLabels[$wo->vehicle_price_tier] ?? $wo->vehicle_price_tier }}
+                                                </span>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>

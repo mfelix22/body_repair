@@ -404,107 +404,79 @@
             </td>
             <td class="info-divider"></td>
             <td class="car-size-cell">
-                @if ($workOrder->paket_size && $workOrder->paket_size !== 'All')
-                    @php
-                        $sizeDisplay = $workOrder->paket_size;
-                        $label = 'Car Size';
-
-                        // Handle Size S/M/L/XL/XXL
-                        if (str_contains($sizeDisplay, 'Size ')) {
-                            $sizeDisplay = strtoupper(str_replace('Size ', '', $sizeDisplay));
-                        }
-                        // Handle Row-based sizes (2 Row, 3 Row)
-                        elseif (str_contains($sizeDisplay, 'Row')) {
-                            $sizeDisplay = str_replace(' Row', '', $sizeDisplay);
-                            $label = 'Row';
-                        }
-                    @endphp
-                    <div class="car-size-box">{{ $sizeDisplay }}</div>
-                    <div class="car-size-label">{{ $label }}</div>
-                @else
-                    <div class="car-size-box" style="font-size:14px;line-height:normal;padding:10px;">
-                        {{ $workOrder->paket_code ?? '-' }}
-                    </div>
-                    <div class="car-size-label">Paket</div>
-                @endif
+                @php
+                    $tierLabels = [
+                        '0_300'   => '0–300jt',
+                        '300_500' => '300–500jt',
+                        '500_800' => '500–800jt',
+                        '800_2000'=> '800jt–2M',
+                    ];
+                    $tierDisplay = $tierLabels[$workOrder->vehicle_price_tier] ?? '-';
+                @endphp
+                <div class="car-size-box" style="font-size:11px;line-height:normal;padding:8px;">{{ $tierDisplay }}</div>
+                <div class="car-size-label">Kisaran Harga</div>
             </td>
         </tr>
     </table>
 
-    {{-- ===== PACKAGE / SERVICE TABLE ===== --}}
+    {{-- ===== PANELS TABLE ===== --}}
+    @php
+        $basePanels = $workOrder->labors->where('is_extra', false);
+        $extraLabors = $workOrder->labors->where('is_extra', true);
+    @endphp
     <table class="section-table">
         <thead>
             <tr>
-                <td style="width:15%">Item Code</td>
-                <td style="width:50%">Description</td>
+                <td style="width:15%">Panel Code</td>
+                <td style="width:45%">Panel</td>
                 <td style="width:10%;text-align:center;">Qty</td>
-                <td style="width:25%">Remark</td>
+                <td style="width:15%;text-align:right;">Rate</td>
+                <td style="width:15%;text-align:right;">Total</td>
             </tr>
         </thead>
         <tbody>
-            @if ($workOrder->paket_name)
-                @php
-                    $codes = explode(' + ', $workOrder->paket_code ?? '');
-                    $names = explode(' + ', $workOrder->paket_name ?? '');
-                    $sizes = explode(
-                        ', ',
-                        $workOrder->paket_size && $workOrder->paket_size !== 'All' ? $workOrder->paket_size : '',
-                    );
-                    $rowCount = max(count($codes), count($names));
-                @endphp
-                @for ($pi = 0; $pi < $rowCount; $pi++)
-                    <tr>
-                        <td>{{ $codes[$pi] ?? '-' }}</td>
-                        <td>{{ $names[$pi] ?? '-' }}</td>
-                        <td style="text-align:center;">1</td>
-                        <td>{{ isset($sizes[$pi]) && $sizes[$pi] ? $sizes[$pi] : '' }}</td>
-                    </tr>
-                @endfor
-                @for ($pi = $rowCount; $pi < 4; $pi++)
-                    <tr class="empty-row">
-                        <td colspan="4">&nbsp;</td>
-                    </tr>
-                @endfor
-            @else
-                @for ($pi = 0; $pi < 4; $pi++)
-                    <tr class="empty-row">
-                        <td colspan="4">&nbsp;</td>
-                    </tr>
-                @endfor
-            @endif
+            @forelse ($basePanels as $labor)
+                <tr>
+                    <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
+                    <td>{{ $labor->description }}</td>
+                    <td style="text-align:center;">{{ number_format($labor->qty ?? 1, 0) }}</td>
+                    <td style="text-align:right;">{{ $labor->rate ? number_format($labor->rate, 0, ',', '.') : '-' }}</td>
+                    <td style="text-align:right;">{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '-' }}</td>
+                </tr>
+            @empty
+                <tr class="empty-row"><td colspan="5">&nbsp;</td></tr>
+            @endforelse
+            @for ($i = $basePanels->count(); $i < 4; $i++)
+                <tr class="empty-row"><td colspan="5">&nbsp;</td></tr>
+            @endfor
         </tbody>
     </table>
 
-    {{-- ===== LABOR TABLE ===== --}}
+    {{-- ===== EXTRA LABOR TABLE (only if any) ===== --}}
+    @if ($extraLabors->isNotEmpty())
     <table class="section-table">
         <thead>
             <tr>
                 <td style="width:15%">Labor Code</td>
-                <td style="width:40%">Description</td>
+                <td style="width:45%">Extra Labor</td>
                 <td style="width:10%;text-align:center;">Qty</td>
-                <td style="width:35%">Remark</td>
+                <td style="width:15%;text-align:right;">Rate</td>
+                <td style="width:15%;text-align:right;">Total</td>
             </tr>
         </thead>
         <tbody>
-            @forelse ($workOrder->labors as $i => $labor)
+            @foreach ($extraLabors as $labor)
                 <tr>
-                    <td>LAB - {{ str_pad($i + 1, 4, '0', STR_PAD_LEFT) }}</td>
+                    <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
                     <td>{{ $labor->description }}</td>
                     <td style="text-align:center;">{{ number_format($labor->qty ?? 1, 0) }}</td>
-                    <td>{{ $labor->remarks }}</td>
+                    <td style="text-align:right;">{{ $labor->rate ? number_format($labor->rate, 0, ',', '.') : '-' }}</td>
+                    <td style="text-align:right;">{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '-' }}</td>
                 </tr>
-            @empty
-                <tr class="empty-row">
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            @endforelse
-            @for ($i = $workOrder->labors->count(); $i < 5; $i++)
-                <tr class="empty-row">
-                    <td colspan="4">&nbsp;</td>
-                </tr>
-            @endfor
+            @endforeach
         </tbody>
     </table>
+    @endif
 
     {{-- ===== RECEIVED BY / SA ROW ===== --}}
     <table style="width:100%;margin:6px 0;">

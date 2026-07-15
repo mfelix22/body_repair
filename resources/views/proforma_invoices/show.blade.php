@@ -87,7 +87,7 @@
                                 $linePending = $line->isPendingMyApproval($authUser->id);
                                 $lb = $line->getStatusBadge();
                                 $typeLabels = [
-                                    'package' => 'Package',
+                                    'package' => 'Panel',
                                     'extra_item' => 'Extra Item',
                                     'extra_labor' => 'Extra Labor',
                                 ];

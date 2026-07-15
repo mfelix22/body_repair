@@ -71,69 +71,61 @@
                             </div>
                         </div>
 
-                        {{-- Existing Items --}}
-                        <h5><i class="fas fa-boxes"></i> Existing Items — Edit Actual Usage</h5>
-                        <div class="table-responsive mb-4">
-                            <table class="table table-bordered table-hover">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Item</th>
-                                        @if ($bonOut->bon_out_type != 3)
-                                            <th class="text-right">Demand Qty</th>
-                                        @endif
-                                        <th class="text-center" width="180">Actual Used</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($bonOut->items as $idx => $bi)
-                                        @php
-                                            $uomCode = $bi->item->smallestUom->code ?? '-';
-                                            $availableStock = $bi->item->stocks->sum('quantity');
-                                        @endphp
-                                        <input type="hidden" name="items[{{ $idx }}][bon_out_item_id]"
-                                            value="{{ $bi->id }}">
-                                        <input type="hidden" name="items[{{ $idx }}][item_id]"
-                                            value="{{ $bi->item_id }}">
-                                        <input type="hidden" name="items[{{ $idx }}][work_order_item_id]"
-                                            value="{{ $bi->work_order_item_id }}">
-                                        <tr>
-                                            <td>{{ $loop->iteration }}</td>
-                                            <td>
-                                                <strong>[{{ $bi->item->code }}]</strong> {{ $bi->item->name }}
-                                            </td>
-                                            @if ($bonOut->bon_out_type != 3)
-                                                <td class="text-right">
-                                                    {{ number_format((float) $bi->demand_quantity, 2) }}
-                                                    {{ $uomCode }}
-                                                </td>
-                                            @endif
-                                            <td>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number"
-                                                        name="items[{{ $idx }}][actual_quantity]"
-                                                        class="form-control text-right" step="0.01" min="0"
-                                                        value="{{ old("items.{$idx}.actual_quantity", $bi->actual_quantity) }}">
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text">{{ $uomCode }}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                        {{-- Materials Used --}}
+                        <h5><i class="fas fa-boxes"></i> Materials Used</h5>
 
-                        {{-- Add New Items --}}
-                        @if ($bonOut->bon_out_type != 3)
-                            <h5><i class="fas fa-plus-circle"></i> Add New Items</h5>
-                            <div class="alert alert-info py-2">
-                                <i class="fas fa-info-circle"></i> Add items that were not in the original Bon Out.
+                        {{-- Existing saved items --}}
+                        @foreach ($bonOut->items as $idx => $bi)
+                            @php $uomCode = $bi->item->smallestUom->code ?? '-'; @endphp
+                            <input type="hidden" name="items[{{ $idx }}][bon_out_item_id]" value="{{ $bi->id }}">
+                            <input type="hidden" name="items[{{ $idx }}][item_id]" value="{{ $bi->item_id }}">
+                            <input type="hidden" name="items[{{ $idx }}][work_order_item_id]" value="{{ $bi->work_order_item_id }}">
+                            <div class="card mb-2 border-left-primary">
+                                <div class="card-body p-3">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-5">
+                                            <label class="small mb-1"><strong>Item</strong></label>
+                                            <div class="form-control form-control-sm bg-light">
+                                                <strong>[{{ $bi->item->code }}]</strong> {{ $bi->item->name }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="small mb-1"><strong>Actual Qty</strong></label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="items[{{ $idx }}][actual_quantity]"
+                                                    class="form-control text-right" step="0.01" min="0"
+                                                    value="{{ old("items.{$idx}.actual_quantity", $bi->actual_quantity) }}">
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text">{{ $uomCode }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="small mb-1"><strong>Stock</strong></label>
+                                            <div class="form-control-plaintext text-muted small">
+                                                {{ number_format((float) $bi->item->stocks->sum('quantity'), 2) }} {{ $uomCode }}
+                                            </div>
+                                        </div>
+                                        @if ($bonOut->bon_out_type != 3)
+                                            <div class="col-md-2">
+                                                <label class="small mb-1"><strong>Selling Price</strong></label>
+                                                <input type="number" name="items[{{ $idx }}][unit_price]"
+                                                    class="form-control form-control-sm" step="0.01" min="0"
+                                                    value="{{ old("items.{$idx}.unit_price", $bi->unit_price ?? 0) }}"
+                                                    placeholder="0 = internal">
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
-                            <div id="newItemsContainer"></div>
-                            <button type="button" class="btn btn-sm btn-success mt-1" id="addNewItemBtn">
-                                <i class="fas fa-plus"></i> Add Item
+                        @endforeach
+
+                        {{-- Dynamically added items --}}
+                        <div id="newItemsContainer"></div>
+
+                        @if ($bonOut->bon_out_type != 3)
+                            <button type="button" class="btn btn-success btn-sm mt-2" id="addNewItemBtn">
+                                <i class="fas fa-plus"></i> Add Material
                             </button>
                         @endif
                     </div>
@@ -180,21 +172,21 @@
             const container = document.getElementById('newItemsContainer');
             const idx = newItemIndex++;
             const div = document.createElement('div');
-            div.className = 'card mb-2 border-success';
+            div.className = 'card mb-2 border-left-success';
             div.innerHTML = `
             <div class="card-body p-3">
                 <div class="row align-items-end">
                     <input type="hidden" name="items[${idx}][bon_out_item_id]" value="">
                     <input type="hidden" name="items[${idx}][work_order_item_id]" value="">
-                    <div class="col-md-5">
-                        <label>Item <span class="text-danger">*</span></label>
+                    <div class="col-md-6">
+                        <label class="small mb-1"><strong>Item <span class="text-danger">*</span></strong></label>
                         <select name="items[${idx}][item_id]" class="form-control form-control-sm new-item-select" required>
-                            <option value="">-- Select Item --</option>
+                            <option value="">-- Pilih Item --</option>
                             ${buildItemOptions()}
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label>Actual Qty <span class="text-danger">*</span></label>
+                    <div class="col-md-3">
+                        <label class="small mb-1"><strong>Actual Qty <span class="text-danger">*</span></strong></label>
                         <div class="input-group input-group-sm">
                             <input type="number" name="items[${idx}][actual_quantity]"
                                 class="form-control text-right" step="0.01" min="0.01" value="0" required>
@@ -202,17 +194,9 @@
                                 <span class="input-group-text uom-label">-</span>
                             </div>
                         </div>
+                        <small class="text-muted stock-info"></small>
                     </div>
-                    <div class="col-md-2">
-                        <label>Stock Available</label>
-                        <div class="form-control-plaintext font-weight-bold stock-info text-muted">-</div>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Selling Price</label>
-                        <input type="number" name="items[${idx}][unit_price]"
-                            class="form-control form-control-sm" step="0.01" min="0" placeholder="0 = internal">
-                    </div>
-                    <div class="col-md-1">
+                    <div class="col-md-1 mt-3">
                         <button type="button" class="btn btn-danger btn-sm remove-new-item">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -234,7 +218,7 @@
                 const stock = parseFloat(opt.dataset.stock || 0).toFixed(2);
                 const row = this.closest('.card-body');
                 row.querySelector('.uom-label').textContent = uom;
-                row.querySelector('.stock-info').textContent = `${stock} ${uom}`;
+                row.querySelector('.stock-info').textContent = `Stock: ${stock} ${uom}`;
             });
 
             div.querySelector('.remove-new-item').addEventListener('click', function() {

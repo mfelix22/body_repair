@@ -34,11 +34,12 @@ class ProformaInvoiceController extends Controller
     {
         $details = [];
         foreach ($workOrders as $wo) {
-            $package = null;
-            if ($wo->paket_name && (float) $wo->paket_grand_total > 0) {
-                $package = [
-                    'description'    => $wo->paket_name,
-                    'original_price' => (float) $wo->paket_grand_total,
+            $panel = null;
+            $panelTotal = (float) $wo->labors->where('is_extra', false)->sum('total_price');
+            if ($panelTotal > 0) {
+                $panel = [
+                    'description'    => 'Panel yang Dikerjakan',
+                    'original_price' => $panelTotal,
                 ];
             }
 
@@ -59,7 +60,7 @@ class ProformaInvoiceController extends Controller
             foreach ($wo->labors->where('total_price', '>', 0)->where('is_extra', true) as $l) {
                 $extraLabors[] = [
                     'target_id'      => $l->id,
-                    'description'    => $l->description ?? 'Labor',
+                    'description'    => $l->description ?? 'Extra Labor',
                     'original_price' => (float) $l->total_price,
                 ];
             }
@@ -68,7 +69,7 @@ class ProformaInvoiceController extends Controller
                 'id'           => $wo->id,
                 'subtotal'     => (float) $wo->grand_total,
                 'customer'     => optional($wo->customer)->name ?? '',
-                'package'      => $package,
+                'panel'        => $panel,
                 'extra_items'  => array_values($extraItems),
                 'extra_labors' => array_values($extraLabors),
             ];
@@ -151,7 +152,7 @@ class ProformaInvoiceController extends Controller
             ->with([
                 'customer',
                 'items'  => fn($q) => $q->where('unit_price', '>', 0)->with('item.smallestUom'),
-                'labors' => fn($q) => $q->where('total_price', '>', 0)->where('is_extra', true),
+                'labors' => fn($q) => $q->where('total_price', '>', 0)->whereNotNull('labor_id'),
             ])
             ->get();
 
@@ -495,6 +496,7 @@ class ProformaInvoiceController extends Controller
         $proformaInvoice->load([
             'workOrder.customer',
             'workOrder.labors.labor',
+            'workOrder.items.item',
             'creator',
             'discountLines',
         ]);

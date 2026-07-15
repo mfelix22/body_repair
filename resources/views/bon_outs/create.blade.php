@@ -33,14 +33,6 @@
                             </div>
                         @endif
 
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Multi-Day Work Support:</strong> Enter materials used <strong>today</strong> only. Leave
-                            quantity as 0 for materials not used today.
-                            You can create another Bon Out tomorrow for the next day's usage.
-                            Items with zero quantity will be ignored.
-                        </div>
-
                         {{-- WO Summary --}}
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -54,9 +46,14 @@
                                         <td>{{ $workOrder->customer->name }}</td>
                                     </tr>
                                     <tr>
-                                        <th>Package</th>
-                                        <td>{{ $workOrder->paket_name ?? '-' }}
-                                            {{ $workOrder->paket_size ? "({$workOrder->paket_size})" : '' }}</td>
+                                        <th>Panels</th>
+                                        <td>
+                                            @forelse ($workOrder->labors->where('is_extra', false) as $wl)
+                                                <span class="badge badge-secondary">{{ $wl->labor->labor_code ?? $wl->description }}</span>
+                                            @empty
+                                                -
+                                            @endforelse
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>Vehicle</th>
@@ -81,98 +78,12 @@
                             </div>
                         </div>
 
-                        {{-- Materials Table --}}
-                        <h5><i class="fas fa-boxes"></i> Material Usage (From Work Order)</h5>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover" id="woMaterialsTable">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th width="40">#</th>
-                                        <th>Item</th>
-                                        <th class="text-right" width="120">Planned</th>
-                                        <th class="text-right" width="120">Already Used</th>
-                                        <th class="text-right" width="120">Available Stock</th>
-                                        <th class="text-center" width="180">Qty Used Today</th>
-                                        <th width="180">Remark</th>
-                                        <th class="text-center" width="100">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($workOrder->items as $idx => $woItem)
-                                        @php
-                                            $uomCode = $woItem->item->smallestUom->code ?? '-';
-                                            $availableStock = $woItem->item->stocks->sum('quantity');
-                                            $alreadyUsed = $woItem->actual_quantity ?? 0;
-                                        @endphp
-                                        <input type="hidden" name="items[{{ $idx }}][item_id]"
-                                            value="{{ $woItem->item_id }}">
-                                        <input type="hidden" name="items[{{ $idx }}][work_order_item_id]"
-                                            value="{{ $woItem->id }}">
-                                        <tr class="material-row">
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td>
-                                                <strong>[{{ $woItem->item->code }}]</strong> {{ $woItem->item->name }}
-                                                @if ($woItem->remark)
-                                                    <br><small class="text-muted">{{ $woItem->remark }}</small>
-                                                @endif
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format($woItem->demand_quantity, 2) }} {{ $uomCode }}
-                                            </td>
-                                            <td class="text-right">
-                                                {{ number_format($alreadyUsed, 2) }} {{ $uomCode }}
-                                            </td>
-                                            <td class="text-right">
-                                                <span class="{{ $availableStock > 0 ? 'text-success' : 'text-danger' }}">
-                                                    {{ number_format($availableStock, 2) }} {{ $uomCode }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number"
-                                                        name="items[{{ $idx }}][actual_quantity]"
-                                                        class="form-control qty-input text-right" step="0.01"
-                                                        min="0" max="{{ $availableStock }}"
-                                                        value="{{ old("items.{$idx}.actual_quantity", 0) }}"
-                                                        data-available="{{ $availableStock }}"
-                                                        data-uom="{{ $uomCode }}">
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text">{{ $uomCode }}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <input type="text" name="items[{{ $idx }}][remark]"
-                                                    class="form-control form-control-sm" placeholder="Optional remark...">
-                                            </td>
-                                            <td class="text-center status-cell">
-                                                <span class="badge badge-secondary">Not used</span>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted">No materials in Work Order
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {{-- Add Other Materials Section --}}
-                        <div class="mt-4">
-                            <h5><i class="fas fa-plus-circle"></i> Add Other Materials (Not in Work Order)</h5>
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Use this section if you need materials that weren't originally planned in the Work Order.
-                            </div>
-
-                            <div id="newMaterialsContainer"></div>
-
-                            <button type="button" class="btn btn-sm btn-success" id="addNewMaterialBtn">
-                                <i class="fas fa-plus"></i> Add Material
-                            </button>
-                        </div>
+                        {{-- Materials Used --}}
+                        <h5><i class="fas fa-boxes"></i> Materials Used</h5>
+                        <div id="newMaterialsContainer"></div>
+                        <button type="button" class="btn btn-success btn-sm mt-2" id="addNewMaterialBtn">
+                            <i class="fas fa-plus"></i> Add Material
+                        </button>
                     </div>
 
                     <div class="card-footer">
@@ -253,49 +164,10 @@
 
 @section('scripts')
     <script>
-        let newMaterialIndex = {{ count($workOrder->items) }};
+        let newMaterialIndex = 0;
 
-        // Update status badge based on quantity
-        document.querySelectorAll('.qty-input').forEach(function(input) {
-            const row = input.closest('tr');
-            const statusCell = row.querySelector('.status-cell');
-            const available = parseFloat(input.dataset.available) || 0;
-
-            function updateStatus() {
-                const qty = parseFloat(input.value) || 0;
-
-                if (qty > 0) {
-                    if (qty > available) {
-                        statusCell.innerHTML = '<span class="badge badge-danger">⚠ Insufficient stock!</span>';
-                        input.classList.add('is-invalid');
-                    } else {
-                        statusCell.innerHTML = '<span class="badge badge-success">✓ Will be saved</span>';
-                        input.classList.remove('is-invalid');
-                    }
-                } else {
-                    statusCell.innerHTML = '<span class="badge badge-secondary">Not used</span>';
-                    input.classList.remove('is-invalid');
-                }
-
-                updateItemCount();
-            }
-
-            input.addEventListener('input', updateStatus);
-            updateStatus();
-        });
-
-        // Count items with qty > 0
         function updateItemCount() {
-            let count = 0;
-
-            // Count WO materials
-            document.querySelectorAll('.qty-input').forEach(input => {
-                if (parseFloat(input.value) > 0) count++;
-            });
-
-            // Count new materials
-            document.querySelectorAll('.new-material-item').forEach(() => count++);
-
+            const count = document.querySelectorAll('.new-material-item').length;
             document.getElementById('itemCount').textContent = count;
         }
 

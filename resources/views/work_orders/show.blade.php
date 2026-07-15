@@ -206,19 +206,33 @@
                         </div>
 
                         <div class="col-md-4">
-                            <h6>Paket HR Auto Studio 2026</h6>
+                            <h6>Panel &amp; Kendaraan</h6>
                             <table class="table table-sm">
                                 <tr>
-                                    <th>Paket Code:</th>
-                                    <td>{{ $workOrder->paket_code ?? '-' }}</td>
+                                    <th>Kisaran Harga:</th>
+                                    <td>
+                                        @php
+                                            $tierLabels = [
+                                                '0_300'   => '0 – 300 juta',
+                                                '300_500' => '300 – 500 juta',
+                                                '500_800' => '500 – 800 juta',
+                                                '800_2000'=> '800 juta – 2 miliar',
+                                            ];
+                                        @endphp
+                                        {{ $tierLabels[$workOrder->vehicle_price_tier] ?? '-' }}
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <th>Paket Name:</th>
-                                    <td>{{ $workOrder->paket_name ?? '-' }}</td>
+                                    <th>Merk / Type:</th>
+                                    <td>{{ trim(($workOrder->vehicle_merk ?? '') . ' ' . ($workOrder->vehicle_type_year ?? '')) ?: '-' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Ukuran:</th>
-                                    <td>{{ $workOrder->paket_size ?? '-' }}</td>
+                                    <th>No. Polisi:</th>
+                                    <td>{{ $workOrder->vehicle_plate ?? '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Chasis No:</th>
+                                    <td>{{ $workOrder->chasis_no ?? '-' }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -226,40 +240,32 @@
                         <div class="col-md-4">
                             <h6>Pricing</h6>
                             @php
-                                $baseLabor = $workOrder->labors->where('is_extra', false)->sum('total_price');
-                                $extraLabor = $workOrder->labors->where('is_extra', true)->sum('total_price');
+                                $panelLabor  = $workOrder->labors->where('is_extra', false)->sum('total_price');
+                                $extraLabor  = $workOrder->labors->where('is_extra', true)->sum('total_price');
                                 $extraMaterial = $workOrder->items->whereNotNull('total_price')->sum('total_price');
-                                $baseMaterial = max(0, ($workOrder->paket_grand_total ?? 0) - $baseLabor);
                             @endphp
                             <table class="table table-sm table-bordered">
-                                <tr>
-                                    <th>Jasa Paket:</th>
-                                    <td class="text-right">Rp {{ number_format($baseMaterial, 0, ',', '.') }}</td>
-                                </tr>
-                                @if ($baseLabor > 0)
+                                @if ($panelLabor > 0)
                                     <tr>
-                                        <th>Base Labor:</th>
-                                        <td class="text-right">Rp {{ number_format($baseLabor, 0, ',', '.') }}</td>
+                                        <th>Total Panel:</th>
+                                        <td class="text-right">Rp {{ number_format($panelLabor, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 @if ($extraMaterial > 0)
                                     <tr>
                                         <th>Extra Materials:</th>
-                                        <td class="text-right text-info">+ Rp
-                                            {{ number_format($extraMaterial, 0, ',', '.') }}</td>
+                                        <td class="text-right text-info">+ Rp {{ number_format($extraMaterial, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 @if ($extraLabor > 0)
                                     <tr>
                                         <th>Extra Labor:</th>
-                                        <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}
-                                        </td>
+                                        <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 <tr class="table-success">
                                     <th><strong>Grand Total:</strong></th>
-                                    <td class="text-right"><strong>Rp
-                                            {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong></td>
+                                    <td class="text-right"><strong>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong></td>
                                 </tr>
                                 <tr>
                                     <th>Status:</th>
@@ -288,54 +294,68 @@
                     @endif
 
                     <hr>
-                    <h6>Materials Used</h6>
-                    @if ($workOrder->items->isNotEmpty())
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th class="text-right">Demand Qty</th>
-                                    <th>UOM</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($workOrder->items as $item)
-                                    <tr>
-                                        <td>[{{ $item->item->code }}] {{ $item->item->name }}</td>
-                                        <td class="text-right">{{ number_format($item->demand_quantity, 2) }}</td>
-                                        <td>{{ $item->item->smallestUom->code ?? '-' }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    @else
-                        <p class="text-muted">No materials used.</p>
-                    @endif
-
-                    <hr>
                     @php
                         $canAddLabor =
                             $workOrder->status !== 'invoiced' &&
                             !$workOrder->proformaInvoice &&
                             \App\Helpers\PermissionHelper::canUpdate('work_orders');
                     @endphp
+                    @php
+                        $basePanels = $workOrder->labors->where('is_extra', false);
+                        $extraLabors = $workOrder->labors->where('is_extra', true);
+                    @endphp
+
+                    {{-- Base Panels --}}
                     <div class="d-flex align-items-center mb-2">
-                        <h6 class="mb-0 mr-3">Labor</h6>
+                        <h6 class="mb-0">Panel yang Dikerjakan</h6>
+                    </div>
+                    @if ($basePanels->isNotEmpty())
+                        <table class="table table-striped table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Panel</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-right">Rate (Rp)</th>
+                                    <th class="text-right">Total (Rp)</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($basePanels as $wol)
+                                    <tr>
+                                        <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
+                                        <td>{{ $wol->description }}</td>
+                                        <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
+                                        <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
+                                        <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>{{ $wol->remarks ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-muted">Belum ada panel.</p>
+                    @endif
+
+                    {{-- Extra Labors --}}
+                    <div class="d-flex align-items-center mb-2 mt-3">
+                        <h6 class="mb-0 mr-3">Extra Labor</h6>
                         @if ($canAddLabor)
-                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
+                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
                                 data-target="#addLaborModal">
-                                <i class="fas fa-plus"></i> Add Labor
+                                <i class="fas fa-plus"></i> Add Extra Labor
                             </button>
                         @endif
                     </div>
-                    @if ($workOrder->labors->isNotEmpty())
+                    @if ($extraLabors->isNotEmpty())
                         <table class="table table-striped table-bordered">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Code</th>
                                     <th>Description</th>
                                     <th class="text-center">Qty</th>
-                                    <th class="text-right">Unit Price (Rp)</th>
+                                    <th class="text-right">Rate (Rp)</th>
                                     <th class="text-right">Total (Rp)</th>
                                     <th>Remarks</th>
                                     @if ($canAddLabor)
@@ -344,62 +364,40 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($workOrder->labors as $wol)
-                                    <tr {{ $wol->is_extra ? 'class=table-warning' : '' }}>
+                                @foreach ($extraLabors as $wol)
+                                    <tr class="table-warning">
                                         <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
                                         <td>{{ $wol->description }}</td>
                                         <td class="text-center">{{ number_format($wol->qty, 2) }}</td>
-                                        <td class="text-right">
-                                            @if ($wol->rate)
-                                                {{ number_format($wol->rate, 0, ',', '.') }}
-                                            @else
-                                                <span class="text-muted">Fixed</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-right">
-                                            @if ($wol->total_price)
-                                                <strong>{{ number_format($wol->total_price, 0, ',', '.') }}</strong>
-                                            @else
-                                                <span class="text-muted">—</span>
-                                            @endif
-                                        </td>
+                                        <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">Fixed</span>' }}</td>
+                                        <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
                                         <td>{{ $wol->remarks ?? '-' }}</td>
                                         @if ($canAddLabor)
                                             <td>
-                                                @if ($wol->is_extra)
-                                                    <form
-                                                        action="{{ route('work_orders.remove_labor', [$workOrder, $wol]) }}"
-                                                        method="POST" class="d-inline"
-                                                        onsubmit="return confirm('Remove this labor item?')">
-                                                        @csrf @method('DELETE')
-                                                        <button class="btn btn-danger btn-xs"><i
-                                                                class="fas fa-times"></i></button>
-                                                    </form>
-                                                @endif
+                                                <form action="{{ route('work_orders.remove_labor', [$workOrder, $wol]) }}"
+                                                    method="POST" class="d-inline"
+                                                    onsubmit="return confirm('Remove this extra labor?')">
+                                                    @csrf @method('DELETE')
+                                                    <button class="btn btn-danger btn-xs"><i class="fas fa-times"></i></button>
+                                                </form>
                                             </td>
                                         @endif
                                     </tr>
                                 @endforeach
                             </tbody>
-                            @php $totalExtraLabor = $workOrder->labors->where('is_extra', true)->sum('total_price'); @endphp
+                            @php $totalExtraLabor = $extraLabors->sum('total_price'); @endphp
                             @if ($totalExtraLabor > 0)
                                 <tfoot>
                                     <tr class="table-success">
-                                        <td colspan="{{ $canAddLabor ? 4 : 3 }}" class="text-right font-weight-bold">
-                                            Extra Labor Total:</td>
-                                        <td class="text-right font-weight-bold">
-                                            {{ number_format($totalExtraLabor, 0, ',', '.') }}</td>
+                                        <td colspan="{{ $canAddLabor ? 4 : 3 }}" class="text-right font-weight-bold">Extra Labor Total:</td>
+                                        <td class="text-right font-weight-bold">{{ number_format($totalExtraLabor, 0, ',', '.') }}</td>
                                         <td colspan="2"></td>
                                     </tr>
                                 </tfoot>
                             @endif
                         </table>
                     @else
-                        <p class="text-muted">No labor recorded.
-                            @if ($canAddLabor)
-                                <a href="#" data-toggle="modal" data-target="#addLaborModal">Add one?</a>
-                            @endif
-                        </p>
+                        <p class="text-muted">Tidak ada extra labor.</p>
                     @endif
                 </div>
             </div>
@@ -476,7 +474,7 @@
                     <form action="{{ route('work_orders.add_labor', $workOrder) }}" method="POST">
                         @csrf
                         <div class="modal-header">
-                            <h5 class="modal-title"><i class="fas fa-hard-hat"></i> Add Labor to
+                            <h5 class="modal-title"><i class="fas fa-hard-hat"></i> Add Extra Labor to
                                 {{ $workOrder->wo_number }}</h5>
                             <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                         </div>
@@ -486,20 +484,9 @@
                             @endif
 
                             <div class="form-group">
-                                <label>Vehicle Price Range <span class="text-danger">*</span></label>
-                                <select id="laborTier" class="form-control">
-                                    <option value="">— Select Price Tier —</option>
-                                    <option value="price_0_300">0 – 300 jt</option>
-                                    <option value="price_300_500">300 – 500 jt</option>
-                                    <option value="price_500_800">500 – 800 jt</option>
-                                    <option value="price_800_2000">800 jt – 2M</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Labor <span class="text-danger">*</span></label>
+                                <label>Panel / Labor <span class="text-danger">*</span></label>
                                 <select name="labor_id" id="laborSelect" class="form-control select2" required>
-                                    <option value="">— Select Labor —</option>
+                                    <option value="">— Pilih Panel / Labor —</option>
                                     @foreach ($masterLabors as $ml)
                                         <option value="{{ $ml->id }}"
                                             data-price_0_300="{{ (float) ($ml->price_0_300 ?? 0) }}"
@@ -509,6 +496,17 @@
                                             {{ $ml->labor_code }} — {{ $ml->description }}
                                         </option>
                                     @endforeach
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Vehicle Price Range <span class="text-danger">*</span></label>
+                                <select id="laborTier" class="form-control">
+                                    <option value="">— Select Price Tier —</option>
+                                    <option value="price_0_300" {{ $workOrder->vehicle_price_tier === '0_300' ? 'selected' : '' }}>0 – 300 jt</option>
+                                    <option value="price_300_500" {{ $workOrder->vehicle_price_tier === '300_500' ? 'selected' : '' }}>300 – 500 jt</option>
+                                    <option value="price_500_800" {{ $workOrder->vehicle_price_tier === '500_800' ? 'selected' : '' }}>500 – 800 jt</option>
+                                    <option value="price_800_2000" {{ $workOrder->vehicle_price_tier === '800_2000' ? 'selected' : '' }}>800 jt – 2M</option>
                                 </select>
                             </div>
 
@@ -549,7 +547,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Add Labor</button>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Add Extra Labor</button>
                         </div>
                     </form>
                 </div>

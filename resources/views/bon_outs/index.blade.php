@@ -78,7 +78,7 @@
                                 <th>Date</th>
                                 <th>Work Order</th>
                                 <th>Customer</th>
-                                <th>Package</th>
+                                <th>Vehicle</th>
                                 <th>Status</th>
                                 <th>Created By</th>
                                 <th>Actions</th>
@@ -108,7 +108,7 @@
                                         @endif
                                     </td>
                                     <td>{{ $bonOut->workOrder->customer->name ?? '-' }}</td>
-                                    <td>{{ $bonOut->workOrder->paket_name ?? '-' }}</td>
+                                    <td>{{ $bonOut->workOrder->vehicle_plate ?? '-' }}</td>
                                     <td>
                                         @if ($bonOut->status === 'on_progress')
                                             <span class="badge badge-secondary">On Progress</span>

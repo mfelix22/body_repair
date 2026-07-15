@@ -27,13 +27,6 @@ class SparepartReportController extends Controller
             ->distinct()
             ->pluck('vehicle_plate');
 
-        $paketCodes  = DB::table('work_orders')
-            ->whereNotNull('paket_code')
-            ->where('paket_code', '!=', '')
-            ->orderBy('paket_code')
-            ->distinct()
-            ->pluck('paket_code');
-
         $items = DB::table('items')
             ->where('is_active', true)
             ->orderBy('name')
@@ -88,7 +81,6 @@ class SparepartReportController extends Controller
                 'wo.vehicle_id',
                 'wo.vehicle_plate',
                 'wo.vehicle_merk',
-                'wo.paket_code',
                 'i.id as item_id',
                 'i.code as item_code',
                 'i.name as item_name',
@@ -101,9 +93,14 @@ class SparepartReportController extends Controller
             ->get();
 
         return view('reports.sparepart', compact(
-            'vehicles', 'paketCodes', 'items',
-            'totalTransactions', 'uniqueParts', 'totalCost',
-            'byPart', 'byVehicle', 'detailed'
+            'vehicles',
+            'items',
+            'totalTransactions',
+            'uniqueParts',
+            'totalCost',
+            'byPart',
+            'byVehicle',
+            'detailed'
         ));
     }
 
@@ -147,18 +144,27 @@ class SparepartReportController extends Controller
             $row++;
 
             $data = (clone $query)
-                ->select('i.code', 'i.name',
+                ->select(
+                    'i.code',
+                    'i.name',
                     DB::raw('SUM(boi.actual_quantity) as total_qty'),
                     DB::raw('COUNT(boi.id) as usage_count'),
                     DB::raw('AVG(boi.unit_cost) as avg_price'),
-                    DB::raw('SUM(boi.actual_quantity * COALESCE(boi.unit_cost,0)) as total_cost'))
+                    DB::raw('SUM(boi.actual_quantity * COALESCE(boi.unit_cost,0)) as total_cost')
+                )
                 ->groupBy('i.id', 'i.code', 'i.name')
                 ->orderByDesc('total_cost')->get();
 
             foreach ($data as $n => $r) {
-                $cols = [$n + 1, $r->code, $r->name,
-                    (float) $r->total_qty, (int) $r->usage_count,
-                    (float) $r->avg_price, (float) $r->total_cost];
+                $cols = [
+                    $n + 1,
+                    $r->code,
+                    $r->name,
+                    (float) $r->total_qty,
+                    (int) $r->usage_count,
+                    (float) $r->avg_price,
+                    (float) $r->total_cost
+                ];
                 foreach ($cols as $col => $val) {
                     $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $val);
                 }
@@ -169,7 +175,6 @@ class SparepartReportController extends Controller
                 $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
             }
             $sheet->setTitle('Summary by Part');
-
         } elseif ($tab === 'by_vehicle') {
             $headers = ['No', 'Vehicle Plate', 'Merk', 'Total Qty Used', 'Usage Count', 'Total Cost (Rp)'];
             foreach ($headers as $col => $h) {
@@ -179,16 +184,25 @@ class SparepartReportController extends Controller
             $row++;
 
             $data = (clone $query)
-                ->select('wo.vehicle_plate', 'wo.vehicle_merk',
+                ->select(
+                    'wo.vehicle_plate',
+                    'wo.vehicle_merk',
                     DB::raw('SUM(boi.actual_quantity) as total_qty'),
                     DB::raw('COUNT(boi.id) as usage_count'),
-                    DB::raw('SUM(boi.actual_quantity * COALESCE(boi.unit_cost,0)) as total_cost'))
+                    DB::raw('SUM(boi.actual_quantity * COALESCE(boi.unit_cost,0)) as total_cost')
+                )
                 ->groupBy('wo.id', 'wo.vehicle_plate', 'wo.vehicle_merk')
                 ->orderByDesc('total_cost')->get();
 
             foreach ($data as $n => $r) {
-                $cols = [$n + 1, $r->vehicle_plate, $r->vehicle_merk,
-                    (float) $r->total_qty, (int) $r->usage_count, (float) $r->total_cost];
+                $cols = [
+                    $n + 1,
+                    $r->vehicle_plate,
+                    $r->vehicle_merk,
+                    (float) $r->total_qty,
+                    (int) $r->usage_count,
+                    (float) $r->total_cost
+                ];
                 foreach ($cols as $col => $val) {
                     $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $val);
                 }
@@ -199,10 +213,9 @@ class SparepartReportController extends Controller
                 $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
             }
             $sheet->setTitle('Summary by Vehicle');
-
         } else {
             // Detailed
-            $headers = ['No', 'Date', 'Bon Out #', 'WO #', 'Vehicle', 'Merk', 'Paket Code', 'Part Code', 'Part Name', 'Qty', 'Unit Cost (Rp)', 'Total (Rp)'];
+            $headers = ['No', 'Date', 'Bon Out #', 'WO #', 'Vehicle', 'Merk', 'Part Code', 'Part Name', 'Qty', 'Unit Cost (Rp)', 'Total (Rp)'];
             foreach ($headers as $col => $h) {
                 $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $h);
             }
@@ -210,25 +223,41 @@ class SparepartReportController extends Controller
             $row++;
 
             $data = (clone $query)
-                ->select('bo.issued_date', 'bo.bon_out_number', 'wo.wo_number',
-                    'wo.vehicle_plate', 'wo.vehicle_merk', 'wo.paket_code',
-                    'i.code as item_code', 'i.name as item_name',
-                    'boi.actual_quantity', 'boi.unit_cost',
-                    DB::raw('boi.actual_quantity * COALESCE(boi.unit_cost,0) as line_cost'))
+                ->select(
+                    'bo.issued_date',
+                    'bo.bon_out_number',
+                    'wo.wo_number',
+                    'wo.vehicle_plate',
+                    'wo.vehicle_merk',
+                    'i.code as item_code',
+                    'i.name as item_name',
+                    'boi.actual_quantity',
+                    'boi.unit_cost',
+                    DB::raw('boi.actual_quantity * COALESCE(boi.unit_cost,0) as line_cost')
+                )
                 ->orderBy('bo.issued_date', 'desc')->orderBy('bo.id', 'desc')->get();
 
             foreach ($data as $n => $r) {
-                $cols = [$n + 1, $r->issued_date, $r->bon_out_number, $r->wo_number,
-                    $r->vehicle_plate, $r->vehicle_merk, $r->paket_code,
-                    $r->item_code, $r->item_name,
-                    (float) $r->actual_quantity, (float) $r->unit_cost, (float) $r->line_cost];
+                $cols = [
+                    $n + 1,
+                    $r->issued_date,
+                    $r->bon_out_number,
+                    $r->wo_number,
+                    $r->vehicle_plate,
+                    $r->vehicle_merk,
+                    $r->item_code,
+                    $r->item_name,
+                    (float) $r->actual_quantity,
+                    (float) $r->unit_cost,
+                    (float) $r->line_cost
+                ];
                 foreach ($cols as $col => $val) {
                     $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $val);
                 }
-                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($cellStyle);
+                $sheet->getStyle("A{$row}:K{$row}")->applyFromArray($cellStyle);
                 $row++;
             }
-            foreach (range(1, 12) as $col) {
+            foreach (range(1, 11) as $col) {
                 $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
             }
             $sheet->setTitle('Detailed Transactions');
@@ -269,9 +298,6 @@ class SparepartReportController extends Controller
         if ($request->filled('item_id')) {
             $q->where('boi.item_id', $request->item_id);
         }
-        if ($request->filled('paket_code')) {
-            $q->where('wo.paket_code', $request->paket_code);
-        }
 
         return $q;
     }
@@ -282,7 +308,6 @@ class SparepartReportController extends Controller
         if ($request->filled('date_from'))  $parts[] = 'From: ' . $request->date_from;
         if ($request->filled('date_to'))    $parts[] = 'To: '   . $request->date_to;
         if ($request->filled('vehicle'))    $parts[] = 'Vehicle: ' . $request->vehicle;
-        if ($request->filled('paket_code')) $parts[] = 'Paket: ' . $request->paket_code;
         return $parts ? implode(' | ', $parts) : 'All Data';
     }
 }

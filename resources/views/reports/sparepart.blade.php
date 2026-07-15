@@ -66,20 +66,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>Product</label>
-                                <select name="paket_code" class="form-control form-control-sm select2">
-                                    <option value="">-- All Codes --</option>
-                                    @foreach ($paketCodes as $pc)
-                                        <option value="{{ $pc }}"
-                                            {{ request('paket_code') === $pc ? 'selected' : '' }}>
-                                            {{ $pc }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -267,7 +253,6 @@
                                 <th>WO #</th>
                                 <th>Vehicle</th>
                                 <th>Merk</th>
-                                <th>Paket</th>
                                 <th>Part Code</th>
                                 <th>Part Name</th>
                                 <th>Qty</th>
@@ -300,7 +285,6 @@
                                         @endif
                                     </td>
                                     <td>{{ $row->vehicle_merk }}</td>
-                                    <td><span class="badge badge-secondary">{{ $row->paket_code }}</span></td>
                                     <td>
                                         <a href="{{ route('items.show', $row->item_id) }}" target="_blank">
                                             <code>{{ $row->item_code }}</code>
@@ -318,14 +302,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="12" class="text-center text-muted">No data found.</td>
+                                    <td colspan="11" class="text-center text-muted">No data found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if ($detailed->count())
                             <tfoot>
                                 <tr class="font-weight-bold bg-light">
-                                    <td colspan="9" class="text-right">Total</td>
+                                    <td colspan="8" class="text-right">Total</td>
                                     <td class="text-right">{{ number_format($detailed->sum('actual_quantity'), 2) }}</td>
                                     <td></td>
                                     <td class="text-right">{{ number_format($detailed->sum('line_cost'), 2, ',', '.') }}

@@ -12,7 +12,6 @@ use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\Labor;
-use App\Models\Package;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -39,88 +38,16 @@ class WorkOrderController extends Controller
             }])
             ->get();
         $items = Item::where('is_active', true)->with(['itemUoms.uom', 'smallestUom', 'stocks'])->get();
-        $packagesFromDb = Package::with(['activeSizes', 'bomItems.item.smallestUom', 'bomItems.uom', 'bomItems.item.stocks'])
-            ->where('is_active', true)
-            ->orderBy('category')
-            ->orderBy('code')
-            ->get();
 
         $completedWos = WorkOrder::where('status', 'completed')
             ->orWhere('status', 'invoiced')
             ->with('customer')
             ->orderBy('work_date', 'desc')
-            ->get(['id', 'wo_number', 'customer_id', 'paket_name', 'work_date']);
-
-        // Transform for view
-        $packages = [];
-        foreach ($packagesFromDb as $pkg) {
-            if (!isset($packages[$pkg->category])) {
-                $packages[$pkg->category] = [];
-            }
-            $sizes = [];
-            foreach ($pkg->activeSizes as $size) {
-                $sizes[$size->size_name] = $size->price;
-            }
-            $bom = [];
-            foreach ($pkg->bomItems as $bi) {
-                $stock = (float) ($bi->item->stocks->sum('quantity') ?? 0);
-                $stockFormatted = $stock == floor($stock) ? number_format($stock, 0, '', '') : rtrim(rtrim(number_format($stock, 2, '.', ''), '0'), '.');
-                $bom[] = [
-                    'item_id'   => $bi->item_id,
-                    'item_code' => $bi->item->code ?? '',
-                    'item_name' => $bi->item->name ?? '',
-                    'uom_id'    => $bi->uom_id,
-                    'uom_code'  => $bi->uom->code ?? '',
-                    'quantity'  => (float) $bi->quantity,
-                    'stock'     => $stockFormatted,
-                ];
-            }
-            $packages[$pkg->category][$pkg->code] = [
-                'name'  => $pkg->name,
-                'sizes' => $sizes,
-                'bom'   => $bom,
-            ];
-        }
+            ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
         $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.create', compact('customers', 'items', 'packages', 'completedWos', 'masterLabors'));
-    }
-
-    /**
-     * HR Auto Studio Paket Prices (2026)
-     * Format: code => ['name', 'category', 'sizes' => [size => price]]
-     * Labor is always Rp 75,000; material_total = grand_total - 75,000
-     */
-    public static function getPackages(): array
-    {
-        return [
-            'PAKET ALA-CARTE' => [
-                'SFD'    => ['name' => 'Salon Full Detailing',     'sizes' => ['All' => 650000]],
-                'PPW'    => ['name' => 'Polish & Wax',             'sizes' => ['Size S' => 1650000, 'Size M' => 1750000, 'Size L' => 1850000, 'Size XL' => 1950000, 'Size XXL' => 2050000]],
-                'EGD'    => ['name' => 'Engine Detailing',         'sizes' => ['All' => 500000]],
-                'WSH'    => ['name' => 'Premium Wash Wax',         'sizes' => ['All' => 350000]],
-                'UND'    => ['name' => 'Undercarriage',            'sizes' => ['All' => 1100000]],
-                'EXD'    => ['name' => 'Exterior Detailing',       'sizes' => ['All' => 1250000]],
-                'IND'    => ['name' => 'Interior Detailing',       'sizes' => ['2 Row' => 1100000, '3 Row' => 1350000]],
-                'GCW'    => ['name' => 'Glass Coating',            'sizes' => ['All' => 1000000]],
-                'ESD'    => ['name' => 'Truck Express Cleaning',   'sizes' => ['All' => 900000]],
-            ],
-            'PAKET COATING' => [
-                'CLS'    => ['name' => 'Classic Package',          'sizes' => ['Size S' => 3000000, 'Size M' => 3250000, 'Size L' => 3500000, 'Size XL' => 3750000, 'Size XXL' => 4000000]],
-                'SPT'    => ['name' => 'Sport Package',            'sizes' => ['Size S' => 3300000, 'Size M' => 3550000, 'Size L' => 3800000, 'Size XL' => 4050000, 'Size XXL' => 4300000]],
-                'ELG'    => ['name' => 'Elegance Package',         'sizes' => ['Size S' => 4500000, 'Size M' => 4750000, 'Size L' => 5000000, 'Size XL' => 5250000, 'Size XXL' => 5500000]],
-                'AVG'    => ['name' => 'Avantgarde Package',       'sizes' => ['Size S' => 6250000, 'Size M' => 6500000, 'Size L' => 6750000, 'Size XL' => 7000000, 'Size XXL' => 7250000]],
-            ],
-            'MAINTENANCE COATING' => [
-                'MAIN-1' => ['name' => 'Level 1',                  'sizes' => ['All' => 550000]],
-                'MAIN-2' => ['name' => 'Level 2',                  'sizes' => ['All' => 950000]],
-                'MAIN-3' => ['name' => 'Level 3',                  'sizes' => ['All' => 1100000]],
-            ],
-            'BUNDLING WORKSHOP & BODY REPAIR' => [
-                'BONUS-BP' => ['name' => 'Coating Bonus Body Repair', 'sizes' => ['All' => 1300000]],
-            ],
-        ];
+        return view('work_orders.create', compact('customers', 'items', 'completedWos', 'masterLabors'));
     }
 
     public function store(Request $request)
@@ -142,11 +69,8 @@ class WorkOrderController extends Controller
             'vehicle_type_year'    => 'nullable|string|max:100',
             'vehicle_plate'        => 'nullable|string|max:100',
             'vehicle_km'           => 'nullable|integer|min:0',
+            'vehicle_price_tier'   => 'nullable|in:0_300,300_500,500_800,800_2000',
             'chasis_no'            => 'nullable|string|max:100',
-            'paket_code'           => 'nullable|string|max:200',
-            'paket_name'           => 'nullable|string|max:500',
-            'paket_size'           => 'nullable|string|max:100',
-            'paket_grand_total'    => 'nullable|numeric|min:0',
             'description'          => 'nullable|string',
             'notes'                => 'nullable|string',
             'sa_sales'             => 'nullable|string|max:100',
@@ -160,7 +84,7 @@ class WorkOrderController extends Controller
             'labors.*.remarks'     => 'nullable|string',
         ]);
 
-        $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
+        $priceTier = $validated['vehicle_price_tier'] ?? null;
 
         // Auto-generate WO number: YYMM/HAS/SEQ (monthly reset)
         $yy = date('y');
@@ -204,17 +128,14 @@ class WorkOrderController extends Controller
             'vehicle_merk'      => $validated['vehicle_merk'] ?? null,
             'vehicle_type_year' => $validated['vehicle_type_year'] ?? null,
             'vehicle_plate'     => $validated['vehicle_plate'] ?? null,
-            'vehicle_km'        => $validated['vehicle_km'] ?? null,
-            'chasis_no'         => $validated['chasis_no'] ?? null,
-            'paket_code'        => $validated['paket_code'] ?? null,
-            'paket_name'        => $validated['paket_name'] ?? null,
-            'paket_size'        => $validated['paket_size'] ?? null,
-            'paket_grand_total' => $paketGrandTotal,
-            'description'       => $validated['description'] ?? null,
-            'notes'             => $validated['notes'] ?? null,
-            'sa_sales'          => $validated['sa_sales'] ?? null,
-            'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
-            'status'            => 'on_progress',
+            'vehicle_km'          => $validated['vehicle_km'] ?? null,
+            'vehicle_price_tier'  => $priceTier,
+            'chasis_no'           => $validated['chasis_no'] ?? null,
+            'description'         => $validated['description'] ?? null,
+            'notes'               => $validated['notes'] ?? null,
+            'sa_sales'            => $validated['sa_sales'] ?? null,
+            'reference_wo_id'     => $validated['reference_wo_id'] ?? null,
+            'status'              => 'on_progress',
             'labor_total'       => 0,
             'material_total'    => 0,
             'grand_total'       => 0,
@@ -238,7 +159,7 @@ class WorkOrderController extends Controller
             foreach ($validated['labors'] as $laborData) {
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
-                $rate = (float) $labor->price;
+                $rate = self::getLaborRateForTier($labor, $priceTier);
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
@@ -287,37 +208,14 @@ class WorkOrderController extends Controller
             $q->where('is_active', true)->orWhereIn('id', $woItemIds);
         })->with(['itemUoms.uom', 'smallestUom', 'stocks'])->get();
 
-        // Load packages from database
-        $packagesFromDb = Package::with('activeSizes')
-            ->where('is_active', true)
-            ->orderBy('category')
-            ->orderBy('code')
-            ->get();
-
-        // Transform for view
-        $packages = [];
-        foreach ($packagesFromDb as $pkg) {
-            if (!isset($packages[$pkg->category])) {
-                $packages[$pkg->category] = [];
-            }
-            $sizes = [];
-            foreach ($pkg->activeSizes as $size) {
-                $sizes[$size->size_name] = $size->price;
-            }
-            $packages[$pkg->category][$pkg->code] = [
-                'name' => $pkg->name,
-                'sizes' => $sizes
-            ];
-        }
-
         $completedWos = WorkOrder::whereIn('status', ['completed', 'invoiced'])
             ->with('customer')
             ->orderBy('work_date', 'desc')
-            ->get(['id', 'wo_number', 'customer_id', 'paket_name', 'work_date']);
+            ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
         $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'packages', 'completedWos', 'masterLabors'));
+        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors'));
     }
 
     public function update(Request $request, WorkOrder $workOrder)
@@ -339,11 +237,8 @@ class WorkOrderController extends Controller
             'vehicle_type_year'    => 'nullable|string|max:100',
             'vehicle_plate'        => 'nullable|string|max:20',
             'vehicle_km'           => 'nullable|integer|min:0',
+            'vehicle_price_tier'   => 'nullable|in:0_300,300_500,500_800,800_2000',
             'chasis_no'            => 'nullable|string|max:100',
-            'paket_code'           => 'nullable|string|max:200',
-            'paket_name'           => 'nullable|string|max:500',
-            'paket_size'           => 'nullable|string|max:100',
-            'paket_grand_total'    => 'nullable|numeric|min:0',
             'description'          => 'nullable|string',
             'notes'                => 'nullable|string',
             'sa_sales'             => 'nullable|string|max:100',
@@ -358,7 +253,7 @@ class WorkOrderController extends Controller
             'labors.*.remarks'        => 'nullable|string',
         ]);
 
-        $paketGrandTotal = $validated['paket_grand_total'] ?? 0;
+        $priceTier = $validated['vehicle_price_tier'] ?? null;
 
         // Auto-save vehicle to master data if checkbox is ticked
         $vehicleId = $validated['vehicle_id'] ?? $workOrder->vehicle_id;
@@ -391,17 +286,14 @@ class WorkOrderController extends Controller
             'vehicle_merk'      => $validated['vehicle_merk'] ?? null,
             'vehicle_type_year' => $validated['vehicle_type_year'] ?? null,
             'vehicle_plate'     => $validated['vehicle_plate'] ?? null,
-            'vehicle_km'        => $validated['vehicle_km'] ?? null,
-            'chasis_no'         => $validated['chasis_no'] ?? null,
-            'paket_code'        => $validated['paket_code'] ?? null,
-            'paket_name'        => $validated['paket_name'] ?? null,
-            'paket_size'        => $validated['paket_size'] ?? null,
-            'paket_grand_total' => $paketGrandTotal,
-            'description'       => $validated['description'] ?? null,
-            'notes'             => $validated['notes'] ?? null,
-            'sa_sales'          => $validated['sa_sales'] ?? null,
-            'reference_wo_id'   => $validated['reference_wo_id'] ?? null,
-            'labor_total'       => 0,
+            'vehicle_km'          => $validated['vehicle_km'] ?? null,
+            'vehicle_price_tier'  => $priceTier,
+            'chasis_no'           => $validated['chasis_no'] ?? null,
+            'description'         => $validated['description'] ?? null,
+            'notes'               => $validated['notes'] ?? null,
+            'sa_sales'            => $validated['sa_sales'] ?? null,
+            'reference_wo_id'     => $validated['reference_wo_id'] ?? null,
+            'labor_total'         => 0,
             'material_total'    => 0,
             'grand_total'       => 0,
         ]);
@@ -429,7 +321,7 @@ class WorkOrderController extends Controller
             foreach ($validated['labors'] as $laborData) {
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
-                $rate = (float) $labor->price;
+                $rate = self::getLaborRateForTier($labor, $priceTier);
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $workOrder->id,
@@ -452,7 +344,7 @@ class WorkOrderController extends Controller
 
     public function printView(WorkOrder $workOrder)
     {
-        $workOrder->load(['customer', 'creator', 'items.item.smallestUom', 'labors']);
+        $workOrder->load(['customer', 'creator', 'items.item.smallestUom', 'labors.labor']);
         return view('work_orders.print', compact('workOrder'));
     }
 
@@ -587,6 +479,21 @@ class WorkOrderController extends Controller
         $workOrder->calculateTotals();
 
         return back()->with('success', 'Labor item removed.');
+    }
+
+    /**
+     * Return the correct price for a Labor based on the vehicle price tier chosen by SA.
+     * Falls back to the base price if tier columns are null.
+     */
+    public static function getLaborRateForTier(Labor $labor, ?string $tier): float
+    {
+        return match ($tier) {
+            '0_300'    => (float) ($labor->price_0_300    ?? $labor->price ?? 0),
+            '300_500'  => (float) ($labor->price_300_500  ?? $labor->price ?? 0),
+            '500_800'  => (float) ($labor->price_500_800  ?? $labor->price ?? 0),
+            '800_2000' => (float) ($labor->price_800_2000 ?? $labor->price ?? 0),
+            default    => (float) ($labor->price ?? 0),
+        };
     }
 
     public function destroy(WorkOrder $workOrder)

@@ -122,9 +122,13 @@
                                         <td>{{ $bonOut->workOrder->customer->name ?? '-' }}</td>
                                     </tr>
                                     <tr>
-                                        <th>Package:</th>
-                                        <td>{{ $bonOut->workOrder->paket_name ?? '-' }}
-                                            {{ $bonOut->workOrder->paket_size ? "({$bonOut->workOrder->paket_size})" : '' }}
+                                        <th>Panels:</th>
+                                        <td>
+                                            @forelse ($bonOut->workOrder->labors->where('is_extra', false) as $wl)
+                                                <span class="badge badge-secondary">{{ $wl->labor->labor_code ?? $wl->description }}</span>
+                                            @empty
+                                                -
+                                            @endforelse
                                         </td>
                                     </tr>
                                     <tr>

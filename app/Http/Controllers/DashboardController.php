@@ -107,7 +107,7 @@ class DashboardController extends Controller
         $monthlyCogsByMonth = DB::table('invoices as i')
             ->join('bon_outs as bo', function ($join) {
                 $join->on('bo.work_order_id', '=', 'i.work_order_id')
-                     ->where('bo.status', '=', 'completed');
+                    ->where('bo.status', '=', 'completed');
             })
             ->join('bon_out_items as boi', 'boi.bon_out_id', '=', 'bo.id')
             ->where('i.status', '!=', 'cancelled')
@@ -117,7 +117,7 @@ class DashboardController extends Controller
             ->get()
             ->keyBy('month');
 
-        $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $monthlyRevenue     = [];
         $monthlyMaterialCost = [];
         for ($m = 1; $m <= 12; $m++) {
@@ -132,18 +132,27 @@ class DashboardController extends Controller
         // Active WOs created this month, excluding invoiced & cancelled
         $monthStart = now()->startOfMonth();
         $monthEnd   = now()->endOfMonth();
-        $activeWorkOrdersThisMonth = WorkOrder::with('customer')
+        $activeWorkOrdersThisMonth = WorkOrder::with(['customer', 'labors'])
             ->whereNotIn('status', ['invoiced', 'cancelled'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->orderBy('created_at', 'desc')
             ->get();
 
         return view('dashboard', compact(
-            'summary', 'entityCounts', 'statusSections',
-            'recentWorkOrders', 'recentPurchaseOrders',
-            'recentInvoices', 'recentStockTransactions', 'lowStockItems',
-            'monthNames', 'monthlyRevenue', 'monthlyMaterialCost',
-            'revenueThisMonth', 'materialCostThisMonth', 'currentYear',
+            'summary',
+            'entityCounts',
+            'statusSections',
+            'recentWorkOrders',
+            'recentPurchaseOrders',
+            'recentInvoices',
+            'recentStockTransactions',
+            'lowStockItems',
+            'monthNames',
+            'monthlyRevenue',
+            'monthlyMaterialCost',
+            'revenueThisMonth',
+            'materialCostThisMonth',
+            'currentYear',
             'activeWorkOrdersThisMonth'
         ));
     }
@@ -167,7 +176,7 @@ class DashboardController extends Controller
         $start = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $end   = $start->clone()->endOfMonth();
 
-        $wos = WorkOrder::with('customer')
+        $wos = WorkOrder::with(['customer', 'labors'])
             ->whereNotIn('status', ['invoiced', 'cancelled'])
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at', 'desc')
@@ -180,9 +189,9 @@ class DashboardController extends Controller
                     'customer_name'    => $wo->customer->name ?? '-',
                     'vehicle_plate'    => $wo->vehicle_plate ?? '-',
                     'vehicle_merk'     => $wo->vehicle_merk ?? '',
-                    'vehicle_type_year'=> $wo->vehicle_type_year ?? '',
-                    'paket_name'       => $wo->paket_name ?? '',
-                    'paket_size'       => $wo->paket_size ?? '',
+                    'vehicle_type_year' => $wo->vehicle_type_year ?? '',
+                    'vehicle_price_tier' => $wo->vehicle_price_tier ?? '',
+                    'panel_count'      => (int) $wo->labors->where('is_extra', false)->count(),
                     'description'      => $wo->description ?? '',
                     'grand_total'      => (float) $wo->grand_total,
                     'status'           => $wo->status,
@@ -197,7 +206,7 @@ class DashboardController extends Controller
             'year'       => $year,
             'label'      => $start->format('F Y'),
             'count'      => $wos->count(),
-            'work_orders'=> $wos,
+            'work_orders' => $wos,
         ]);
     }
 
@@ -254,8 +263,12 @@ class DashboardController extends Controller
         ]);
 
         return view('dashboards.manager', compact(
-            'summary', 'prsPendingApproval', 'overdueWorkOrders',
-            'recentInvoices', 'woStatusItems', 'invoiceStatusItems'
+            'summary',
+            'prsPendingApproval',
+            'overdueWorkOrders',
+            'recentInvoices',
+            'woStatusItems',
+            'invoiceStatusItems'
         ));
     }
 
@@ -300,8 +313,11 @@ class DashboardController extends Controller
         ]);
 
         return view('dashboards.purchasing', compact(
-            'summary', 'prsReadyForPo', 'recentPurchaseOrders',
-            'poStatusItems', 'prStatusItems'
+            'summary',
+            'prsReadyForPo',
+            'recentPurchaseOrders',
+            'poStatusItems',
+            'prStatusItems'
         ));
     }
 
@@ -340,8 +356,11 @@ class DashboardController extends Controller
         $recentBonOuts = BonOut::orderBy('created_at', 'desc')->limit(5)->get();
 
         return view('dashboards.warehouse', compact(
-            'summary', 'lowStockItems', 'openWorkOrders',
-            'recentStockTransactions', 'recentBonOuts'
+            'summary',
+            'lowStockItems',
+            'openWorkOrders',
+            'recentStockTransactions',
+            'recentBonOuts'
         ));
     }
 
@@ -383,7 +402,10 @@ class DashboardController extends Controller
             ->limit(5)->get();
 
         return view('dashboards.finance', compact(
-            'summary', 'recentInvoices', 'invoiceStatusItems', 'recentWorkOrders'
+            'summary',
+            'recentInvoices',
+            'invoiceStatusItems',
+            'recentWorkOrders'
         ));
     }
 

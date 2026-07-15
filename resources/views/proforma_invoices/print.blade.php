@@ -299,24 +299,20 @@
             return $date->day . ' ' . $monthsId[$date->month] . ' ' . $date->year;
         };
 
-        $paketCodes = $wo->paket_code ? explode(' + ', $wo->paket_code) : ['-'];
-        $paketNames = $wo->paket_name ? explode(' + ', $wo->paket_name) : ['-'];
-        $paketCount = max(count($paketCodes), count($paketNames));
-
-        $laborTotal = (float) ($wo->labor_total ?? 0);
         $subtotal = (float) $pf->subtotal;
         $discountPct = (float) ($pf->discount_percentage ?? 0);
         $discountAmt = (float) ($pf->discount_amount ?? 0);
         $grandTotal = (float) $pf->total;
 
-        $serviceTotal = $subtotal - $laborTotal;
+        // Panel / labor / item breakdown
+        $basePanels = $wo->labors->where('is_extra', false);
+        $extraLabors = $wo->labors->where('is_extra', true);
+        $extraItems = $wo->items->where('unit_price', '>', 0);
+        $panelTotal = (float) $basePanels->sum('total_price');
+        $extraLaborTotal = (float) $extraLabors->sum('total_price');
+        $extraItemTotal = (float) $extraItems->sum('total_price');
 
-        $sizeDisplay = '';
-        if ($wo->paket_size && $wo->paket_size !== 'All') {
-            $sizeDisplay = str_replace('Size ', '', $wo->paket_size);
-        }
-
-        // Per-line discount data
+        // Per-line discount data (target_type 'package' is the panel group line)
         $hasLines = $pf->discountLines->isNotEmpty();
         $pkgLines = $pf->discountLines->where('target_type', 'package');
         $itemLines = $pf->discountLines->where('target_type', 'extra_item');
@@ -362,10 +358,9 @@
             <td class="info-section">
                 <table>
                     <tr>
-                        <td>WO No / Size</td>
+                        <td>WO Number</td>
                         <td>:</td>
-                        <td class="val">{{ $wo->wo_number ?? '-' }}{{ $sizeDisplay ? ' / ' . $sizeDisplay : '' }}
-                        </td>
+                        <td class="val">{{ $wo->wo_number ?? '-' }}</td>
                     </tr>
                     <tr>
                         <td>Licence Plate</td>
@@ -432,25 +427,83 @@
         </tr>
     </table>
 
-    {{-- ITEM TABLE --}}
+    {{-- PANELS TABLE --}}
+    <div class="section-label">Panel yang Dikerjakan</div>
     <table class="items-table">
         <thead>
             <tr>
-                <th style="width:12%">Item Code</th>
-                <th style="width:33%">Description</th>
-                <th style="width:18%">Price</th>
+                <th style="width:12%">Panel Code</th>
+                <th style="width:38%">Panel</th>
+                <th style="width:8%" class="text-center">Qty</th>
+                <th style="width:18%">Rate</th>
                 <th style="width:10%">Discount</th>
-                <th style="width:8%">Qty</th>
-                <th style="width:19%">Total</th>
+                <th style="width:14%">Total</th>
             </tr>
         </thead>
         <tbody>
+            @forelse ($basePanels as $panel)
+                <tr>
+                    <td>{{ $panel->labor?->labor_code ?? '-' }}</td>
+                    <td>{{ $panel->description }}</td>
+                    <td class="text-center">{{ number_format($panel->qty, 0) }}</td>
+                    <td class="text-right">Rp {{ number_format($panel->rate ?? 0, 0, ',', '.') }}</td>
+                    <td class="text-center">
+                        @if ($pkgLines->isNotEmpty())
+                            @foreach ($pkgLines as $line)
+                                @if ($line->status === 'approved')
+                                    {{ number_format($line->discount_percentage, 2) }}%
+                                @elseif ($line->status === 'rejected')
+                                    <em>No disc.</em>
+                                @else
+                                    Pending
+                                @endif
+                            @endforeach
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-right">Rp {{ number_format($panel->total_price ?? 0, 0, ',', '.') }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6" class="text-center" style="color:#999;">—</td></tr>
+            @endforelse
+            @for ($i = $basePanels->count(); $i < 3; $i++)
+                <tr class="empty-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+            @endfor
+        </tbody>
+    </table>
+
+    {{-- EXTRA LABOR TABLE --}}
+    @if ($extraLabors->isNotEmpty() || $laborLines->isNotEmpty())
+    <div class="section-label">Extra Labor</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:12%">Labor Code</th>
+                <th style="width:38%">Extra Labor</th>
+                <th style="width:8%" class="text-center">Qty</th>
+                <th style="width:18%">Rate</th>
+                <th style="width:10%">Discount</th>
+                <th style="width:14%">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($extraLabors as $labor)
+                <tr>
+                    <td>{{ $labor->labor?->labor_code ?? 'LAB' }}</td>
+                    <td>{{ $labor->description }}</td>
+                    <td class="text-center">{{ number_format($labor->qty, 0) }}</td>
+                    <td class="text-right">Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
             @if ($hasLines)
-                {{-- Package lines from discount system --}}
-                @foreach ($pkgLines as $line)
+                @foreach ($laborLines as $line)
                     <tr>
-                        <td>{{ implode('+', $paketCodes) }}</td>
+                        <td>LAB</td>
                         <td>{{ $line->description }}</td>
+                        <td class="text-center">1</td>
                         <td class="text-right">Rp {{ number_format($line->original_price, 0, ',', '.') }}</td>
                         <td class="text-center">
                             @if ($line->status === 'approved')
@@ -461,26 +514,40 @@
                                 Pending
                             @endif
                         </td>
-                        <td class="text-center">1</td>
                         <td class="text-right">Rp {{ number_format($line->final_price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
-                {{-- If no package line in discount system but WO has a package, show full price --}}
-                @if ($pkgLines->isEmpty() && $wo->paket_name)
-                    @for ($i = 0; $i < $paketCount; $i++)
-                        <tr>
-                            <td>{{ $paketCodes[$i] ?? '-' }}</td>
-                            <td>{{ $paketNames[$i] ?? '-' }}</td>
-                            <td class="text-right">Rp
-                                {{ number_format($wo->paket_grand_total / $paketCount, 0, ',', '.') }}</td>
-                            <td></td>
-                            <td class="text-center">1</td>
-                            <td class="text-right">Rp
-                                {{ number_format($wo->paket_grand_total / $paketCount, 0, ',', '.') }}</td>
-                        </tr>
-                    @endfor
-                @endif
-                {{-- Extra item lines --}}
+            @endif
+        </tbody>
+    </table>
+    @endif
+
+    {{-- EXTRA ITEMS TABLE --}}
+    @if ($extraItems->isNotEmpty() || $itemLines->isNotEmpty())
+    <div class="section-label">Extra Materials</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:12%">Item Code</th>
+                <th style="width:38%">Description</th>
+                <th style="width:8%" class="text-center">Qty</th>
+                <th style="width:18%">Price</th>
+                <th style="width:10%">Discount</th>
+                <th style="width:14%">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($extraItems as $item)
+                <tr>
+                    <td>{{ $item->item?->code ?? '-' }}</td>
+                    <td>{{ optional($item->item)->name ?? $item->description ?? '-' }}</td>
+                    <td class="text-center">{{ number_format($item->actual_quantity ?? ($item->demand_quantity ?? 0), 2) }}</td>
+                    <td class="text-right">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">Rp {{ number_format($item->total_price, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
+            @if ($hasLines)
                 @foreach ($itemLines as $line)
                     @php
                         $parts = explode(' — ', $line->description, 2);
@@ -490,6 +557,7 @@
                     <tr>
                         <td>{{ $itemCode }}</td>
                         <td>{{ $itemDesc }}</td>
+                        <td class="text-center">1</td>
                         <td class="text-right">Rp {{ number_format($line->original_price, 0, ',', '.') }}</td>
                         <td class="text-center">
                             @if ($line->status === 'approved')
@@ -500,126 +568,13 @@
                                 Pending
                             @endif
                         </td>
-                        <td class="text-center">1</td>
                         <td class="text-right">Rp {{ number_format($line->final_price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
-                {{-- Filler rows --}}
-                @php $itemRowCount = $pkgLines->count() + ($pkgLines->isEmpty() && $wo->paket_name ? $paketCount : 0) + $itemLines->count(); @endphp
-                @for ($i = $itemRowCount; $i < 3; $i++)
-                    <tr class="empty-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                @endfor
-            @else
-                {{-- Legacy / no-lines rendering --}}
-                @for ($i = 0; $i < $paketCount; $i++)
-                    <tr>
-                        <td>{{ $paketCodes[$i] ?? '-' }}</td>
-                        <td>{{ $paketNames[$i] ?? '-' }}</td>
-                        <td class="text-right">Rp {{ number_format($serviceTotal / $paketCount, 0, ',', '.') }}</td>
-                        <td class="text-center">{{ $discountPct > 0 ? number_format($discountPct, 2) . '%' : '' }}</td>
-                        <td class="text-center">1</td>
-                        <td class="text-right">Rp {{ number_format($serviceTotal / $paketCount, 0, ',', '.') }}</td>
-                    </tr>
-                @endfor
-                @for ($i = $paketCount; $i < 3; $i++)
-                    <tr class="empty-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                @endfor
             @endif
         </tbody>
     </table>
-
-    {{-- LABOR TABLE --}}
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width:12%">Labor Code</th>
-                <th style="width:33%">Description</th>
-                <th style="width:18%">Price</th>
-                <th style="width:10%">Discount</th>
-                <th style="width:8%">Qty</th>
-                <th style="width:19%">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{-- Base labor rows from master labor selection --}}
-            @foreach ($wo->labors->where('is_extra', false) as $baseLaborRow)
-            <tr>
-                <td>{{ $baseLaborRow->labor?->labor_code ?? 'LAB' }}</td>
-                <td>{{ $baseLaborRow->description }}</td>
-                <td class="text-right">Rp {{ number_format($baseLaborRow->rate ?? 0, 0, ',', '.') }}</td>
-                <td></td>
-                <td class="text-center">{{ number_format($baseLaborRow->qty, 0) }}</td>
-                <td class="text-right">Rp {{ number_format($baseLaborRow->total_price ?? 0, 0, ',', '.') }}</td>
-            </tr>
-            @endforeach
-            @if ($wo->labors->where('is_extra', false)->isEmpty())
-            <tr>
-                <td>LAB</td>
-                <td>Jasa Pengerjaan</td>
-                <td class="text-right">-</td>
-                <td></td>
-                <td class="text-center">-</td>
-                <td class="text-right">-</td>
-            </tr>
-            @endif
-            @if ($hasLines)
-                {{-- Extra labor lines from discount system --}}
-                @foreach ($laborLines as $line)
-                    <tr>
-                        <td>LAB</td>
-                        <td>{{ $line->description }}</td>
-                        <td class="text-right">Rp {{ number_format($line->original_price, 0, ',', '.') }}</td>
-                        <td class="text-center">
-                            @if ($line->status === 'approved')
-                                {{ number_format($line->discount_percentage, 2) }}%
-                            @elseif ($line->status === 'rejected')
-                                <em>No disc.</em>
-                            @else
-                                Pending
-                            @endif
-                        </td>
-                        <td class="text-center">1</td>
-                        <td class="text-right">Rp {{ number_format($line->final_price, 0, ',', '.') }}</td>
-                    </tr>
-                @endforeach
-                @for ($i = 1 + $laborLines->count(); $i < 3; $i++)
-                    <tr class="empty-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                @endfor
-            @else
-                @for ($i = 1; $i < 3; $i++)
-                    <tr class="empty-row">
-                        <td>&nbsp;</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                @endfor
-            @endif
-        </tbody>
-    </table>
+    @endif
 
     {{-- BOTTOM: PAYMENT + TOTALS --}}
     <table class="bottom-section">
@@ -639,12 +594,24 @@
             <td style="width:45%;">
                 <table class="totals-table">
                     <tr>
-                        <td style="width:45%"><strong>Total Item</strong></td>
-                        <td class="text-right">Rp {{ number_format($serviceTotal, 0, ',', '.') }}</td>
+                        <td style="width:45%"><strong>Total Panel</strong></td>
+                        <td class="text-right">Rp {{ number_format($panelTotal, 0, ',', '.') }}</td>
                     </tr>
+                    @if ($extraLaborTotal > 0)
+                        <tr>
+                            <td><strong>Total Extra Labor</strong></td>
+                            <td class="text-right">Rp {{ number_format($extraLaborTotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($extraItemTotal > 0)
+                        <tr>
+                            <td><strong>Total Extra Materials</strong></td>
+                            <td class="text-right">Rp {{ number_format($extraItemTotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
                     <tr>
-                        <td><strong>Total Labor</strong></td>
-                        <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
+                        <td><strong>Subtotal</strong></td>
+                        <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($discountAmt > 0)
                         <tr>

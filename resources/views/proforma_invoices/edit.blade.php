@@ -56,12 +56,12 @@
                             @if ($woDetail)
                                 @php
                                     $lines = [];
-                                    if ($woDetail['package']) {
+                                    if ($woDetail['panel']) {
                                         $lines[] = [
                                             'type' => 'package',
                                             'target_id' => '',
-                                            'description' => $woDetail['package']['description'],
-                                            'original_price' => $woDetail['package']['original_price'],
+                                            'description' => $woDetail['panel']['description'],
+                                            'original_price' => $woDetail['panel']['original_price'],
                                         ];
                                     }
                                     foreach ($woDetail['extra_items'] as $ei) {
@@ -95,7 +95,7 @@
                                                 'extra_labor' => 'badge-secondary',
                                             ];
                                             $typeLabels = [
-                                                'package' => 'Package',
+                                                'package' => 'Panel',
                                                 'extra_item' => 'Extra Item',
                                                 'extra_labor' => 'Extra Labor',
                                             ];
