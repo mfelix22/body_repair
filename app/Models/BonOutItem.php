@@ -17,6 +17,7 @@ class BonOutItem extends Model
         'unit_cost',
         'unit_price',
         'remark',
+        'bon_out_section',
     ];
 
     protected $casts = [

@@ -17,6 +17,7 @@ use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\LaborController;
+use App\Http\Controllers\PanelController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\BonOutController;
@@ -190,6 +191,11 @@ Route::middleware('auth')->group(function () {
     Route::get('labors/template', [LaborController::class, 'downloadTemplate'])->name('labors.template');
     Route::post('labors/import', [LaborController::class, 'import'])->name('labors.import');
     Route::resource('labors', LaborController::class)->except(['show']);
+
+    // Panel Master
+    Route::get('panels/template', [PanelController::class, 'downloadTemplate'])->name('panels.template');
+    Route::post('panels/import', [PanelController::class, 'import'])->name('panels.import');
+    Route::resource('panels', PanelController::class)->except(['show']);
 
     // Invoices
     Route::resource('invoices', InvoiceController::class);

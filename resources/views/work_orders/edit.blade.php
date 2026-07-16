@@ -190,26 +190,71 @@
                                 </div>
                             </div>
 
-                            {{-- Col 3: Panel list + Tier + Price Summary --}}
+                            {{-- Col 3: Panel list + Labor + Tier + Price Summary --}}
                             <div class="col-md-4">
                                 <h6><i class="fas fa-tools"></i> Panel yang Dikerjakan</h6>
                                 <p class="text-muted small mb-2">Pilih panel, lalu tentukan kisaran harga kendaraan di bawah.</p>
 
-                                <div id="labors-container">
-                                    @foreach ($workOrder->labors->where('is_extra', false) as $index => $labor)
-                                        <div class="labor-row card mb-2 border-left-success">
+                                <div id="panels-container">
+                                    @foreach ($workOrder->panelLabors->where('is_extra', false) as $index => $panel)
+                                        <div class="panel-row card mb-2 border-left-success">
                                             <div class="card-body py-2">
                                                 <div class="form-group mb-1">
                                                     <label class="mb-1"><strong>Panel</strong></label>
-                                                    <select name="labors[{{ $index }}][labor_id]" class="form-control form-control-sm labor-select">
+                                                    <select name="panels[{{ $index }}][panel_id]" class="form-control form-control-sm panel-select">
                                                         <option value="">-- Pilih Panel --</option>
+                                                        @foreach ($masterPanels as $mp)
+                                                            <option value="{{ $mp->id }}"
+                                                                data-price="{{ $mp->price }}"
+                                                                data-p0300="{{ $mp->price_0_300 }}"
+                                                                data-p300500="{{ $mp->price_300_500 }}"
+                                                                data-p500800="{{ $mp->price_500_800 }}"
+                                                                data-p8002000="{{ $mp->price_800_2000 }}"
+                                                                {{ $panel->panel_id == $mp->id ? 'selected' : '' }}>
+                                                                {{ $mp->panel_code }} — {{ $mp->description }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-4">
+                                                        <label class="mb-1 small"><strong>Qty</strong></label>
+                                                        <input type="number" name="panels[{{ $index }}][qty]" class="form-control form-control-sm panel-qty" step="1" min="1" value="{{ $panel->qty ?? 1 }}">
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="mb-1 small"><strong>Rate</strong></label>
+                                                        <input type="number" class="form-control form-control-sm panel-rate" readonly value="{{ $panel->rate ? number_format($panel->rate, 0, '', '') : '' }}">
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="mb-1 small"><strong>Total</strong></label>
+                                                        <input type="text" class="form-control form-control-sm panel-total-display" readonly value="{{ $panel->total_price ? number_format($panel->total_price, 0, ',', '.') : '' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="text-right mt-1">
+                                                    <button type="button" class="btn btn-danger btn-xs remove-panel"><i class="fas fa-trash"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="btn btn-success btn-sm mb-3" id="add-panel">
+                                    <i class="fas fa-plus"></i> Tambah Panel
+                                </button>
+
+                                <h6><i class="fas fa-wrench"></i> Labor</h6>
+                                <p class="text-muted small mb-2">Pilih pekerjaan umum yang dikerjakan.</p>
+
+                                <div id="labors-container">
+                                    @foreach ($workOrder->generalLabors->where('is_extra', false) as $index => $labor)
+                                        <div class="labor-row card mb-2 border-left-info">
+                                            <div class="card-body py-2">
+                                                <div class="form-group mb-1">
+                                                    <label class="mb-1"><strong>Labor</strong></label>
+                                                    <select name="labors[{{ $index }}][labor_id]" class="form-control form-control-sm labor-select">
+                                                        <option value="">-- Pilih Labor --</option>
                                                         @foreach ($masterLabors as $ml)
                                                             <option value="{{ $ml->id }}"
                                                                 data-price="{{ $ml->price }}"
-                                                                data-p0300="{{ $ml->price_0_300 }}"
-                                                                data-p300500="{{ $ml->price_300_500 }}"
-                                                                data-p500800="{{ $ml->price_500_800 }}"
-                                                                data-p8002000="{{ $ml->price_800_2000 }}"
                                                                 {{ $labor->labor_id == $ml->id ? 'selected' : '' }}>
                                                                 {{ $ml->labor_code }} — {{ $ml->description }}
                                                             </option>
@@ -237,8 +282,8 @@
                                         </div>
                                     @endforeach
                                 </div>
-                                <button type="button" class="btn btn-success btn-sm mb-3" id="add-labor">
-                                    <i class="fas fa-plus"></i> Tambah Panel
+                                <button type="button" class="btn btn-info btn-sm mb-3" id="add-labor">
+                                    <i class="fas fa-plus"></i> Tambah Labor
                                 </button>
 
                                 <div class="form-group">
@@ -257,12 +302,19 @@
                                     <small class="text-muted">Menentukan tarif untuk semua panel di atas.</small>
                                 </div>
 
-                                @php $panelTotal = $workOrder->labors->where('is_extra', false)->sum('total_price'); @endphp
-                                <div id="panel_price_summary" style="{{ $panelTotal > 0 ? '' : 'display:none;' }}">
+                                @php
+                                    $panelTotal = $workOrder->panelLabors->where('is_extra', false)->sum('total_price');
+                                    $baseLaborTotal = $workOrder->generalLabors->where('is_extra', false)->sum('total_price');
+                                @endphp
+                                <div id="panel_price_summary" style="{{ ($panelTotal + $baseLaborTotal) > 0 ? '' : 'display:none;' }}">
                                     <table class="table table-sm table-bordered mb-0">
                                         <tr>
                                             <td>Total Panel</td>
                                             <td class="text-right"><strong id="display_panel_total">Rp {{ number_format($panelTotal, 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Total Labor</td>
+                                            <td class="text-right"><strong id="display_labor_total">Rp {{ number_format($baseLaborTotal, 0, ',', '.') }}</strong></td>
                                         </tr>
                                         <tr class="table-success">
                                             <td><strong>Grand Total</strong></td>
@@ -287,9 +339,10 @@
 
     <script>
         let itemIndex = {{ $workOrder->items->count() }};
-        let laborIndex = {{ $workOrder->labors->where('is_extra', false)->count() }};
+        let panelIndex = {{ $workOrder->panelLabors->where('is_extra', false)->count() }};
+        let laborIndex = {{ $workOrder->generalLabors->where('is_extra', false)->count() }};
 
-        // ===== PANEL PRICE SUMMARY =====
+        // ===== PANEL + LABOR PRICE SUMMARY =====
         function getPriceTierKey() {
             const el = document.getElementById('vehicle_price_tier');
             const tier = el ? el.value : '';
@@ -309,26 +362,47 @@
             return parseFloat(opt.dataset.price) || 0;
         }
 
+        function updateRowTotal(row, tierKey) {
+            const isPanel = row.classList.contains('panel-row');
+            const select = row.querySelector(isPanel ? '.panel-select' : '.labor-select');
+            const qtyInput = row.querySelector(isPanel ? '.panel-qty' : '.labor-qty');
+            const rateInput = row.querySelector(isPanel ? '.panel-rate' : '.labor-rate');
+            const totalInput = row.querySelector(isPanel ? '.panel-total-display' : '.labor-total-display');
+            if (!select || !qtyInput) return 0;
+
+            if (!select.value) {
+                if (rateInput) rateInput.value = '';
+                if (totalInput) totalInput.value = '';
+                return 0;
+            }
+
+            const opt = select.options[select.selectedIndex];
+            const price = getPriceFromOption(opt, isPanel ? tierKey : null);
+            const qty = parseFloat(qtyInput.value) || 0;
+            const rowTotal = price * qty;
+            if (rateInput) rateInput.value = price;
+            if (totalInput) totalInput.value = rowTotal.toLocaleString('id-ID');
+            return rowTotal;
+        }
+
         function updatePriceDisplay() {
             const tierKey = getPriceTierKey();
-            let total = 0;
-            document.querySelectorAll('.labor-row').forEach(function(row) {
-                const select = row.querySelector('.labor-select');
-                const qtyInput = row.querySelector('.labor-qty');
-                if (select && select.value && qtyInput) {
-                    const opt = select.options[select.selectedIndex];
-                    const price = getPriceFromOption(opt, tierKey);
-                    const qty = parseFloat(qtyInput.value) || 0;
-                    const rowTotal = price * qty;
-                    total += rowTotal;
-                    row.querySelector('.labor-rate').value = price;
-                    row.querySelector('.labor-total-display').value = rowTotal.toLocaleString('id-ID');
-                }
+            let panelTotal = 0;
+            document.querySelectorAll('.panel-row').forEach(function(row) {
+                panelTotal += updateRowTotal(row, tierKey);
             });
+
+            let laborTotal = 0;
+            document.querySelectorAll('.labor-row').forEach(function(row) {
+                laborTotal += updateRowTotal(row, null);
+            });
+
+            const grandTotal = panelTotal + laborTotal;
             const summaryEl = document.getElementById('panel_price_summary');
-            if (total > 0) {
-                document.getElementById('display_panel_total').textContent = 'Rp ' + total.toLocaleString('id-ID');
-                document.getElementById('display_grand_total').textContent  = 'Rp ' + total.toLocaleString('id-ID');
+            if (panelTotal > 0 || laborTotal > 0) {
+                document.getElementById('display_panel_total').textContent = 'Rp ' + panelTotal.toLocaleString('id-ID');
+                document.getElementById('display_labor_total').textContent = 'Rp ' + laborTotal.toLocaleString('id-ID');
+                document.getElementById('display_grand_total').textContent  = 'Rp ' + grandTotal.toLocaleString('id-ID');
                 summaryEl.style.display = 'block';
             } else {
                 summaryEl.style.display = 'none';
@@ -416,23 +490,62 @@
             initItemSelect2();
         });
 
-        document.getElementById('add-labor').addEventListener('click', function() {
-            const container = document.getElementById('labors-container');
-            const newLaborRow = document.createElement('div');
-            newLaborRow.className = 'labor-row card mb-2 border-left-success';
-            newLaborRow.innerHTML = `
+        document.getElementById('add-panel').addEventListener('click', function() {
+            const container = document.getElementById('panels-container');
+            const newPanelRow = document.createElement('div');
+            newPanelRow.className = 'panel-row card mb-2 border-left-success';
+            newPanelRow.innerHTML = `
                 <div class="card-body py-2">
                     <div class="form-group mb-1">
                         <label class="mb-1"><strong>Panel</strong></label>
-                        <select name="labors[${laborIndex}][labor_id]" class="form-control form-control-sm labor-select">
+                        <select name="panels[${panelIndex}][panel_id]" class="form-control form-control-sm panel-select">
                             <option value="">-- Pilih Panel --</option>
+                            @foreach ($masterPanels as $mp)
+                                <option value="{{ $mp->id }}"
+                                    data-price="{{ $mp->price }}"
+                                    data-p0300="{{ $mp->price_0_300 }}"
+                                    data-p300500="{{ $mp->price_300_500 }}"
+                                    data-p500800="{{ $mp->price_500_800 }}"
+                                    data-p8002000="{{ $mp->price_800_2000 }}">{{ $mp->panel_code }} — {{ $mp->description }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <label class="mb-1 small"><strong>Qty</strong></label>
+                            <input type="number" name="panels[${panelIndex}][qty]" class="form-control form-control-sm panel-qty" step="1" min="1" value="1">
+                        </div>
+                        <div class="col-4">
+                            <label class="mb-1 small"><strong>Rate</strong></label>
+                            <input type="number" class="form-control form-control-sm panel-rate" readonly>
+                        </div>
+                        <div class="col-4">
+                            <label class="mb-1 small"><strong>Total</strong></label>
+                            <input type="text" class="form-control form-control-sm panel-total-display" readonly>
+                        </div>
+                    </div>
+                    <div class="text-right mt-1">
+                        <button type="button" class="btn btn-danger btn-xs remove-panel"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+            container.appendChild(newPanelRow);
+            panelIndex++;
+            attachPanelListeners();
+            if (typeof initPanelSelect2 === 'function') initPanelSelect2();
+        });
+
+        document.getElementById('add-labor').addEventListener('click', function() {
+            const container = document.getElementById('labors-container');
+            const newLaborRow = document.createElement('div');
+            newLaborRow.className = 'labor-row card mb-2 border-left-info';
+            newLaborRow.innerHTML = `
+                <div class="card-body py-2">
+                    <div class="form-group mb-1">
+                        <label class="mb-1"><strong>Labor</strong></label>
+                        <select name="labors[${laborIndex}][labor_id]" class="form-control form-control-sm labor-select">
+                            <option value="">-- Pilih Labor --</option>
                             @foreach ($masterLabors as $ml)
-                                <option value="{{ $ml->id }}"
-                                    data-price="{{ $ml->price }}"
-                                    data-p0300="{{ $ml->price_0_300 }}"
-                                    data-p300500="{{ $ml->price_300_500 }}"
-                                    data-p500800="{{ $ml->price_500_800 }}"
-                                    data-p8002000="{{ $ml->price_800_2000 }}">{{ $ml->labor_code }} — {{ $ml->description }}</option>
+                                <option value="{{ $ml->id }}" data-price="{{ $ml->price }}">{{ $ml->labor_code }} — {{ $ml->description }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -460,7 +573,17 @@
             if (typeof initLaborSelect2 === 'function') initLaborSelect2();
         });
 
-        // ===== LABOR FUNCTIONS =====
+        // ===== ROW LISTENERS =====
+        function attachPanelListeners() {
+            document.querySelectorAll('.panel-select').forEach(select => {
+                if (select.dataset.hasListener) return;
+                select.dataset.hasListener = '1';
+                select.onchange = function() {
+                    updatePriceDisplay();
+                };
+            });
+        }
+
         function attachLaborListeners() {
             document.querySelectorAll('.labor-select').forEach(select => {
                 if (select.dataset.hasListener) return;
@@ -473,11 +596,12 @@
 
         // Event delegation for qty — covers both static and dynamically added rows
         document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('labor-qty')) {
+            if (e.target.classList.contains('panel-qty') || e.target.classList.contains('labor-qty')) {
                 updatePriceDisplay();
             }
         });
 
+        attachPanelListeners();
         attachLaborListeners();
 
         function attachItemListeners() {
@@ -496,8 +620,13 @@
             if (e.target.closest('.remove-item')) {
                 if (document.querySelectorAll('.item-row').length > 1) e.target.closest('.item-row').remove();
             }
+            if (e.target.closest('.remove-panel')) {
+                if (document.querySelectorAll('.panel-row').length > 1) e.target.closest('.panel-row').remove();
+                updatePriceDisplay();
+            }
             if (e.target.closest('.remove-labor')) {
                 if (document.querySelectorAll('.labor-row').length > 1) e.target.closest('.labor-row').remove();
+                updatePriceDisplay();
             }
         });
 
@@ -505,6 +634,10 @@
 
         // ===== STRIP BLANK ROWS BEFORE SUBMIT =====
         document.querySelector('form').addEventListener('submit', function() {
+            document.querySelectorAll('.panel-row').forEach(function(row) {
+                const sel = row.querySelector('.panel-select');
+                if (!sel || !sel.value) row.remove();
+            });
             document.querySelectorAll('.labor-row').forEach(function(row) {
                 const sel = row.querySelector('.labor-select');
                 if (!sel || !sel.value) row.remove();
@@ -575,15 +708,33 @@
             });
 
             initItemSelect2();
+            initPanelSelect2();
             initLaborSelect2();
         });
+
+        function initPanelSelect2() {
+            $('.panel-select').not('.select2-hidden-accessible').each(function() {
+                const savedVal = $(this).val();
+                $(this).select2({
+                    theme: 'bootstrap4',
+                    placeholder: '-- Pilih Panel --',
+                    allowClear: true,
+                    width: '100%'
+                }).on('change', function() {
+                    updatePriceDisplay();
+                });
+                if (savedVal) {
+                    $(this).val(savedVal).trigger('change');
+                }
+            });
+        }
 
         function initLaborSelect2() {
             $('.labor-select').not('.select2-hidden-accessible').each(function() {
                 const savedVal = $(this).val();
                 $(this).select2({
                     theme: 'bootstrap4',
-                    placeholder: '-- Pilih Panel --',
+                    placeholder: '-- Pilih Labor --',
                     allowClear: true,
                     width: '100%'
                 }).on('change', function() {

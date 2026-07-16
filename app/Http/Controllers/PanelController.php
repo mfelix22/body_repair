@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\PermissionHelper;
-use App\Models\Labor;
+use App\Models\Panel;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -12,104 +12,120 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class LaborController extends Controller
+class PanelController extends Controller
 {
     public function index()
     {
-        if (!PermissionHelper::canView('labors')) {
-            return PermissionHelper::denyAccess('labors', 'view');
+        if (!PermissionHelper::canView('panels')) {
+            return PermissionHelper::denyAccess('panels', 'view');
         }
-        $labors = Labor::where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
-        return view('labors.index', compact('labors'));
+        $panels = Panel::orderBy('panel_code')->get();
+        return view('panels.index', compact('panels'));
     }
 
     public function create()
     {
-        if (!PermissionHelper::canCreate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'create');
+        if (!PermissionHelper::canCreate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'create');
         }
-        return view('labors.create');
+        return view('panels.create');
     }
 
     public function store(Request $request)
     {
-        if (!PermissionHelper::canCreate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'create');
+        if (!PermissionHelper::canCreate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'create');
         }
 
         $validated = $request->validate([
             'description' => 'required|string|max:255',
             'price'       => 'required|numeric|min:0',
+            'price_0_300'   => 'nullable|numeric|min:0',
+            'price_300_500' => 'nullable|numeric|min:0',
+            'price_500_800' => 'nullable|numeric|min:0',
+            'price_800_2000' => 'nullable|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);
 
-        // Auto-generate labor code: LAB-0001
-        $last = Labor::orderBy('id', 'desc')->first();
-        $nextSeq = $last ? (int) substr($last->labor_code, 4) + 1 : 1;
-        $laborCode = 'LAB-' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
+        // Auto-generate panel code: PNL-0001
+        $last = Panel::orderBy('id', 'desc')->first();
+        $nextSeq = $last ? (int) substr($last->panel_code, 4) + 1 : 1;
+        $panelCode = 'PNL-' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
 
-        Labor::create([
-            'labor_code'  => $laborCode,
-            'description' => $validated['description'],
-            'price'       => $validated['price'],
-            'is_active'   => $request->boolean('is_active', true),
+        Panel::create([
+            'panel_code'     => $panelCode,
+            'description'    => $validated['description'],
+            'price'          => $validated['price'],
+            'price_0_300'    => $validated['price_0_300'] ?? $validated['price'],
+            'price_300_500'  => $validated['price_300_500'] ?? $validated['price'],
+            'price_500_800'  => $validated['price_500_800'] ?? $validated['price'],
+            'price_800_2000' => $validated['price_800_2000'] ?? $validated['price'],
+            'is_active'      => $request->boolean('is_active', true),
         ]);
 
-        return redirect()->route('labors.index')
-            ->with('success', "Labor {$laborCode} created.");
+        return redirect()->route('panels.index')
+            ->with('success', "Panel {$panelCode} created.");
     }
 
-    public function edit(Labor $labor)
+    public function edit(Panel $panel)
     {
-        if (!PermissionHelper::canUpdate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'update');
+        if (!PermissionHelper::canUpdate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'update');
         }
-        return view('labors.edit', compact('labor'));
+        return view('panels.edit', compact('panel'));
     }
 
-    public function update(Request $request, Labor $labor)
+    public function update(Request $request, Panel $panel)
     {
-        if (!PermissionHelper::canUpdate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'update');
+        if (!PermissionHelper::canUpdate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'update');
         }
 
         $validated = $request->validate([
             'description' => 'required|string|max:255',
             'price'       => 'required|numeric|min:0',
+            'price_0_300'   => 'nullable|numeric|min:0',
+            'price_300_500' => 'nullable|numeric|min:0',
+            'price_500_800' => 'nullable|numeric|min:0',
+            'price_800_2000' => 'nullable|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);
 
-        $labor->update([
-            'description' => $validated['description'],
-            'price'       => $validated['price'],
-            'is_active'   => $request->boolean('is_active', true),
+        $panel->update([
+            'description'    => $validated['description'],
+            'price'          => $validated['price'],
+            'price_0_300'    => $validated['price_0_300'] ?? $validated['price'],
+            'price_300_500'  => $validated['price_300_500'] ?? $validated['price'],
+            'price_500_800'  => $validated['price_500_800'] ?? $validated['price'],
+            'price_800_2000' => $validated['price_800_2000'] ?? $validated['price'],
+            'is_active'      => $request->boolean('is_active', true),
         ]);
 
-        return redirect()->route('labors.index')
-            ->with('success', "Labor {$labor->labor_code} updated.");
+        return redirect()->route('panels.index')
+            ->with('success', "Panel {$panel->panel_code} updated.");
     }
 
-    public function destroy(Labor $labor)
+    public function destroy(Panel $panel)
     {
-        if (!PermissionHelper::canDelete('labors')) {
-            return PermissionHelper::denyAccess('labors', 'delete');
+        if (!PermissionHelper::canDelete('panels')) {
+            return PermissionHelper::denyAccess('panels', 'delete');
         }
 
-        $labor->delete();
+        $panel->delete();
 
-        return redirect()->route('labors.index')
-            ->with('success', 'Labor deleted.');
+        return redirect()->route('panels.index')
+            ->with('success', 'Panel deleted.');
     }
 
     public function downloadTemplate()
     {
-        if (!PermissionHelper::canCreate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'create');
+        if (!PermissionHelper::canCreate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'create');
         }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Labor Import');
+        $sheet->setTitle('Panel Import');
 
         // Headers
         $headers = ['cdjob', 'emjob', 'hstd', 'fstd', 'cdjob_o', '0-300jt', '300-500jt', '500-800jt', '800jt-2mil'];
@@ -127,8 +143,8 @@ class LaborController extends Controller
         ]);
 
         // Example row
-        $sheet->setCellValue('A2', '102RHR2');
-        $sheet->setCellValue('B2', 'Replace + (example name)');
+        $sheet->setCellValue('A2', 'PNL-9999');
+        $sheet->setCellValue('B2', 'Panel example name');
         $sheet->setCellValue('C2', 0.25);
         $sheet->setCellValue('D2', 0);
         $sheet->setCellValue('E2', '');
@@ -150,8 +166,8 @@ class LaborController extends Controller
 
         // Note row
         $sheet->setCellValue('A4', 'Notes:');
-        $sheet->setCellValue('A5', '- Column A (cdjob): Job code — used as unique key');
-        $sheet->setCellValue('A6', '- Column B (emjob): Job name/description');
+        $sheet->setCellValue('A5', '- Column A (cdjob): Panel code — used as unique key');
+        $sheet->setCellValue('A6', '- Column B (emjob): Panel name/description');
         $sheet->setCellValue('A7', '- Column C (hstd): Multiplier (e.g. 0.25). Prices = base price x multiplier');
         $sheet->setCellValue('A8', '- Columns D & E (fstd, cdjob_o): optional, ignored on import');
         $sheet->setCellValue('A9', '- Columns F-I: Price per tier (0-300jt, 300-500jt, 500-800jt, 800jt-2mil)');
@@ -167,15 +183,15 @@ class LaborController extends Controller
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
-        }, 'labor_import_template.xlsx', [
+        }, 'panel_import_template.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 
     public function import(Request $request)
     {
-        if (!PermissionHelper::canCreate('labors')) {
-            return PermissionHelper::denyAccess('labors', 'create');
+        if (!PermissionHelper::canCreate('panels')) {
+            return PermissionHelper::denyAccess('panels', 'create');
         }
 
         $request->validate([
@@ -185,17 +201,16 @@ class LaborController extends Controller
         try {
             $spreadsheet = IOFactory::load($request->file('excel_file')->getPathname());
             $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray(null, true, true, true); // keyed by column letter
+            $rows        = $sheet->toArray(null, true, true, true);
 
             $imported = 0;
             $skipped  = 0;
             $errors   = [];
 
-            // Skip row 1 (headers). Row 2 may be base-price reference row — skip if no cdjob.
             foreach (array_slice($rows, 1, null, true) as $rowNum => $row) {
                 $cdjob = trim((string) ($row['A'] ?? ''));
                 if ($cdjob === '') {
-                    continue; // skip header / base-price rows
+                    continue;
                 }
 
                 $emjob       = trim((string) ($row['B'] ?? ''));
@@ -206,33 +221,33 @@ class LaborController extends Controller
                 $price8002000 = (float) ($row['I'] ?? 0);
 
                 if ($emjob === '') {
-                    $errors[] = "Row {$rowNum}: labor name (emjob) is empty — skipped.";
+                    $errors[] = "Row {$rowNum}: panel name (emjob) is empty — skipped.";
                     $skipped++;
                     continue;
                 }
 
-                Labor::updateOrCreate(
-                    ['labor_code' => $cdjob],
+                Panel::updateOrCreate(
+                    ['panel_code' => $cdjob],
                     [
-                        'description'   => $emjob,
-                        'multiplier'    => $hstd,
-                        'price_0_300'   => $price0300,
-                        'price_300_500' => $price300500,
-                        'price_500_800' => $price500800,
+                        'description'    => $emjob,
+                        'multiplier'     => $hstd,
+                        'price_0_300'    => $price0300,
+                        'price_300_500'  => $price300500,
+                        'price_500_800'  => $price500800,
                         'price_800_2000' => $price8002000,
-                        'price'         => $price0300, // default price = tier 1
-                        'is_active'     => true,
+                        'price'          => $price0300,
+                        'is_active'      => true,
                     ]
                 );
                 $imported++;
             }
 
-            $msg = "Import complete: {$imported} labor(s) imported/updated.";
+            $msg = "Import complete: {$imported} panel(s) imported/updated.";
             if ($skipped) {
                 $msg .= " {$skipped} row(s) skipped.";
             }
 
-            return redirect()->route('labors.index')->with('success', $msg)
+            return redirect()->route('panels.index')->with('success', $msg)
                 ->with('import_errors', $errors);
         } catch (\Exception $e) {
             return back()->with('error', 'Import failed: ' . $e->getMessage());

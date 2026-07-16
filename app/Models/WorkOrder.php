@@ -95,6 +95,16 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderLabor::class);
     }
 
+    public function panelLabors(): HasMany
+    {
+        return $this->hasMany(WorkOrderLabor::class)->whereNotNull('panel_id');
+    }
+
+    public function generalLabors(): HasMany
+    {
+        return $this->hasMany(WorkOrderLabor::class)->whereNotNull('labor_id');
+    }
+
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class);

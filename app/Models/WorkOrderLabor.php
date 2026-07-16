@@ -10,6 +10,7 @@ class WorkOrderLabor extends Model
     protected $fillable = [
         'work_order_id',
         'labor_id',
+        'panel_id',
         'description',
         'qty',
         'remarks',
@@ -34,5 +35,20 @@ class WorkOrderLabor extends Model
     public function labor(): BelongsTo
     {
         return $this->belongsTo(Labor::class);
+    }
+
+    public function panel(): BelongsTo
+    {
+        return $this->belongsTo(Panel::class);
+    }
+
+    public function masterItem(): ?Model
+    {
+        return $this->panel ?? $this->labor;
+    }
+
+    public function isPanel(): bool
+    {
+        return !is_null($this->panel_id);
     }
 }

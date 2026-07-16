@@ -120,6 +120,7 @@
                                 'packages.*',
                                 'vehicles.*',
                                 'labors.*',
+                                'panels.*',
                             ];
                             $mdOpen = request()->routeIs($mdRoutes);
                             $mdVisible =
@@ -129,7 +130,8 @@
                                 \App\Helpers\PermissionHelper::canView('suppliers') ||
                                 \App\Helpers\PermissionHelper::canView('packages') ||
                                 \App\Helpers\PermissionHelper::canView('vehicles') ||
-                                \App\Helpers\PermissionHelper::canView('labors');
+                                \App\Helpers\PermissionHelper::canView('labors') ||
+                                \App\Helpers\PermissionHelper::canView('panels');
                         @endphp
                         @if ($mdVisible)
                             <li class="nav-item has-treeview {{ $mdOpen ? 'menu-open' : '' }}">
@@ -183,11 +185,20 @@
                                             </a>
                                         </li>
                                     @endif
+                                    @if (\App\Helpers\PermissionHelper::canView('panels'))
+                                        <li class="nav-item">
+                                            <a href="{{ route('panels.index') }}"
+                                                class="nav-link {{ request()->routeIs('panels.*') ? 'active' : '' }}">
+                                                <i class="fas fa-brush nav-icon"></i>
+                                                <p>Panels</p>
+                                            </a>
+                                        </li>
+                                    @endif
                                     @if (\App\Helpers\PermissionHelper::canView('labors'))
                                         <li class="nav-item">
                                             <a href="{{ route('labors.index') }}"
                                                 class="nav-link {{ request()->routeIs('labors.*') ? 'active' : '' }}">
-                                                <i class="fas fa-brush nav-icon"></i>
+                                                <i class="fas fa-wrench nav-icon"></i>
                                                 <p>Labor</p>
                                             </a>
                                         </li>

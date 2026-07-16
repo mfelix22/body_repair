@@ -240,15 +240,22 @@
                         <div class="col-md-4">
                             <h6>Pricing</h6>
                             @php
-                                $panelLabor  = $workOrder->labors->where('is_extra', false)->sum('total_price');
-                                $extraLabor  = $workOrder->labors->where('is_extra', true)->sum('total_price');
+                                $panelTotal    = $workOrder->panelLabors->where('is_extra', false)->sum('total_price');
+                                $laborTotal    = $workOrder->generalLabors->where('is_extra', false)->sum('total_price');
+                                $extraLabor    = $workOrder->generalLabors->where('is_extra', true)->sum('total_price');
                                 $extraMaterial = $workOrder->items->whereNotNull('total_price')->sum('total_price');
                             @endphp
                             <table class="table table-sm table-bordered">
-                                @if ($panelLabor > 0)
+                                @if ($panelTotal > 0)
                                     <tr>
                                         <th>Total Panel:</th>
-                                        <td class="text-right">Rp {{ number_format($panelLabor, 0, ',', '.') }}</td>
+                                        <td class="text-right">Rp {{ number_format($panelTotal, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endif
+                                @if ($laborTotal > 0)
+                                    <tr>
+                                        <th>Total Labor:</th>
+                                        <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 @if ($extraMaterial > 0)
@@ -301,8 +308,9 @@
                             \App\Helpers\PermissionHelper::canUpdate('work_orders');
                     @endphp
                     @php
-                        $basePanels = $workOrder->labors->where('is_extra', false);
-                        $extraLabors = $workOrder->labors->where('is_extra', true);
+                        $basePanels   = $workOrder->panelLabors->where('is_extra', false);
+                        $baseLabors   = $workOrder->generalLabors->where('is_extra', false);
+                        $extraLabors  = $workOrder->generalLabors->where('is_extra', true);
                     @endphp
 
                     {{-- Base Panels --}}
@@ -324,7 +332,7 @@
                             <tbody>
                                 @foreach ($basePanels as $wol)
                                     <tr>
-                                        <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
+                                        <td>{{ $wol->panel?->panel_code ?? '—' }}</td>
                                         <td>{{ $wol->description }}</td>
                                         <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
                                         <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
@@ -336,6 +344,39 @@
                         </table>
                     @else
                         <p class="text-muted">Belum ada panel.</p>
+                    @endif
+
+                    {{-- Base Labors --}}
+                    <div class="d-flex align-items-center mb-2 mt-3">
+                        <h6 class="mb-0">Labor yang Dikerjakan</h6>
+                    </div>
+                    @if ($baseLabors->isNotEmpty())
+                        <table class="table table-striped table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Labor</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-right">Rate (Rp)</th>
+                                    <th class="text-right">Total (Rp)</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($baseLabors as $wol)
+                                    <tr>
+                                        <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
+                                        <td>{{ $wol->description }}</td>
+                                        <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
+                                        <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
+                                        <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>{{ $wol->remarks ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-muted">Belum ada labor.</p>
                     @endif
 
                     {{-- Extra Labors --}}
@@ -484,29 +525,14 @@
                             @endif
 
                             <div class="form-group">
-                                <label>Panel / Labor <span class="text-danger">*</span></label>
+                                <label>Labor <span class="text-danger">*</span></label>
                                 <select name="labor_id" id="laborSelect" class="form-control select2" required>
-                                    <option value="">— Pilih Panel / Labor —</option>
+                                    <option value="">— Pilih Labor —</option>
                                     @foreach ($masterLabors as $ml)
-                                        <option value="{{ $ml->id }}"
-                                            data-price_0_300="{{ (float) ($ml->price_0_300 ?? 0) }}"
-                                            data-price_300_500="{{ (float) ($ml->price_300_500 ?? 0) }}"
-                                            data-price_500_800="{{ (float) ($ml->price_500_800 ?? 0) }}"
-                                            data-price_800_2000="{{ (float) ($ml->price_800_2000 ?? 0) }}">
+                                        <option value="{{ $ml->id }}" data-price="{{ (float) $ml->price }}">
                                             {{ $ml->labor_code }} — {{ $ml->description }}
                                         </option>
                                     @endforeach
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Vehicle Price Range <span class="text-danger">*</span></label>
-                                <select id="laborTier" class="form-control">
-                                    <option value="">— Select Price Tier —</option>
-                                    <option value="price_0_300" {{ $workOrder->vehicle_price_tier === '0_300' ? 'selected' : '' }}>0 – 300 jt</option>
-                                    <option value="price_300_500" {{ $workOrder->vehicle_price_tier === '300_500' ? 'selected' : '' }}>300 – 500 jt</option>
-                                    <option value="price_500_800" {{ $workOrder->vehicle_price_tier === '500_800' ? 'selected' : '' }}>500 – 800 jt</option>
-                                    <option value="price_800_2000" {{ $workOrder->vehicle_price_tier === '800_2000' ? 'selected' : '' }}>800 jt – 2M</option>
                                 </select>
                             </div>
 
@@ -557,7 +583,6 @@
         @push('scripts')
             <script>
                 $(function() {
-                    const $tier = $('#laborTier');
                     const $sel = $('#laborSelect');
                     const $qty = $('#laborQty');
                     const $rate = $('#laborRate');
@@ -576,10 +601,9 @@
                     }
 
                     function fillPrice() {
-                        const tier = $tier.val();
                         const opt = $sel.find(':selected')[0];
-                        if (tier && opt && opt.value) {
-                            const price = parseFloat(opt.dataset[tier]) || 0;
+                        if (opt && opt.value) {
+                            const price = parseFloat(opt.dataset.price) || 0;
                             $rate.val(price);
                             recalc();
                         } else {
@@ -588,7 +612,6 @@
                         }
                     }
 
-                    $tier.on('change', fillPrice);
                     $sel.on('change', fillPrice);
                     $qty.add($rate).on('input', recalc);
 

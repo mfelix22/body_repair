@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Labor;
+use App\Models\Panel;
 
 class PanelLaborSeeder extends Seeder
 {
@@ -80,8 +80,8 @@ class PanelLaborSeeder extends Seeder
         ];
 
         foreach ($panels as $panel) {
-            Labor::updateOrCreate(
-                ['labor_code' => $panel['code']],
+            Panel::updateOrCreate(
+                ['panel_code' => $panel['code']],
                 [
                     'description'    => $panel['description'],
                     'price'          => $panel['p0_300'],
@@ -94,6 +94,6 @@ class PanelLaborSeeder extends Seeder
             );
         }
 
-        $this->command->info('67 panel labors seeded successfully!');
+        $this->command->info('67 panels seeded successfully!');
     }
 }

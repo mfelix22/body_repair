@@ -421,8 +421,9 @@
 
     {{-- ===== PANELS TABLE ===== --}}
     @php
-        $basePanels = $workOrder->labors->where('is_extra', false);
-        $extraLabors = $workOrder->labors->where('is_extra', true);
+        $basePanels  = $workOrder->panelLabors->where('is_extra', false);
+        $baseLabors  = $workOrder->generalLabors->where('is_extra', false);
+        $extraLabors = $workOrder->generalLabors->where('is_extra', true);
     @endphp
     <table class="section-table">
         <thead>
@@ -435,13 +436,13 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($basePanels as $labor)
+            @forelse ($basePanels as $panel)
                 <tr>
-                    <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
-                    <td>{{ $labor->description }}</td>
-                    <td style="text-align:center;">{{ number_format($labor->qty ?? 1, 0) }}</td>
-                    <td style="text-align:right;">{{ $labor->rate ? number_format($labor->rate, 0, ',', '.') : '-' }}</td>
-                    <td style="text-align:right;">{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '-' }}</td>
+                    <td>{{ $panel->panel?->panel_code ?? '-' }}</td>
+                    <td>{{ $panel->description }}</td>
+                    <td style="text-align:center;">{{ number_format($panel->qty ?? 1, 0) }}</td>
+                    <td style="text-align:right;">{{ $panel->rate ? number_format($panel->rate, 0, ',', '.') : '-' }}</td>
+                    <td style="text-align:right;">{{ $panel->total_price ? number_format($panel->total_price, 0, ',', '.') : '-' }}</td>
                 </tr>
             @empty
                 <tr class="empty-row"><td colspan="5">&nbsp;</td></tr>
@@ -451,6 +452,32 @@
             @endfor
         </tbody>
     </table>
+
+    {{-- ===== LABOR TABLE ===== --}}
+    @if ($baseLabors->isNotEmpty())
+    <table class="section-table">
+        <thead>
+            <tr>
+                <td style="width:15%">Labor Code</td>
+                <td style="width:45%">Labor</td>
+                <td style="width:10%;text-align:center;">Qty</td>
+                <td style="width:15%;text-align:right;">Rate</td>
+                <td style="width:15%;text-align:right;">Total</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($baseLabors as $labor)
+                <tr>
+                    <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
+                    <td>{{ $labor->description }}</td>
+                    <td style="text-align:center;">{{ number_format($labor->qty ?? 1, 0) }}</td>
+                    <td style="text-align:right;">{{ $labor->rate ? number_format($labor->rate, 0, ',', '.') : '-' }}</td>
+                    <td style="text-align:right;">{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '-' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
 
     {{-- ===== EXTRA LABOR TABLE (only if any) ===== --}}
     @if ($extraLabors->isNotEmpty())

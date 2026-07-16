@@ -128,6 +128,7 @@ class BonOutController extends Controller
             'items.*.actual_quantity'    => 'required|numeric|min:0',
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
+            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D',
         ]);
 
         $workOrder = WorkOrder::with('items.item')->findOrFail($validated['work_order_id']);
@@ -208,6 +209,7 @@ class BonOutController extends Controller
                     'actual_quantity'     => $itemData['actual_quantity'],
                     'unit_price'          => $unitPrice,
                     'remark'              => $itemData['remark'] ?? null,
+                    'bon_out_section'     => $itemData['bon_out_section'] ?? null,
                 ]);
 
                 // Update WO item actual_quantity if it's from the WO
@@ -352,6 +354,7 @@ class BonOutController extends Controller
             'items.*.actual_quantity'    => 'required|numeric|min:0',
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
+            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D',
         ]);
 
         // Filter out zero-quantity rows for new items (existing rows can be 0 = not used today)
@@ -374,6 +377,8 @@ class BonOutController extends Controller
                     $bonOutItem = BonOutItem::findOrFail($itemData['bon_out_item_id']);
                     $bonOutItem->update([
                         'actual_quantity' => $itemData['actual_quantity'],
+                        'unit_price'      => $itemData['unit_price'] ?? $bonOutItem->unit_price,
+                        'bon_out_section' => $itemData['bon_out_section'] ?? $bonOutItem->bon_out_section,
                     ]);
                     $existingIds[] = $bonOutItem->id;
                 }
@@ -402,6 +407,7 @@ class BonOutController extends Controller
                         'demand_quantity'    => $demandQty,
                         'actual_quantity'    => $itemData['actual_quantity'],
                         'unit_price'         => $unitPrice,
+                        'bon_out_section'    => $itemData['bon_out_section'] ?? null,
                     ]);
                 }
             }

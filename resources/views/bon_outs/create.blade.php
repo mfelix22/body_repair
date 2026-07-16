@@ -48,8 +48,8 @@
                                     <tr>
                                         <th>Panels</th>
                                         <td>
-                                            @forelse ($workOrder->labors->where('is_extra', false) as $wl)
-                                                <span class="badge badge-secondary">{{ $wl->labor->labor_code ?? $wl->description }}</span>
+                                            @forelse ($workOrder->panelLabors->where('is_extra', false) as $wl)
+                                                <span class="badge badge-secondary">{{ $wl->panel?->panel_code ?? $wl->description }}</span>
                                             @empty
                                                 -
                                             @endforelse
@@ -78,12 +78,36 @@
                             </div>
                         </div>
 
-                        {{-- Materials Used --}}
-                        <h5><i class="fas fa-boxes"></i> Materials Used</h5>
-                        <div id="newMaterialsContainer"></div>
-                        <button type="button" class="btn btn-success btn-sm mt-2" id="addNewMaterialBtn">
-                            <i class="fas fa-plus"></i> Add Material
-                        </button>
+                        {{-- Section-based Materials --}}
+                        @php
+                            $sections = [
+                                'A' => 'DEMPUL',
+                                'B' => 'CAT',
+                                'C' => 'VERNIS',
+                                'D' => 'POLES dan KEBERSIHAN AKHIR',
+                            ];
+                        @endphp
+
+                        @foreach ($sections as $sectionKey => $sectionLabel)
+                        <div class="card mb-3 section-card" id="section-card-{{ $sectionKey }}">
+                            <div class="card-header py-2" style="background:#f8f9fa;">
+                                <strong>{{ $sectionKey }}. &nbsp; {{ $sectionLabel }}</strong>
+                                <button type="button" class="btn btn-success btn-xs float-right add-section-btn"
+                                    data-section="{{ $sectionKey }}">
+                                    <i class="fas fa-plus"></i> Add Material
+                                </button>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="section-items-container" id="section-items-{{ $sectionKey }}">
+                                    <p class="text-muted text-center small py-2 empty-section-msg">No materials added yet.</p>
+                                </div>
+                                <div class="d-flex justify-content-end mt-1">
+                                    <span class="text-muted small mr-2">Subtotal Section {{ $sectionKey }}:</span>
+                                    <strong class="section-subtotal" id="subtotal-{{ $sectionKey }}">Rp 0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
                     </div>
 
                     <div class="card-footer">
@@ -101,61 +125,53 @@
         </div>
     </div>
 
-    {{-- Hidden template for new material row --}}
-    <template id="newMaterialTemplate">
-        <div class="card mb-2 new-material-item">
-            <div class="card-body p-3">
-                <div class="row mb-2">
-                    <div class="col-md-11">
-                        <label>Material <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm select2-new-material material-select"
-                            data-index="__INDEX__" required>
-                            <option value="">-- Select Material --</option>
-                            @foreach ($allItems as $item)
-                                <option value="{{ $item->id }}" data-code="{{ $item->code }}"
-                                    data-name="{{ $item->name }}" data-uom="{{ $item->smallestUom->code ?? '-' }}"
-                                    data-stock="{{ $item->stocks->sum('quantity') }}">
-                                    [{{ $item->code }}] {{ $item->name }} (Stock:
-                                    {{ number_format($item->stocks->sum('quantity'), 2) }}
-                                    {{ $item->smallestUom->code ?? '-' }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-1">
-                        <label>&nbsp;</label>
-                        <button type="button" class="btn btn-sm btn-danger btn-block remove-material-btn">
-                            <i class="fas fa-trash"></i>
-                        </button>
+    {{-- Hidden item row template --}}
+    <template id="materialRowTemplate">
+        <div class="border rounded p-2 mb-2 material-row bg-white">
+            <input type="hidden" name="items[__INDEX__][bon_out_section]" value="__SECTION__">
+            <div class="row align-items-end">
+                <div class="col-md-5">
+                    <label class="small mb-1">Material <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm select2-material material-select"
+                        name="items[__INDEX__][item_id]" data-index="__INDEX__" required>
+                        <option value="">-- Select Material --</option>
+                        @foreach ($allItems as $item)
+                            <option value="{{ $item->id }}"
+                                data-uom="{{ $item->smallestUom->code ?? '-' }}"
+                                data-stock="{{ $item->stocks->sum('quantity') }}">
+                                [{{ $item->code }}] {{ $item->name }}
+                                (Stock: {{ number_format($item->stocks->sum('quantity'), 2) }} {{ $item->smallestUom->code ?? '-' }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="small mb-1">Stock Available</label>
+                    <input type="text" class="form-control form-control-sm stock-display" readonly value="-">
+                </div>
+                <div class="col-md-2">
+                    <label class="small mb-1">Qty Used <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control qty-input"
+                            name="items[__INDEX__][actual_quantity]" step="0.01" min="0.01" required>
+                        <div class="input-group-append">
+                            <span class="input-group-text uom-label">-</span>
+                        </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <label>Available Stock</label>
-                        <input type="text" class="form-control form-control-sm available-stock-display" readonly
-                            value="-">
+                <div class="col-md-2">
+                    <label class="small mb-1">Selling Price <small class="text-muted">(optional)</small></label>
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                        <input type="number" class="form-control price-input"
+                            name="items[__INDEX__][unit_price]" step="1" min="0" placeholder="0">
                     </div>
-                    <div class="col-md-4">
-                        <label>Quantity <span class="text-danger">*</span></label>
-                        <div class="input-group input-group-sm">
-                            <input type="number" class="form-control new-qty-input" step="0.01" min="0.01"
-                                value="" data-index="__INDEX__" data-field="actual_quantity" required>
-                            <div class="input-group-append">
-                                <span class="input-group-text uom-display">-</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label>Selling Price (Rp) <small class="text-muted">optional</small></label>
-                        <div class="input-group input-group-sm">
-                            <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                            <input type="number" name="items[__INDEX__][unit_price]" data-index="__INDEX__"
-                                data-field="unit_price" class="form-control new-price-input" step="1"
-                                min="0" value="" placeholder="0 = internal use only">
-                        </div>
-                        <small class="text-info"><i class="fas fa-info-circle"></i> If set, item is billed to
-                            customer</small>
-                    </div>
+                </div>
+                <div class="col-md-1 text-right">
+                    <label class="small mb-1">&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-danger btn-block remove-row-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -164,87 +180,85 @@
 
 @section('scripts')
     <script>
-        let newMaterialIndex = 0;
+        let materialIndex = 0;
+
+        const fmtRp = v => 'Rp ' + parseFloat(v || 0).toLocaleString('id-ID');
+
+        function updateSectionSubtotal(section) {
+            let total = 0;
+            document.querySelectorAll(`#section-items-${section} .material-row`).forEach(row => {
+                const qty   = parseFloat(row.querySelector('.qty-input')?.value   || 0);
+                const price = parseFloat(row.querySelector('.price-input')?.value || 0);
+                total += qty * price;
+            });
+            document.getElementById(`subtotal-${section}`).textContent = fmtRp(total);
+        }
 
         function updateItemCount() {
-            const count = document.querySelectorAll('.new-material-item').length;
+            const count = document.querySelectorAll('.material-row').length;
             document.getElementById('itemCount').textContent = count;
         }
 
-        // Add new material button
-        document.getElementById('addNewMaterialBtn').addEventListener('click', function() {
-            const template = document.getElementById('newMaterialTemplate');
-            const clone = template.content.cloneNode(true);
+        function addMaterialRow(section) {
+            const template = document.getElementById('materialRowTemplate');
+            const html = template.innerHTML
+                .replace(/__INDEX__/g, materialIndex)
+                .replace(/__SECTION__/g, section);
 
-            // Replace __INDEX__ with actual index
-            clone.querySelectorAll('[data-index="__INDEX__"]').forEach(el => {
-                el.setAttribute('data-index', newMaterialIndex);
-                if (el.tagName === 'SELECT') {
-                    el.setAttribute('name', `items[${newMaterialIndex}][item_id]`);
-                    el.classList.remove('select2-new-material');
-                    el.classList.add('select2-material-' + newMaterialIndex);
-                } else if (el.tagName === 'INPUT') {
-                    const field = el.dataset.field || 'actual_quantity';
-                    el.setAttribute('name', `items[${newMaterialIndex}][${field}]`);
-                }
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html;
+            const row = wrapper.firstElementChild;
+
+            const container = document.getElementById(`section-items-${section}`);
+            // Hide empty message
+            const emptyMsg = container.querySelector('.empty-section-msg');
+            if (emptyMsg) emptyMsg.style.display = 'none';
+
+            container.appendChild(row);
+
+            // Init Select2
+            const $sel = $(row).find('.select2-material');
+            $sel.select2({ theme: 'bootstrap4', width: '100%' });
+            $sel.on('select2:select', function(e) {
+                const opt = e.params.data.element;
+                const uom   = opt?.dataset?.uom   || '-';
+                const stock = opt?.dataset?.stock  || '0';
+                row.querySelector('.stock-display').value = parseFloat(stock).toFixed(2) + ' ' + uom;
+                row.querySelector('.uom-label').textContent = uom;
+                row.querySelector('.qty-input').setAttribute('max', stock);
             });
 
-            document.getElementById('newMaterialsContainer').appendChild(clone);
+            // Recalculate on qty/price change
+            row.addEventListener('input', () => updateSectionSubtotal(section));
 
-            // Initialize Select2 for new select
-            const $select = $('.select2-material-' + newMaterialIndex);
-            $select.select2({
-                theme: 'bootstrap4',
-                width: '100%'
-            });
-
-            // Attach change handler specifically for this Select2 element
-            $select.on('select2:select', function(e) {
-                const option = e.params.data.element;
-                const container = $(this).closest('.new-material-item')[0];
-                const stockDisplay = container.querySelector('.available-stock-display');
-                const uomDisplay = container.querySelector('.uom-display');
-                const qtyInput = container.querySelector('.new-qty-input');
-
-                if (option && option.value) {
-                    const stock = option.dataset.stock;
-                    const uom = option.dataset.uom;
-
-                    stockDisplay.value = parseFloat(stock).toFixed(2) + ' ' + uom;
-                    uomDisplay.textContent = uom;
-                    qtyInput.setAttribute('max', stock);
-                    qtyInput.dataset.available = stock;
-                } else {
-                    stockDisplay.value = '-';
-                    uomDisplay.textContent = '-';
-                    qtyInput.removeAttribute('max');
-                }
-            });
-
-            newMaterialIndex++;
+            materialIndex++;
             updateItemCount();
+        }
+
+        // Section "Add Material" buttons
+        document.querySelectorAll('.add-section-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                addMaterialRow(this.dataset.section);
+            });
         });
 
-        // Remove material button
+        // Remove row
         document.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-material-btn')) {
-                e.target.closest('.new-material-item').remove();
-                updateItemCount();
-            }
+            const btn = e.target.closest('.remove-row-btn');
+            if (!btn) return;
+            const row     = btn.closest('.material-row');
+            const section = row.querySelector('input[name*="bon_out_section"]')?.value;
+            row.remove();
+            if (section) updateSectionSubtotal(section);
+            updateItemCount();
         });
 
         // Form validation
         document.getElementById('bonOutForm').addEventListener('submit', function(e) {
-            const count = parseInt(document.getElementById('itemCount').textContent);
-
-            if (count === 0) {
+            if (document.querySelectorAll('.material-row').length === 0) {
                 e.preventDefault();
-                alert('Please enter at least one material with quantity greater than zero.');
-                return false;
+                alert('Please add at least one material in any section.');
             }
         });
-
-        // Initialize item count
-        updateItemCount();
     </script>
 @endsection

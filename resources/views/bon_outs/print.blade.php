@@ -334,44 +334,141 @@
         </tr>
     </table>
 
-    {{-- ===== ITEMS TABLE ===== --}}
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width:14%">SKU</th>
-                <th style="width:34%">Description</th>
-                <th style="width:10%">Class</th>
-                <th style="width:10%">Qty</th>
-                <th style="width:10%">Unit</th>
-                <th style="width:22%">Remarks</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($bonOut->items as $bi)
+    {{-- ===== ITEMS TABLE (grouped by section) ===== --}}
+    @php
+        $sectionLabels = [
+            'A' => 'DEMPUL',
+            'B' => 'CAT',
+            'C' => 'VERNIS',
+            'D' => 'POLES dan KEBERSIHAN AKHIR',
+        ];
+        $sectionOrder  = ['A', 'B', 'C', 'D'];
+        $grouped       = $bonOut->items->groupBy(fn($i) => $i->bon_out_section ?? 'Unsorted');
+        $grandQtyTotal = 0;
+        $rowsPrinted   = 0;
+    @endphp
+
+    @foreach ($sectionOrder as $sKey)
+        @if (!isset($grouped[$sKey])) @continue @endif
+        @php
+            $sItems    = $grouped[$sKey];
+            $sQtyTotal = 0;
+        @endphp
+
+        {{-- Section header row --}}
+        <table class="items-table" style="margin-bottom:0;">
+            <tbody>
                 <tr>
-                    <td>{{ $bi->item->code ?? '-' }}</td>
-                    <td>{{ $bi->item->name ?? '-' }}</td>
-                    <td class="text-center">{{ $bi->item->item_type ?? '' }}</td>
-                    <td class="text-center">{{ number_format((float) $bi->actual_quantity, 2) }}</td>
-                    <td class="text-center">{{ $bi->item->smallestUom->code ?? '-' }}</td>
-                    <td></td>
+                    <td colspan="6" style="background:#d8d8d8;font-weight:bold;padding:4px 6px;border:1px solid #aaa;font-size:11px;">
+                        {{ $sKey }}.&nbsp;&nbsp;&nbsp;{{ $sectionLabels[$sKey] }}
+                    </td>
                 </tr>
-            @empty
-                <tr class="empty-row">
-                    <td colspan="6">&nbsp;</td>
+            </tbody>
+        </table>
+
+        <table class="items-table" style="margin-bottom:0;border-top:none;">
+            <thead>
+                <tr>
+                    <th style="width:5%">No</th>
+                    <th style="width:14%">SKU</th>
+                    <th style="width:33%">Description</th>
+                    <th style="width:10%">Class</th>
+                    <th style="width:10%">Qty</th>
+                    <th style="width:8%">Unit</th>
+                    <th style="width:20%">Remarks</th>
                 </tr>
-            @endforelse
-            {{-- Empty rows to fill minimum 8 --}}
-            @for ($i = $bonOut->items->count(); $i < 8; $i++)
-                <tr class="empty-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+            </thead>
+            <tbody>
+                @foreach ($sItems as $bi)
+                    @php
+                        $qty = (float) $bi->actual_quantity;
+                        $sQtyTotal    += $qty;
+                        $grandQtyTotal += $qty;
+                        $rowsPrinted++;
+                    @endphp
+                    <tr>
+                        <td class="text-center">{{ $loop->iteration }}</td>
+                        <td>{{ $bi->item->code ?? '-' }}</td>
+                        <td>{{ $bi->item->name ?? '-' }}</td>
+                        <td class="text-center">{{ $bi->item->item_type ?? '' }}</td>
+                        <td class="text-center">{{ number_format($qty, 2) }}</td>
+                        <td class="text-center">{{ $bi->item->smallestUom->code ?? '-' }}</td>
+                        <td>{{ $bi->remark ?? '' }}</td>
+                    </tr>
+                @endforeach
+                {{-- Subtotal row --}}
+                <tr style="background:#f0f0f0;font-weight:bold;">
+                    <td colspan="4" class="text-right" style="border:1px solid #ccc;padding:4px 6px;">
+                        Subtotal Section {{ $sKey }}
+                    </td>
+                    <td class="text-center" style="border:1px solid #ccc;padding:4px 6px;">
+                        {{ number_format($sQtyTotal, 2) }}
+                    </td>
+                    <td colspan="2" style="border:1px solid #ccc;padding:4px 6px;"></td>
                 </tr>
-            @endfor
+            </tbody>
+        </table>
+        <div style="margin-bottom:6px;"></div>
+    @endforeach
+
+    @if (isset($grouped['Unsorted']))
+        @php $uItems = $grouped['Unsorted']; $uQtyTotal = 0; @endphp
+        <table class="items-table" style="margin-bottom:0;">
+            <tbody>
+                <tr>
+                    <td colspan="7" style="background:#e8e8e8;font-weight:bold;padding:4px 6px;border:1px solid #aaa;font-size:11px;">
+                        Unsorted
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="items-table" style="margin-bottom:0;border-top:none;">
+            <thead>
+                <tr>
+                    <th style="width:5%">No</th>
+                    <th style="width:14%">SKU</th>
+                    <th style="width:33%">Description</th>
+                    <th style="width:10%">Class</th>
+                    <th style="width:10%">Qty</th>
+                    <th style="width:8%">Unit</th>
+                    <th style="width:20%">Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($uItems as $bi)
+                    @php
+                        $qty = (float) $bi->actual_quantity;
+                        $uQtyTotal     += $qty;
+                        $grandQtyTotal += $qty;
+                        $rowsPrinted++;
+                    @endphp
+                    <tr>
+                        <td class="text-center">{{ $loop->iteration }}</td>
+                        <td>{{ $bi->item->code ?? '-' }}</td>
+                        <td>{{ $bi->item->name ?? '-' }}</td>
+                        <td class="text-center">{{ $bi->item->item_type ?? '' }}</td>
+                        <td class="text-center">{{ number_format($qty, 2) }}</td>
+                        <td class="text-center">{{ $bi->item->smallestUom->code ?? '-' }}</td>
+                        <td>{{ $bi->remark ?? '' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+        <div style="margin-bottom:6px;"></div>
+    @endif
+
+    {{-- Grand total --}}
+    <table class="items-table" style="margin-bottom:4px;">
+        <tbody>
+            <tr style="background:#c8c8c8;font-weight:bold;">
+                <td colspan="4" class="text-right" style="border:1px solid #aaa;padding:4px 6px;width:62%;">
+                    Grand Total
+                </td>
+                <td class="text-center" style="border:1px solid #aaa;padding:4px 6px;width:10%;">
+                    {{ number_format($grandQtyTotal, 2) }}
+                </td>
+                <td colspan="2" style="border:1px solid #aaa;padding:4px 6px;width:28%;"></td>
+            </tr>
         </tbody>
     </table>
 

@@ -335,11 +335,13 @@
         $grandTotal = (float) $creditNote->grand_total;
         $serviceTotal = $grandTotal - $laborTotal;
 
-        // Panel / extra labor / extra item breakdown
-        $basePanels   = $wo ? $wo->labors->where('is_extra', false) : collect();
-        $extraLabors  = $wo ? $wo->labors->where('is_extra', true) : collect();
+        // Panel / labor / extra labor / extra item breakdown
+        $basePanels   = $wo ? $wo->panelLabors->where('is_extra', false) : collect();
+        $baseLabors   = $wo ? $wo->generalLabors->where('is_extra', false) : collect();
+        $extraLabors  = $wo ? $wo->generalLabors->where('is_extra', true) : collect();
         $extraItems   = $wo ? $wo->items->where('unit_price', '>', 0) : collect();
         $panelTotal   = (float) $basePanels->sum('total_price');
+        $baseLaborTotal  = (float) $baseLabors->sum('total_price');
         $extraLaborTotal = (float) $extraLabors->sum('total_price');
         $extraItemTotal  = (float) $extraItems->sum('total_price');
 
@@ -521,12 +523,22 @@
             @else
                 @foreach ($basePanels as $panel)
                     <tr>
-                        <td>{{ $panel->labor?->labor_code ?? '-' }}</td>
+                        <td>{{ $panel->panel?->panel_code ?? '-' }}</td>
                         <td>{{ $panel->description }}</td>
                         <td class="text-right">Rp {{ number_format($panel->rate ?? 0, 0, ',', '.') }}</td>
                         <td class="text-center">-</td>
                         <td class="text-center">{{ number_format($panel->qty, 0) }}</td>
                         <td class="text-right">Rp {{ number_format($panel->total_price ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                @endforeach
+                @foreach ($baseLabors as $labor)
+                    <tr>
+                        <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
+                        <td>{{ $labor->description }}</td>
+                        <td class="text-right">Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
+                        <td class="text-center">-</td>
+                        <td class="text-center">{{ number_format($labor->qty, 0) }}</td>
+                        <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             @endif
@@ -541,7 +553,7 @@
                 </tr>
             @endforeach
             @php
-                $itemRowCount = ($hasLines ? $pkgLines->count() + $itemLines->count() : $basePanels->count()) + $extraItems->count();
+                $itemRowCount = ($hasLines ? $pkgLines->count() + $itemLines->count() : ($basePanels->count() + $baseLabors->count())) + $extraItems->count();
             @endphp
             @for ($i = $itemRowCount; $i < 3; $i++)
                 <tr class="empty-row">

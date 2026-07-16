@@ -171,27 +171,55 @@
                     </table>
 
                     <hr>
-                    <h6>Labor</h6>
+                    <h6>Panels</h6>
                     <table class="table table-striped">
                         <thead>
                             <tr>
+                                <th>Code</th>
                                 <th>Description</th>
                                 <th>Qty</th>
+                                <th class="text-right">Total (Rp)</th>
                                 <th>Remarks</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($invoice->workOrder->labors as $labor)
+                            @foreach ($invoice->workOrder->panelLabors as $panel)
                                 <tr>
+                                    <td>{{ $panel->panel?->panel_code ?? '—' }}</td>
+                                    <td>{{ $panel->description }}</td>
+                                    <td>{{ rtrim(rtrim(number_format((float) ($panel->qty ?? 1), 2, '.', ''), '0'), '.') }}</td>
+                                    <td class="text-right">{{ $panel->total_price ? number_format($panel->total_price, 0, ',', '.') : '—' }}</td>
+                                    <td>{{ $panel->remarks ?? '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <hr>
+                    <h6>Labor</h6>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th class="text-right">Total (Rp)</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($invoice->workOrder->generalLabors as $labor)
+                                <tr>
+                                    <td>{{ $labor->labor?->labor_code ?? '—' }}</td>
                                     <td>{{ $labor->description }}</td>
-                                    <td>{{ rtrim(rtrim(number_format((float) ($labor->qty ?? 1), 2, '.', ''), '0'), '.') }}
-                                    </td>
+                                    <td>{{ rtrim(rtrim(number_format((float) ($labor->qty ?? 1), 2, '.', ''), '0'), '.') }}</td>
+                                    <td class="text-right">{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '—' }}</td>
                                     <td>{{ $labor->remarks ?? '-' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
-                    @php $baseLabor = $invoice->workOrder->labors->where('is_extra', false)->sum('total_price'); @endphp
+                    @php $baseLabor = $invoice->workOrder->generalLabors->where('is_extra', false)->sum('total_price'); @endphp
                     @if ($baseLabor > 0)
                         <small class="text-muted">Base labor: Rp {{ number_format($baseLabor, 0, ',', '.') }} (included in total).</small>
                     @endif

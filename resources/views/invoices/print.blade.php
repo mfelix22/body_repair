@@ -327,10 +327,12 @@
         $discountAmount = (float) ($invoice->discount_amount ?? 0);
         $grandTotal = (float) $invoice->grand_total;
 
-        // Panels
-        $basePanels = $wo->labors->where('is_extra', false);
-        $extraLabors = $wo->labors->where('is_extra', true);
+        // Panels & labors
+        $basePanels  = $wo->panelLabors->where('is_extra', false);
+        $baseLabors  = $wo->generalLabors->where('is_extra', false);
+        $extraLabors = $wo->generalLabors->where('is_extra', true);
         $panelTotal = (float) $basePanels->sum('total_price');
+        $baseLaborTotal = (float) $baseLabors->sum('total_price');
         $extraLaborTotal = (float) $extraLabors->sum('total_price');
 
         // Proforma discount lines (if any)
@@ -470,7 +472,7 @@
         <tbody>
             @forelse ($basePanels as $panel)
                 <tr>
-                    <td>{{ $panel->labor?->labor_code ?? '-' }}</td>
+                    <td>{{ $panel->panel?->panel_code ?? '-' }}</td>
                     <td>{{ $panel->description }}</td>
                     <td class="text-center">{{ number_format($panel->qty, 0) }}</td>
                     <td class="text-right">Rp {{ number_format($panel->rate ?? 0, 0, ',', '.') }}</td>
@@ -492,6 +494,35 @@
             @endfor
         </tbody>
     </table>
+
+    {{-- ===== BASE LABOR TABLE ===== --}}
+    @if ($baseLabors->isNotEmpty())
+    <div class="section-label">Labor yang Dikerjakan</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:12%">Labor Code</th>
+                <th style="width:38%">Labor</th>
+                <th style="width:8%" class="text-center">Qty</th>
+                <th style="width:18%">Rate</th>
+                <th style="width:10%">Discount</th>
+                <th style="width:14%">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($baseLabors as $labor)
+                <tr>
+                    <td>{{ $labor->labor?->labor_code ?? '-' }}</td>
+                    <td>{{ $labor->description }}</td>
+                    <td class="text-center">{{ number_format($labor->qty, 0) }}</td>
+                    <td class="text-right">Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
 
     {{-- ===== EXTRA LABOR TABLE ===== --}}
     @if ($extraLabors->isNotEmpty() || $laborLines->isNotEmpty())
@@ -566,6 +597,12 @@
                         <td style="width:45%"><strong>Total Panel</strong></td>
                         <td class="text-right">Rp {{ number_format($panelTotal, 0, ',', '.') }}</td>
                     </tr>
+                    @if ($baseLaborTotal > 0)
+                        <tr>
+                            <td><strong>Total Labor</strong></td>
+                            <td class="text-right">Rp {{ number_format($baseLaborTotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
                     @if ($extraLaborTotal > 0)
                         <tr>
                             <td><strong>Total Extra Labor</strong></td>
