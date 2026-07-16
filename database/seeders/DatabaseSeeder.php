@@ -39,28 +39,75 @@ class DatabaseSeeder extends Seeder
         $pack       = UOM::create(['name' => 'Pack',        'code' => 'PCK']);
         $litre      = UOM::create(['name' => 'Litre',       'code' => 'LTR']);
 
+        // Helper to derive conversion factor from composite UOMs to the base unit (Gram)
+        // 1L of liquid = 1000g; "1kg" bottle = 1000g
+        $getCompositeFactor = function ($uom, string $name): ?float {
+            if ($uom->code === 'BTL_GRM') {
+                if (preg_match('/(\d+)\s*kg/i', $name, $m)) {
+                    return (float) $m[1] * 1000;
+                }
+                return 1000;
+            }
+            if ($uom->code === 'KG_KL') {
+                if (preg_match('/\((\d+),(\d+)L\)/', $name, $m)) {
+                    $liters = (float) ($m[1] . '.' . $m[2]);
+                    return $liters * 1000;
+                }
+                if (preg_match('/\((\d+)L\)/', $name, $m)) {
+                    return (float) $m[1] * 1000;
+                }
+                return 1000;
+            }
+            return null;
+        };
+
         // Helper closure to create item + item_uom + stock
-        $make = function (string $code, string $name, $uom, float $price, float $stock, string $category = 'Supplies', string $itemType = 'C') use (&$piece) {
+        $make = function (string $code, string $name, $uom, float $price, float $stock, string $category = 'Supplies', string $itemType = 'C') use (&$piece, &$gram, $kalengGram, $botolGram, $getCompositeFactor) {
+            $compositeFactor = $getCompositeFactor($uom, $name);
+            $smallestUom = $compositeFactor ? $gram : $uom;
+
             $item = Item::create([
                 'code'           => $code,
                 'name'           => $name,
                 'item_type'      => $itemType,
                 'category'       => $category,
-                'smallest_uom_id' => $uom->id,
+                'smallest_uom_id' => $smallestUom->id,
                 'reorder_level'  => 0,
                 'is_active'      => true,
             ]);
+
+            // Smallest UOM ItemUOM (price converted to per-gram for composite UOMs)
             ItemUOM::create([
                 'item_id'              => $item->id,
-                'uom_id'               => $uom->id,
+                'uom_id'               => $smallestUom->id,
                 'conversion_to_smallest' => 1,
-                'price'                => $price,
-                'is_default'           => true,
+                'price'                => $compositeFactor ? round($price / $compositeFactor, 2) : $price,
+                'is_default'           => $compositeFactor ? false : true,
             ]);
+
+            if ($compositeFactor) {
+                // Composite/container UOM ItemUOM (original image price, per can/bottle)
+                ItemUOM::create([
+                    'item_id'              => $item->id,
+                    'uom_id'               => $uom->id,
+                    'conversion_to_smallest' => $compositeFactor,
+                    'price'                => $price,
+                    'is_default'           => true,
+                ]);
+
+                // Global UOM conversion record (default 1000g; per-item accuracy lives in ItemUOM)
+                UOMConversion::firstOrCreate(
+                    ['from_uom_id' => $uom->id, 'to_uom_id' => $gram->id],
+                    ['conversion_factor' => 1000]
+                );
+            }
+
+            $perSmallestPrice = $compositeFactor ? round($price / $compositeFactor, 2) : $price;
             Stock::create([
                 'item_id'  => $item->id,
                 'location' => 'default',
                 'quantity' => $stock,
+                'avg_cost' => $perSmallestPrice,
             ]);
             return $item;
         };
