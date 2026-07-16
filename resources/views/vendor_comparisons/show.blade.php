@@ -292,6 +292,23 @@
                                     </span>
                                 </div>
                                 <div class="info-row">
+                                    <span class="info-label">Include PPN 11%</span>
+                                    <span class="info-value">
+                                        {{ $vendor->include_ppn ? 'Ya' : 'Tidak' }}
+                                    </span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Total Termasuk PPN 11%</span>
+                                    <span class="info-value">
+                                        @if ($vendor->harga_barang_jasa)
+                                            <strong>Rp
+                                                {{ number_format($vendor->harga_barang_jasa * ($vendor->include_ppn ? 1.11 : 1), 2, ',', '.') }}</strong>
+                                        @else
+                                            -
+                                        @endif
+                                    </span>
+                                </div>
+                                <div class="info-row">
                                     <span class="info-label">Ketentuan Lain</span>
                                     <span class="info-value">{{ $vendor->ketentuan_lain ?: '-' }}</span>
                                 </div>

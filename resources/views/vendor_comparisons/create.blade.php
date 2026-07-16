@@ -155,10 +155,6 @@
         const suppliersData = @json($suppliers);
 
         function buildVendorForm(index, num) {
-            const supplierOptions = suppliersData.map(s =>
-                `<option value="" data-name="${s.name}" data-alamat="${s.address || ''}" data-telepon="${s.phone || ''}" data-email="${s.email || ''}" data-pic="${s.contact_person || ''}" data-bank="${[s.bank_name, s.bank_account_no, s.bank_account_name ? 'a.n. '+s.bank_account_name : ''].filter(Boolean).join(' - ')}" value="${s.id}">${s.name}</option>`
-            ).join('');
-
             return `
             <div class="vendor-wrapper" data-index="${index}">
                 <div class="vendor-card">
@@ -175,7 +171,7 @@
                                     <i class="fas fa-magic"></i>
                                     Auto-isi dari Supplier Master <em>(opsional — ketik manual di bawah)</em>
                                 </label>
-                                <select class="form-control supplier-autofill" data-index="${index}">
+                                <select class="form-control select2 select2-supplier supplier-autofill" data-index="${index}">
                                     <option value="">-- Pilih Supplier untuk Auto-Isi --</option>
                                     ${suppliersData.map(s =>
                                         `<option
@@ -272,6 +268,25 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" name="vendors[${index}][include_ppn]"
+                                            id="include_ppn_${index}" class="custom-control-input" value="1" checked>
+                                        <label class="custom-control-label" for="include_ppn_${index}">
+                                            Harga sudah termasuk PPN 11%
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Total Termasuk PPN 11%</label>
+                                    <input type="text" class="form-control total-ppn" readonly placeholder="Rp 0">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -284,24 +299,47 @@
             });
         }
 
-        function attachSupplierAutofill() {
-            document.querySelectorAll('.supplier-autofill').forEach(select => {
-                select.removeEventListener('change', supplierAutofillHandler);
-                select.addEventListener('change', supplierAutofillHandler);
+        function supplierAutofillHandler() {
+            const $select = $(this);
+            const opt = $select.find('option:selected');
+            const wrapper = $select.closest('.vendor-wrapper')[0];
+            if (!$select.val()) return;
+            wrapper.querySelector('.vendor-nama').value = opt.data('name') || '';
+            wrapper.querySelector('.vendor-alamat').value = opt.data('alamat') || '';
+            wrapper.querySelector('.vendor-telepon').value = opt.data('telepon') || '';
+            wrapper.querySelector('.vendor-email').value = opt.data('email') || '';
+            wrapper.querySelector('.vendor-pic').value = opt.data('pic') || '';
+            wrapper.querySelector('.vendor-bank').value = opt.data('bank') || '';
+        }
+
+        function formatRupiah(amount) {
+            return 'Rp ' + amount.toLocaleString('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             });
         }
 
-        function supplierAutofillHandler() {
-            const opt = this.options[this.selectedIndex];
-            const wrapper = this.closest('.vendor-wrapper');
-            if (!this.value) return;
-            wrapper.querySelector('.vendor-nama').value = opt.dataset.name || '';
-            wrapper.querySelector('.vendor-alamat').value = opt.dataset.alamat || '';
-            wrapper.querySelector('.vendor-telepon').value = opt.dataset.telepon || '';
-            wrapper.querySelector('.vendor-email').value = opt.dataset.email || '';
-            wrapper.querySelector('.vendor-pic').value = opt.dataset.pic || '';
-            wrapper.querySelector('.vendor-bank').value = opt.dataset.bank || '';
+        function updatePpnTotal(wrapper) {
+            const hargaInput = wrapper.querySelector('[name*="harga_barang_jasa"]');
+            const includeCheckbox = wrapper.querySelector('[name*="include_ppn"]');
+            const totalInput = wrapper.querySelector('.total-ppn');
+            if (!hargaInput || !totalInput) return;
+            const harga = parseFloat(hargaInput.value) || 0;
+            const total = includeCheckbox && includeCheckbox.checked ? harga * 1.11 : harga;
+            totalInput.value = harga ? formatRupiah(total) : '';
         }
+
+        document.getElementById('vendor-list').addEventListener('input', function(e) {
+            if (e.target.name && e.target.name.includes('harga_barang_jasa')) {
+                updatePpnTotal(e.target.closest('.vendor-wrapper'));
+            }
+        });
+
+        document.getElementById('vendor-list').addEventListener('change', function(e) {
+            if (e.target.name && e.target.name.includes('include_ppn')) {
+                updatePpnTotal(e.target.closest('.vendor-wrapper'));
+            }
+        });
 
         document.getElementById('btn-add-vendor').addEventListener('click', function() {
             const currentCount = document.querySelectorAll('#vendor-list .vendor-wrapper').length;
@@ -320,9 +358,22 @@
                 this.classList.add('disabled');
             }
 
-            attachSupplierAutofill();
+            initSupplierSelect2(div.firstElementChild);
             attachRemoveButtons();
         });
+
+        function initSupplierSelect2(context = document) {
+            $(context).find('.select2-supplier').each(function() {
+                const $select = $(this);
+                if ($select.data('select2')) return;
+                $select.select2({
+                    theme: 'bootstrap4',
+                    placeholder: '-- Pilih Supplier untuk Auto-Isi --',
+                    allowClear: true,
+                    width: '100%'
+                }).on('change.select2autofill', supplierAutofillHandler);
+            });
+        }
 
         function attachRemoveButtons() {
             document.querySelectorAll('.btn-remove-vendor').forEach(btn => {
@@ -419,7 +470,18 @@
         })();
 
         // Initialize vendor form handlers
-        attachSupplierAutofill();
         attachRemoveButtons();
+
+        // Calculate initial PPn totals
+        document.querySelectorAll('#vendor-list .vendor-wrapper').forEach(updatePpnTotal);
+
+        // Initialize select2 dropdowns
+        initSupplierSelect2();
+        $('#purchase_request_id').select2({
+            theme: 'bootstrap4',
+            placeholder: '-- Pilih PPB/PPJ --',
+            allowClear: true,
+            width: '100%'
+        });
     </script>
 @endpush

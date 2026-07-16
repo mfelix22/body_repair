@@ -89,6 +89,7 @@ class VendorComparisonController extends Controller
             'vendors.*.rekening_bank'     => 'nullable|string|max:255',
             'vendors.*.term_of_payment'   => 'nullable|string|max:100',
             'vendors.*.harga_barang_jasa' => 'nullable|numeric|min:0',
+            'vendors.*.include_ppn'       => 'nullable|boolean',
             'vendors.*.ketentuan_lain'    => 'nullable|string',
         ]);
 
@@ -118,6 +119,7 @@ class VendorComparisonController extends Controller
                     'rekening_bank'        => $vendorData['rekening_bank'] ?? null,
                     'term_of_payment'      => $vendorData['term_of_payment'] ?? null,
                     'harga_barang_jasa'    => $vendorData['harga_barang_jasa'] ?? null,
+                    'include_ppn'          => $request->boolean("vendors.$index.include_ppn"),
                     'ketentuan_lain'       => $vendorData['ketentuan_lain'] ?? null,
                 ]);
             }
@@ -208,6 +210,7 @@ class VendorComparisonController extends Controller
             'vendors.*.rekening_bank'     => 'nullable|string|max:255',
             'vendors.*.term_of_payment'   => 'nullable|string|max:100',
             'vendors.*.harga_barang_jasa' => 'nullable|numeric|min:0',
+            'vendors.*.include_ppn'       => 'nullable|boolean',
             'vendors.*.ketentuan_lain'    => 'nullable|string',
         ]);
 
@@ -234,6 +237,7 @@ class VendorComparisonController extends Controller
                     'rekening_bank'        => $vendorData['rekening_bank'] ?? null,
                     'term_of_payment'      => $vendorData['term_of_payment'] ?? null,
                     'harga_barang_jasa'    => $vendorData['harga_barang_jasa'] ?? null,
+                    'include_ppn'          => $request->boolean("vendors.$index.include_ppn"),
                     'ketentuan_lain'       => $vendorData['ketentuan_lain'] ?? null,
                 ]);
             }

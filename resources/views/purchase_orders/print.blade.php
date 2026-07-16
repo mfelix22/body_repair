@@ -562,6 +562,13 @@
             </td>
             <td class="payment-right">&nbsp;</td>
         </tr>
+        <tr>
+            <td colspan="2" style="padding:6px 8px; font-size:10px; border:1px solid #000; background:#f9f9f9;">
+                <strong>Mohon tidak memberikan hadiah / imbalan jasa berupa apapun.</strong><br>
+                Segala bentuk permintaan hadiah / imbalan jasa yang dilakukan oleh karyawan kami,<br>
+                harap dilaporkan kepada Direksi PT. Hartono Raya Motor melalui email suggestion@hartonomotor.com
+            </td>
+        </tr>
         @if ($purchaseOrder->payment_terms)
             <tr>
                 <td colspan="2" style="padding:6px 8px;">

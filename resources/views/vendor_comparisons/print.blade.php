@@ -381,6 +381,12 @@
                 </div>
 
                 <div class="vendor-field-row">
+                    <div class="vf-label">Include PPn 11%</div>
+                    <div class="vf-colon">:</div>
+                    <div class="vf-value">{{ $vendor->include_ppn ? 'Ya' : 'Tidak' }}</div>
+                </div>
+
+                <div class="vendor-field-row">
                     <div class="vf-label" style="white-space: normal; padding-top: 2px;">Ketentuan lain-lain dari calon
                         <em>supplier</em>:
                     </div>

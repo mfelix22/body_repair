@@ -12,7 +12,7 @@
                     <i class="fas fa-magic"></i>
                     Auto-isi dari Supplier Master <em>(opsional — ketik manual di bawah)</em>
                 </label>
-                <select class="form-control supplier-autofill" data-index="{{ $index }}">
+                <select class="form-control select2 select2-supplier supplier-autofill" data-index="{{ $index }}">
                     <option value="">-- Pilih Supplier untuk Auto-Isi --</option>
                     @foreach ($vendors as $s)
                         <option data-name="{{ $s->name }}" data-alamat="{{ $s->address }}"
@@ -115,6 +115,27 @@
                     <label>Ketentuan Lain-lain dari Calon Supplier</label>
                     <textarea name="vendors[{{ $index }}][ketentuan_lain]" class="form-control" rows="2"
                         placeholder="Ketentuan lain dari calon supplier...">{{ old('vendors.' . $index . '.ketentuan_lain') }}</textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="vendors[{{ $index }}][include_ppn]"
+                            id="include_ppn_{{ $index }}" class="custom-control-input" value="1"
+                            {{ old('vendors.' . $index . '.include_ppn', true) ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="include_ppn_{{ $index }}">
+                            Harga sudah termasuk PPN 11%
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Total Termasuk PPN 11%</label>
+                    <input type="text" class="form-control total-ppn" readonly placeholder="Rp 0"
+                        value="Rp {{ old('vendors.' . $index . '.harga_barang_jasa') && old('vendors.' . $index . '.include_ppn', true) ? number_format((float) old('vendors.' . $index . '.harga_barang_jasa') * 1.11, 2, ',', '.') : '0,00' }}">
                 </div>
             </div>
         </div>

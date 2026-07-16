@@ -19,11 +19,13 @@ class VendorComparisonVendor extends Model
         'rekening_bank',
         'term_of_payment',
         'harga_barang_jasa',
+        'include_ppn',
         'ketentuan_lain',
     ];
 
     protected $casts = [
         'harga_barang_jasa' => 'decimal:2',
+        'include_ppn'       => 'boolean',
     ];
 
     public function comparison(): BelongsTo
