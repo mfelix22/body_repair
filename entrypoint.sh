@@ -10,7 +10,7 @@ echo "Database is ready."
 php artisan config:clear
 php artisan view:clear
 php artisan cache:clear || true
-php artisan migrate --force || true
+php artisan migrate --force
 php artisan storage:link --force || true
 
 exec apache2-foreground
