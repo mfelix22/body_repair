@@ -191,9 +191,16 @@
                                     <td>{{ $trx->created_at->format('d M H:i') }}</td>
                                     <td>{{ $trx->item->code ?? '-' }}</td>
                                     <td>
-                                        @php $trxClass = $trx->transaction_type === 'in' ? 'success' : ($trx->transaction_type === 'out' ? 'danger' : 'warning'); @endphp
+                                        @php
+                                            $trxClass = match ($trx->transaction_type) {
+                                                'in' => 'success',
+                                                'out' => 'danger',
+                                                'opening' => 'info',
+                                                default => 'warning',
+                                            };
+                                        @endphp
                                         <span
-                                            class="badge badge-{{ $trxClass }}">{{ ucfirst($trx->transaction_type) }}</span>
+                                            class="badge badge-{{ $trxClass }}">{{ $trx->typeLabel() }}</span>
                                     </td>
                                     <td class="text-right">
                                         {{ rtrim(rtrim(number_format($trx->quantity, 2, '.', ''), '0'), '.') }}</td>

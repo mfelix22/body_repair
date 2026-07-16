@@ -7,6 +7,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockTransaction extends Model
 {
+    public const TYPE_IN = 'in';
+    public const TYPE_OUT = 'out';
+    public const TYPE_ADJUSTMENT = 'adjustment';
+    public const TYPE_OPENING = 'opening';
+
+    public static function transactionTypes(): array
+    {
+        return [
+            self::TYPE_IN => 'In',
+            self::TYPE_OUT => 'Out',
+            self::TYPE_ADJUSTMENT => 'Adjustment',
+            self::TYPE_OPENING => 'Opening',
+        ];
+    }
+
+    public function typeLabel(): string
+    {
+        return self::transactionTypes()[$this->transaction_type] ?? ucfirst($this->transaction_type);
+    }
+
     protected $fillable = [
         'item_id',
         'transaction_type',

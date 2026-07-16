@@ -7,8 +7,10 @@ use App\Models\UOMConversion;
 use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\Stock;
+use App\Models\StockTransaction;
 use App\Models\Customer;
 use App\Models\Supplier;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -22,6 +24,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(UserSeeder::class);
+
+        $seedUserId = User::where('role', 'super_admin')->value('id');
 
         // Create UOMs (Units of Measurement)
         $kalengGram = UOM::create(['name' => 'Kaleng/Gram', 'code' => 'KG_KL']);
@@ -61,8 +65,8 @@ class DatabaseSeeder extends Seeder
             return null;
         };
 
-        // Helper closure to create item + item_uom + stock
-        $make = function (string $code, string $name, $uom, float $price, float $stock, string $category = 'Supplies', string $itemType = 'C') use (&$piece, &$gram, $kalengGram, $botolGram, $getCompositeFactor) {
+        // Helper closure to create item + item_uom + stock + opening transaction
+        $make = function (string $code, string $name, $uom, float $price, float $stock, string $category = 'Supplies', string $itemType = 'C') use (&$piece, &$gram, $kalengGram, $botolGram, $getCompositeFactor, $seedUserId) {
             $compositeFactor = $getCompositeFactor($uom, $name);
             $smallestUom = $compositeFactor ? $gram : $uom;
 
@@ -103,12 +107,29 @@ class DatabaseSeeder extends Seeder
             }
 
             $perSmallestPrice = $compositeFactor ? round($price / $compositeFactor, 2) : $price;
-            Stock::create([
+            $createdStock = Stock::create([
                 'item_id'  => $item->id,
                 'location' => 'default',
                 'quantity' => $stock,
                 'avg_cost' => $perSmallestPrice,
             ]);
+
+            // Record the opening balance so the transaction history is complete
+            if ($seedUserId) {
+                StockTransaction::create([
+                    'item_id'          => $item->id,
+                    'transaction_type' => StockTransaction::TYPE_OPENING,
+                    'quantity'         => $stock,
+                    'unit_cost'        => $perSmallestPrice,
+                    'balance_after'    => $stock,
+                    'location'         => 'default',
+                    'reference_type'   => 'OPENING',
+                    'reference_id'     => null,
+                    'notes'            => 'Opening balance from database seeder',
+                    'created_by'       => $seedUserId,
+                ]);
+            }
+
             return $item;
         };
 

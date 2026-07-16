@@ -261,16 +261,16 @@ class ItemImportController extends Controller
                 $avgCostUpdated = false; // Initialize
 
                 $itemData = [
-                        'name'           => $name,
-                        'item_type'      => $itemType,
-                        'category'       => $classRaw,
-                        'smallest_uom_id' => $smallestUom?->id,
-                        'is_active'      => true,
-                    ];
-                    if ($sellingPrice !== null) {
-                        $itemData['selling_price'] = $sellingPrice;
-                    }
-                    $item = Item::updateOrCreate(
+                    'name'           => $name,
+                    'item_type'      => $itemType,
+                    'category'       => $classRaw,
+                    'smallest_uom_id' => $smallestUom?->id,
+                    'is_active'      => true,
+                ];
+                if ($sellingPrice !== null) {
+                    $itemData['selling_price'] = $sellingPrice;
+                }
+                $item = Item::updateOrCreate(
                     ['code' => $sku],
                     $itemData
                 );
@@ -305,7 +305,7 @@ class ItemImportController extends Controller
                         if ($saldo > 0) {
                             \App\Models\StockTransaction::create([
                                 'item_id'          => $item->id,
-                                'transaction_type' => 'in',
+                                'transaction_type' => \App\Models\StockTransaction::TYPE_OPENING,
                                 'quantity'         => $saldo,
                                 'unit_cost'        => $openingAvgCost,
                                 'balance_after'    => $saldo,

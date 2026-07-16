@@ -90,6 +90,8 @@
                                             </option>
                                             <option value="adjustment"
                                                 {{ request('type') === 'adjustment' ? 'selected' : '' }}>Adj</option>
+                                            <option value="opening"
+                                                {{ request('type') === 'opening' ? 'selected' : '' }}>Opening</option>
                                         </select>
                                     </div>
                                 </div>
@@ -160,6 +162,8 @@
                                             <span class="badge badge-success">In</span>
                                         @elseif($transaction->transaction_type === 'out')
                                             <span class="badge badge-danger">Out</span>
+                                        @elseif($transaction->transaction_type === 'opening')
+                                            <span class="badge badge-info">Opening</span>
                                         @else
                                             <span class="badge badge-warning">Adjustment</span>
                                         @endif
