@@ -826,10 +826,11 @@ class PurchaseOrderController extends Controller
 
                 $oldQuantity = $stock->quantity;
                 $oldAvgCost = (float) $stock->avg_cost;
-                $stock->addQuantity($quantityInSmallest);
 
                 $taxMultiplier = ($purchaseOrder->include_ppn && $purchaseOrder->po_type === 'purchase_order') ? 1.11 : 1.0;
                 $receivedUnitCost = ($pod->unit_price * $taxMultiplier) / (float) $itemUom->conversion_to_smallest;
+
+                $stock->addQuantity($quantityInSmallest, $receivedUnitCost);
 
                 // Create transaction record
                 StockTransaction::create([
@@ -1140,7 +1141,7 @@ class PurchaseOrderController extends Controller
 
         $pr->update([
             'status' => 'closed',
-            'cancellation_reason' => 'Auto-closed: all items fully ordered. Last completed PO: '.$purchaseOrder->po_number.'.',
+            'cancellation_reason' => 'Auto-closed: all items fully ordered. Last completed PO: ' . $purchaseOrder->po_number . '.',
         ]);
     }
 
@@ -1235,7 +1236,7 @@ class PurchaseOrderController extends Controller
         // Generate PDF and return directly
         $pdf = Pdf::loadView('purchase_orders.print', ['purchaseOrder' => $tempPo]);
         $filename = 'PREVIEW-' . $tempPo->po_number . '.pdf';
-        
+
         return $pdf->stream($filename);
     }
 
@@ -1360,8 +1361,19 @@ class PurchaseOrderController extends Controller
         }
 
         // Column widths
-        $colWidths = ['A' => 22, 'B' => 28, 'C' => 14, 'D' => 18, 'E' => 18,
-                      'F' => 6,  'G' => 38, 'H' => 8,  'I' => 8,  'J' => 16, 'K' => 16];
+        $colWidths = [
+            'A' => 22,
+            'B' => 28,
+            'C' => 14,
+            'D' => 18,
+            'E' => 18,
+            'F' => 6,
+            'G' => 38,
+            'H' => 8,
+            'I' => 8,
+            'J' => 16,
+            'K' => 16
+        ];
         foreach ($colWidths as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }

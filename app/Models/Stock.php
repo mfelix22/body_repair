@@ -27,8 +27,18 @@ class Stock extends Model
     /**
      * Add quantity to stock (always in smallest UOM)
      */
-    public function addQuantity(float $quantity): void
+    public function addQuantity(float $quantity, ?float $unitCost = null): void
     {
+        if ($unitCost !== null && $quantity > 0) {
+            $oldQuantity = (float) $this->quantity;
+            $oldAvgCost  = (float) $this->avg_cost;
+            $newQuantity = $oldQuantity + $quantity;
+
+            $this->avg_cost = $newQuantity > 0
+                ? (($oldQuantity * $oldAvgCost) + ($quantity * $unitCost)) / $newQuantity
+                : $oldAvgCost;
+        }
+
         $this->quantity += $quantity;
         $this->save();
     }
