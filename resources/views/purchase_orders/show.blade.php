@@ -145,8 +145,7 @@
                         @endif
                         @if ($purchaseOrder->po_type === 'service_order' &&
                                 $purchaseOrder->status === 'approved' &&
-                                $purchaseOrder->purchaseRequest &&
-                                $purchaseOrder->purchaseRequest->berita_acara_path &&
+                                $purchaseOrder->berita_acara_path &&
                                 auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin', 'manager', 'director']))
                             <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
                                 data-target="#closeSOModal">
@@ -506,6 +505,22 @@
                                 </td>
                             </tr>
                         @endif
+                        @if ($purchaseOrder->po_type === 'service_order' && $purchaseOrder->berita_acara_path)
+                            <tr class="table-info">
+                                <td><strong>Berita Acara:</strong></td>
+                                <td>
+                                    {{ optional($purchaseOrder->beritaAcaraUploader)->name ?? '—' }}
+                                    <br>
+                                    <small class="text-muted">{{ $purchaseOrder->berita_acara_uploaded_at?->format('M d, Y H:i') }}</small>
+                                </td>
+                                <td>
+                                    <a href="{{ asset('storage/' . $purchaseOrder->berita_acara_path) }}"
+                                        target="_blank" class="btn btn-xs btn-outline-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        @endif
                         @if ($purchaseOrder->po_type === 'service_order' && $purchaseOrder->closed_at)
                             <tr class="table-success">
                                 <td><strong>Closed By:</strong></td>
@@ -817,8 +832,7 @@
     {{-- Close SO Modal (Service Order only) --}}
     @if ($purchaseOrder->po_type === 'service_order' &&
             $purchaseOrder->status === 'approved' &&
-            $purchaseOrder->purchaseRequest &&
-            $purchaseOrder->purchaseRequest->berita_acara_path &&
+            $purchaseOrder->berita_acara_path &&
             auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin', 'manager', 'director']))
         <div class="modal fade" id="closeSOModal" tabindex="-1" role="dialog">
             <div class="modal-dialog" role="document">

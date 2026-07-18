@@ -103,6 +103,11 @@ class PurchaseOrder extends Model
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    public function beritaAcaraUploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'berita_acara_uploaded_by');
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(PurchaseOrderDetail::class);
