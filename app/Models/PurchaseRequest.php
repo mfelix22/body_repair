@@ -24,6 +24,9 @@ class PurchaseRequest extends Model
         'purchasing_received_by',
         'purchasing_received_at',
         'attachment_path',
+        'berita_acara_path',
+        'berita_acara_uploaded_by',
+        'berita_acara_uploaded_at',
     ];
 
     protected $casts = [
@@ -31,6 +34,7 @@ class PurchaseRequest extends Model
         'dept_head_at' => 'datetime',
         'gm_at' => 'datetime',
         'purchasing_received_at' => 'datetime',
+        'berita_acara_uploaded_at' => 'datetime',
     ];
 
     public function requestor(): BelongsTo
@@ -56,6 +60,11 @@ class PurchaseRequest extends Model
     public function purchasingReceiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'purchasing_received_by');
+    }
+
+    public function beritaAcaraUploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'berita_acara_uploaded_by');
     }
 
     public function details(): HasMany

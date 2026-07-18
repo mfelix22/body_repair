@@ -228,6 +228,7 @@ class PurchaseRequestController extends Controller
             'requestor',
             'deptHeadApprover',
             'gmApprover',
+            'beritaAcaraUploader',
             'details.item',
             'details.uom',
             'purchaseOrders'
@@ -739,6 +740,54 @@ class PurchaseRequestController extends Controller
         }
 
         return response()->file($path);
+    }
+
+    public function uploadBeritaAcara(Request $request, PurchaseRequest $purchaseRequest)
+    {
+        $user = auth()->user();
+        $isRequester = $purchaseRequest->requested_by === $user?->id;
+        $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+
+        if (!$user || (!$isRequester && !$isAdmin)) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Only the PPJ creator can upload Berita Acara.');
+        }
+
+        if ($purchaseRequest->type !== 'Jasa') {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Berita Acara upload is only for PPJ (Jasa).');
+        }
+
+        if (!in_array($purchaseRequest->status, ['completed', 'printed'])) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Berita Acara can only be uploaded after the PPJ is received by purchasing.');
+        }
+
+        $request->validate([
+            'berita_acara' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $file = $request->file('berita_acara');
+        $filename = 'berita-acara-' . $purchaseRequest->id . '-' . time() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('berita-acara', $filename, 'public');
+
+        $purchaseRequest->update([
+            'berita_acara_path'        => $path,
+            'berita_acara_uploaded_by' => auth()->id(),
+            'berita_acara_uploaded_at' => now(),
+        ]);
+
+        NotificationService::sendToRole(
+            ['purchasing', 'admin', 'super_admin'],
+            'ppj_berita_acara_uploaded',
+            'Berita Acara Uploaded',
+            "Berita Acara for PPJ {$purchaseRequest->pr_number} has been uploaded by " . auth()->user()->name . ".",
+            route('purchase_requests.show', $purchaseRequest),
+            auth()->id()
+        );
+
+        return redirect()->route('purchase_requests.show', $purchaseRequest)
+            ->with('success', 'Berita Acara uploaded successfully. The linked Service Order can now be closed by purchasing.');
     }
 
     private function canCancelPurchaseRequest(?User $user, PurchaseRequest $purchaseRequest): bool

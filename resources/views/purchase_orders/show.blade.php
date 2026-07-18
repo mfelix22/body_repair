@@ -143,18 +143,22 @@
                                 <i class="fas fa-undo-alt"></i> Send Back for Revision
                             </button>
                         @endif
-                        @if (in_array($purchaseOrder->status, ['approved', 'partial']) && $hasOpenReceiptLines)
+                        @if ($purchaseOrder->po_type === 'service_order' &&
+                                $purchaseOrder->status === 'approved' &&
+                                $purchaseOrder->purchaseRequest &&
+                                $purchaseOrder->purchaseRequest->berita_acara_path &&
+                                auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin', 'manager', 'director']))
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
+                                data-target="#closeSOModal">
+                                <i class="fas fa-check-double"></i> Close SO
+                            </button>
+                        @endif
+                        @if (in_array($purchaseOrder->status, ['approved', 'partial']) && $hasOpenReceiptLines && $purchaseOrder->po_type === 'purchase_order')
                             @if (auth()->user()->hasAnyRole(['warehouse', 'admin', 'super_admin']))
-                                @if ($purchaseOrder->po_type === 'purchase_order')
-                                    <a href="{{ route('receivables.create', ['po_id' => $purchaseOrder->id]) }}"
-                                        class="btn btn-success btn-sm">
-                                        <i class="fas fa-dolly"></i> Create Bon In
-                                    </a>
-                                @else
-                                    <span class="badge badge-info" title="Service orders don't require Bon In">
-                                        <i class="fas fa-info-circle"></i> PPJ (Service) - No Bon In needed
-                                    </span>
-                                @endif
+                                <a href="{{ route('receivables.create', ['po_id' => $purchaseOrder->id]) }}"
+                                    class="btn btn-success btn-sm">
+                                    <i class="fas fa-dolly"></i> Create Bon In
+                                </a>
                             @endif
                             @if (auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin']))
                                 <button type="button" class="btn btn-dark btn-sm" data-toggle="modal"
@@ -234,6 +238,12 @@
                                     <tr>
                                         <th>Cancellation Reason:</th>
                                         <td><span class="text-danger">{{ $purchaseOrder->cancellation_reason }}</span></td>
+                                    </tr>
+                                @endif
+                                @if ($purchaseOrder->po_type === 'service_order' && $purchaseOrder->nomor_nota)
+                                    <tr>
+                                        <th>Nomor Nota:</th>
+                                        <td><strong>{{ $purchaseOrder->nomor_nota }}</strong></td>
                                     </tr>
                                 @endif
                             </table>
@@ -496,6 +506,17 @@
                                 </td>
                             </tr>
                         @endif
+                        @if ($purchaseOrder->po_type === 'service_order' && $purchaseOrder->closed_at)
+                            <tr class="table-success">
+                                <td><strong>Closed By:</strong></td>
+                                <td>
+                                    {{ optional($purchaseOrder->closer)->name ?? '—' }}
+                                    <br>
+                                    <small class="text-muted">{{ $purchaseOrder->closed_at->format('M d, Y H:i') }}</small>
+                                </td>
+                                <td><span class="badge badge-success"><i class="fas fa-check-double"></i> SO Closed</span></td>
+                            </tr>
+                        @endif
 
                     </table>
 
@@ -665,7 +686,8 @@
             </div>
         </div>
     </div>
-    @if (in_array($purchaseOrder->status, ['approved', 'partial']) &&
+    @if ($purchaseOrder->po_type === 'purchase_order' &&
+            in_array($purchaseOrder->status, ['approved', 'partial']) &&
             $hasOpenReceiptLines &&
             auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin']))
         <div class="modal fade" id="closeRemainingModal" tabindex="-1" role="dialog">
@@ -791,6 +813,45 @@
             </div>
         </div>
     </div>
+
+    {{-- Close SO Modal (Service Order only) --}}
+    @if ($purchaseOrder->po_type === 'service_order' &&
+            $purchaseOrder->status === 'approved' &&
+            $purchaseOrder->purchaseRequest &&
+            $purchaseOrder->purchaseRequest->berita_acara_path &&
+            auth()->user()->hasAnyRole(['purchasing', 'admin', 'super_admin', 'manager', 'director']))
+        <div class="modal fade" id="closeSOModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <form action="{{ route('purchase_orders.close_so', $purchaseOrder) }}" method="POST">
+                        @csrf
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title"><i class="fas fa-check-double"></i> Close Service Order</h5>
+                            <button type="button" class="close text-white"
+                                data-dismiss="modal"><span>&times;</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Closing SO <strong>{{ $purchaseOrder->po_number }}</strong>. This action cannot be undone.
+                            </div>
+                            <div class="form-group">
+                                <label for="nomor_nota">Nomor Nota <span class="text-danger">*</span></label>
+                                <input type="text" name="nomor_nota" id="nomor_nota" class="form-control"
+                                    placeholder="e.g., NOTA-2026-001" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-double"></i> Close SO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Record Invoice Modal --}}
     <div class="modal fade" id="recordInvoiceModal" tabindex="-1" role="dialog">

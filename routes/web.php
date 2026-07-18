@@ -138,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::post('purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->name('purchase_requests.reject');
         Route::post('purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase_requests.cancel');
         Route::post('purchase-requests/{purchaseRequest}/close', [PurchaseRequestController::class, 'close'])->name('purchase_requests.close');
+        Route::post('purchase-requests/{purchaseRequest}/upload-berita-acara', [PurchaseRequestController::class, 'uploadBeritaAcara'])->name('purchase_requests.upload_berita_acara');
         Route::get('purchase-requests/{purchaseRequest}/print', [PurchaseRequestController::class, 'print'])->name('purchase_requests.print')->middleware('signed');
         Route::get('purchase-requests/{purchaseRequest}/attachment', [PurchaseRequestController::class, 'attachment'])->name('purchase_requests.attachment');
     });
@@ -153,6 +154,7 @@ Route::middleware('auth')->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/record-invoice', [PurchaseOrderController::class, 'recordInvoice'])->name('purchase_orders.record_invoice');
     Route::post('purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete'])->name('purchase_orders.complete');
     Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase_orders.cancel');
+    Route::post('purchase-orders/{purchaseOrder}/close-so', [PurchaseOrderController::class, 'closeSO'])->name('purchase_orders.close_so');
     Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase_orders.print')->middleware('signed');
 
     // Vendor Comparisons (FK-PCH)

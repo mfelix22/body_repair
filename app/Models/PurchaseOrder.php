@@ -50,6 +50,9 @@ class PurchaseOrder extends Model
         'revocation_reason',
         'printed_at',
         'printed_by',
+        'closed_by',
+        'closed_at',
+        'nomor_nota',
     ];
 
     protected $casts = [
@@ -62,6 +65,7 @@ class PurchaseOrder extends Model
         'revoked_at'  => 'datetime',
         'invoice_recorded_at' => 'datetime',
         'printed_at' => 'datetime',
+        'closed_at' => 'datetime',
     ];
 
     public function purchaseRequest(): BelongsTo
@@ -94,6 +98,10 @@ class PurchaseOrder extends Model
         return $this->belongsTo(User::class, 'invoice_recorded_by');
     }
 
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
 
     public function details(): HasMany
     {
