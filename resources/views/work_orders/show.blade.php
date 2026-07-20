@@ -529,7 +529,12 @@
                                 <select name="labor_id" id="laborSelect" class="form-control select2" required>
                                     <option value="">— Pilih Labor —</option>
                                     @foreach ($masterLabors as $ml)
-                                        <option value="{{ $ml->id }}" data-price="{{ (float) $ml->price }}">
+                                        <option value="{{ $ml->id }}"
+                                            data-price="{{ (float) $ml->price }}"
+                                            data-p0300="{{ (float) $ml->price_0_300 }}"
+                                            data-p300500="{{ (float) $ml->price_300_500 }}"
+                                            data-p500800="{{ (float) $ml->price_500_800 }}"
+                                            data-p8002000="{{ (float) $ml->price_800_2000 }}">
                                             {{ $ml->labor_code }} — {{ $ml->description }}
                                         </option>
                                     @endforeach
@@ -551,9 +556,9 @@
                                             <div class="input-group-prepend"><span class="input-group-text">Rp</span>
                                             </div>
                                             <input type="number" name="rate" id="laborRate" class="form-control"
-                                                value="" min="0" step="1" required>
+                                                value="" min="0" step="1" readonly required>
                                         </div>
-                                        <small class="text-muted">Auto-filled from master. You can override.</small>
+                                        <small class="text-muted">Auto-filled based on Kisaran Harga Kendaraan.</small>
                                     </div>
                                 </div>
                             </div>
@@ -588,6 +593,15 @@
                     const $rate = $('#laborRate');
                     const $tot = $('#laborTotal');
 
+                    const tierMap = {
+                        '0_300': 'p0300',
+                        '300_500': 'p300500',
+                        '500_800': 'p500800',
+                        '800_2000': 'p8002000'
+                    };
+                    const priceTier = @json($workOrder->vehicle_price_tier);
+                    const tierKey = tierMap[priceTier] || null;
+
                     $sel.select2({
                         theme: 'bootstrap4',
                         dropdownParent: $('#addLaborModal'),
@@ -603,7 +617,12 @@
                     function fillPrice() {
                         const opt = $sel.find(':selected')[0];
                         if (opt && opt.value) {
-                            const price = parseFloat(opt.dataset.price) || 0;
+                            let price = 0;
+                            if (tierKey && opt.dataset[tierKey] && parseFloat(opt.dataset[tierKey]) > 0) {
+                                price = parseFloat(opt.dataset[tierKey]);
+                            } else {
+                                price = parseFloat(opt.dataset.price) || 0;
+                            }
                             $rate.val(price);
                             recalc();
                         } else {

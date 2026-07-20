@@ -38,9 +38,14 @@ class LaborController extends Controller
         }
 
         $validated = $request->validate([
-            'description' => 'required|string|max:255',
-            'price'       => 'required|numeric|min:0',
-            'is_active'   => 'nullable|boolean',
+            'description'    => 'required|string|max:255',
+            'price'          => 'required|numeric|min:0',
+            'multiplier'     => 'nullable|numeric|min:0',
+            'price_0_300'    => 'nullable|numeric|min:0',
+            'price_300_500'  => 'nullable|numeric|min:0',
+            'price_500_800'  => 'nullable|numeric|min:0',
+            'price_800_2000' => 'nullable|numeric|min:0',
+            'is_active'      => 'nullable|boolean',
         ]);
 
         // Auto-generate labor code: LAB-0001
@@ -49,10 +54,15 @@ class LaborController extends Controller
         $laborCode = 'LAB-' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
 
         Labor::create([
-            'labor_code'  => $laborCode,
-            'description' => $validated['description'],
-            'price'       => $validated['price'],
-            'is_active'   => $request->boolean('is_active', true),
+            'labor_code'     => $laborCode,
+            'description'    => $validated['description'],
+            'price'          => $validated['price'],
+            'multiplier'     => $validated['multiplier'] ?? null,
+            'price_0_300'    => $validated['price_0_300'] ?? $validated['price'],
+            'price_300_500'  => $validated['price_300_500'] ?? $validated['price'],
+            'price_500_800'  => $validated['price_500_800'] ?? $validated['price'],
+            'price_800_2000' => $validated['price_800_2000'] ?? $validated['price'],
+            'is_active'      => $request->boolean('is_active', true),
         ]);
 
         return redirect()->route('labors.index')

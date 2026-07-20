@@ -33,7 +33,7 @@
                         </div>
                     @endif
 
-                    <table class="table table-bordered table-hover table-sm" id="panelTable">
+                    <table class="table table-bordered table-hover table-sm w-100" id="panelTable" style="width: 100% !important;">
                         <thead class="thead-light">
                             <tr>
                                 <th>Code</th>
@@ -162,7 +162,7 @@
                     [0, 'asc']
                 ],
                 pageLength: 50,
-                scrollX: true,
+                autoWidth: false,
             });
         });
     </script>

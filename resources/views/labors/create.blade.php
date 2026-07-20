@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">New Labor Item</h3>
@@ -36,17 +36,67 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <label>Price (Rp) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                                <input type="number" name="price"
-                                    class="form-control @error('price') is-invalid @enderror" value="{{ old('price', 0) }}"
-                                    min="0" step="1" required>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Base Price (Rp) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                                    <input type="number" name="price"
+                                        class="form-control @error('price') is-invalid @enderror"
+                                        value="{{ old('price', 0) }}" min="0" step="1" required>
+                                </div>
+                                @error('price')
+                                    <span class="invalid-feedback">{{ $message }}</span>
+                                @enderror
                             </div>
-                            @error('price')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                            <div class="col-md-6 form-group">
+                                <label>Multiplier</label>
+                                <input type="number" name="multiplier"
+                                    class="form-control @error('multiplier') is-invalid @enderror"
+                                    value="{{ old('multiplier') }}" min="0" step="0.01">
+                                @error('multiplier')
+                                    <span class="invalid-feedback">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Price 0–300jt</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                                    <input type="number" name="price_0_300"
+                                        class="form-control @error('price_0_300') is-invalid @enderror"
+                                        value="{{ old('price_0_300') }}" min="0" step="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Price 300–500jt</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                                    <input type="number" name="price_300_500"
+                                        class="form-control @error('price_300_500') is-invalid @enderror"
+                                        value="{{ old('price_300_500') }}" min="0" step="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Price 500–800jt</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                                    <input type="number" name="price_500_800"
+                                        class="form-control @error('price_500_800') is-invalid @enderror"
+                                        value="{{ old('price_500_800') }}" min="0" step="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Price 800jt–2M</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                                    <input type="number" name="price_800_2000"
+                                        class="form-control @error('price_800_2000') is-invalid @enderror"
+                                        value="{{ old('price_800_2000') }}" min="0" step="1">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">

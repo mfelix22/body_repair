@@ -85,7 +85,7 @@ class WorkOrderController extends Controller
             'panels.*.qty'         => 'nullable|numeric|min:0.01',
             'panels.*.remarks'     => 'nullable|string',
             'labors'               => 'nullable|array',
-            'labors.*.labor_id'    => 'required|exists:labors,id',
+            'labors.*.labor_id'    => 'nullable|exists:labors,id',
             'labors.*.qty'         => 'nullable|numeric|min:0.01',
             'labors.*.remarks'     => 'nullable|string',
         ]);
@@ -182,9 +182,12 @@ class WorkOrderController extends Controller
 
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
+                if (empty($laborData['labor_id'])) {
+                    continue;
+                }
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
-                $rate = (float) ($labor->price ?? 0);
+                $rate = self::getLaborRateForTier($labor, $priceTier);
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
@@ -278,7 +281,7 @@ class WorkOrderController extends Controller
             'panels.*.qty'            => 'nullable|numeric|min:0.01',
             'panels.*.remarks'        => 'nullable|string',
             'labors'                  => 'nullable|array',
-            'labors.*.labor_id'       => 'required|exists:labors,id',
+            'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
             'labors.*.remarks'        => 'nullable|string',
         ]);
@@ -369,6 +372,9 @@ class WorkOrderController extends Controller
         // Add new labors
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
+                if (empty($laborData['labor_id'])) {
+                    continue;
+                }
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
                 $rate = self::getLaborRateForTier($labor, $priceTier);
@@ -478,7 +484,7 @@ class WorkOrderController extends Controller
 
         $labor = Labor::findOrFail($validated['labor_id']);
         $qty         = (float) $validated['qty'];
-        $rate        = (float) $validated['rate'];
+        $rate        = self::getLaborRateForTier($labor, $workOrder->vehicle_price_tier);
         $totalPrice  = $qty * $rate;
 
         WorkOrderLabor::create([

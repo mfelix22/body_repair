@@ -255,6 +255,10 @@
                                                         @foreach ($masterLabors as $ml)
                                                             <option value="{{ $ml->id }}"
                                                                 data-price="{{ $ml->price }}"
+                                                                data-p0300="{{ $ml->price_0_300 }}"
+                                                                data-p300500="{{ $ml->price_300_500 }}"
+                                                                data-p500800="{{ $ml->price_500_800 }}"
+                                                                data-p8002000="{{ $ml->price_800_2000 }}"
                                                                 {{ $labor->labor_id == $ml->id ? 'selected' : '' }}>
                                                                 {{ $ml->labor_code }} — {{ $ml->description }}
                                                             </option>
@@ -377,7 +381,7 @@
             }
 
             const opt = select.options[select.selectedIndex];
-            const price = getPriceFromOption(opt, isPanel ? tierKey : null);
+            const price = getPriceFromOption(opt, tierKey);
             const qty = parseFloat(qtyInput.value) || 0;
             const rowTotal = price * qty;
             if (rateInput) rateInput.value = price;
@@ -394,7 +398,7 @@
 
             let laborTotal = 0;
             document.querySelectorAll('.labor-row').forEach(function(row) {
-                laborTotal += updateRowTotal(row, null);
+                laborTotal += updateRowTotal(row, tierKey);
             });
 
             const grandTotal = panelTotal + laborTotal;
@@ -545,7 +549,12 @@
                         <select name="labors[${laborIndex}][labor_id]" class="form-control form-control-sm labor-select">
                             <option value="">-- Pilih Labor --</option>
                             @foreach ($masterLabors as $ml)
-                                <option value="{{ $ml->id }}" data-price="{{ $ml->price }}">{{ $ml->labor_code }} — {{ $ml->description }}</option>
+                                <option value="{{ $ml->id }}"
+                                    data-price="{{ $ml->price }}"
+                                    data-p0300="{{ $ml->price_0_300 }}"
+                                    data-p300500="{{ $ml->price_300_500 }}"
+                                    data-p500800="{{ $ml->price_500_800 }}"
+                                    data-p8002000="{{ $ml->price_800_2000 }}">{{ $ml->labor_code }} — {{ $ml->description }}</option>
                             @endforeach
                         </select>
                     </div>
