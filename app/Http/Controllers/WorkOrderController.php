@@ -21,7 +21,9 @@ class WorkOrderController extends Controller
     public function index()
     {
         $wos = WorkOrder::with(['customer', 'creator', 'proformaInvoice'])
-            ->withCount(['items', 'labors'])
+            ->withCount(['items', 'labors' => function ($query) {
+                $query->whereNotNull('labor_id');
+            }])
             ->orderBy('created_at', 'desc')
             ->get();
         return view('work_orders.index', compact('wos'));
