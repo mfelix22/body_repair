@@ -146,6 +146,7 @@ class AuditLogController extends Controller
             'Invoice',
             'WorkOrder',
             'ProformaInvoice',
+            'Estimasi',
             'BonOut',
             'SalesOrder',
             'Receivable',

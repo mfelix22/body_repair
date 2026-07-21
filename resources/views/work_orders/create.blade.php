@@ -37,6 +37,8 @@
                                                 Internal WS</option>
                                             <option value="INT_W3" {{ old('account_code') === 'INT_W3' ? 'selected' : '' }}>
                                                 Internal W3</option>
+                                            <option value="ASURANSI" {{ old('account_code') === 'ASURANSI' ? 'selected' : '' }}>
+                                                Asuransi</option>
                                         </select>
                                         @error('account_code')
                                             <span class="invalid-feedback">{{ $message }}</span>

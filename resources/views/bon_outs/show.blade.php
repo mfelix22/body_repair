@@ -197,9 +197,10 @@
                             'B' => 'CAT',
                             'C' => 'VERNIS',
                             'D' => 'POLES dan KEBERSIHAN AKHIR',
+                            'E' => 'SPAREPART',
                         ];
                         $grouped = $bonOut->items->groupBy(fn($i) => $i->bon_out_section ?? 'Unsorted');
-                        $sectionOrder = ['A', 'B', 'C', 'D', 'Unsorted'];
+                        $sectionOrder = ['A', 'B', 'C', 'D', 'E', 'Unsorted'];
                     @endphp
                     @if ($hasExtraPricedItems && $bonOut->workOrder)
                         <div class="alert alert-info py-2">

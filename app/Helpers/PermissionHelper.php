@@ -195,6 +195,7 @@ class PermissionHelper
             'work_orders' => 'Work Orders',
             'sales_orders' => 'Sales Orders',
             'proforma_invoices' => 'Proforma Invoices',
+            'estimasis' => 'Estimasi',
             'bon_outs' => 'Bon Out',
             'invoices' => 'Invoices',
             'audit_logs' => 'Audit Logs',
@@ -404,6 +405,15 @@ class PermissionHelper
 
             // Finance
             'proforma_invoices' => [
+                'service_advisor' => 'crud',
+                'director'        => 'read',
+                'manager'         => 'read',
+                'accounting'      => 'read',
+                'finance'         => 'read',
+                'audit'           => 'read',
+                'viewer'          => 'read',
+            ],
+            'estimasis' => [
                 'service_advisor' => 'crud',
                 'director'        => 'read',
                 'manager'         => 'read',

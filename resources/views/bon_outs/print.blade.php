@@ -341,8 +341,9 @@
             'B' => 'CAT',
             'C' => 'VERNIS',
             'D' => 'POLES dan KEBERSIHAN AKHIR',
+            'E' => 'SPAREPART',
         ];
-        $sectionOrder  = ['A', 'B', 'C', 'D'];
+        $sectionOrder  = ['A', 'B', 'C', 'D', 'E'];
         $grouped       = $bonOut->items->groupBy(fn($i) => $i->bon_out_section ?? 'Unsorted');
         $grandQtyTotal = 0;
         $rowsPrinted   = 0;

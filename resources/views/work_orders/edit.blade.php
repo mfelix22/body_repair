@@ -55,6 +55,9 @@
                                         <option value="INT_W3"
                                             {{ old('account_code', $workOrder->account_code) === 'INT_W3' ? 'selected' : '' }}>
                                             Internal W3</option>
+                                        <option value="ASURANSI"
+                                            {{ old('account_code', $workOrder->account_code) === 'ASURANSI' ? 'selected' : '' }}>
+                                            Asuransi</option>
                                     </select>
                                 </div>
 
@@ -450,7 +453,8 @@
         // Stub - will be overridden once jQuery/Select2 are loaded
         function initItemSelect2() {}
 
-        document.getElementById('add-item').addEventListener('click', function() {
+        const addItemBtn = document.getElementById('add-item');
+        if (addItemBtn) addItemBtn.addEventListener('click', function() {
             const container = document.getElementById('items-container');
             const itemOptions = buildItemOptions();
 
@@ -494,7 +498,8 @@
             initItemSelect2();
         });
 
-        document.getElementById('add-panel').addEventListener('click', function() {
+        const addPanelBtn = document.getElementById('add-panel');
+        if (addPanelBtn) addPanelBtn.addEventListener('click', function() {
             const container = document.getElementById('panels-container');
             const newPanelRow = document.createElement('div');
             newPanelRow.className = 'panel-row card mb-2 border-left-success';
@@ -538,7 +543,8 @@
             if (typeof initPanelSelect2 === 'function') initPanelSelect2();
         });
 
-        document.getElementById('add-labor').addEventListener('click', function() {
+        const addLaborBtn = document.getElementById('add-labor');
+        if (addLaborBtn) addLaborBtn.addEventListener('click', function() {
             const container = document.getElementById('labors-container');
             const newLaborRow = document.createElement('div');
             newLaborRow.className = 'labor-row card mb-2 border-left-info';

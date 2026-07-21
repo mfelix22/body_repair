@@ -79,6 +79,7 @@
                                 'B' => 'CAT',
                                 'C' => 'VERNIS',
                                 'D' => 'POLES dan KEBERSIHAN AKHIR',
+                                'E' => 'SPAREPART',
                             ];
                             $groupedExisting = $bonOut->items->groupBy(fn($i) => $i->bon_out_section ?? 'Unsorted');
                             $existingCount   = $bonOut->items->count();
@@ -86,8 +87,11 @@
 
                         @foreach ($sections as $sectionKey => $sectionLabel)
                         <div class="card mb-3 section-card" id="section-card-{{ $sectionKey }}">
-                            <div class="card-header py-2" style="background:#f8f9fa;">
+                            <div class="card-header py-2" style="background:{{ $sectionKey === 'E' ? '#fff3cd' : '#f8f9fa' }};">
                                 <strong>{{ $sectionKey }}. &nbsp; {{ $sectionLabel }}</strong>
+                                @if ($sectionKey === 'E')
+                                    <small class="text-muted ml-2">— Sparepart used to replace parts (e.g. bumper). Always billed to the customer.</small>
+                                @endif
                                 @if ($bonOut->bon_out_type != 3)
                                 <button type="button" class="btn btn-success btn-xs float-right add-section-btn"
                                     data-section="{{ $sectionKey }}">
@@ -135,11 +139,11 @@
                                                 </div>
                                                 @if ($bonOut->bon_out_type != 3)
                                                 <div class="col-md-2">
-                                                    <label class="small mb-1"><strong>Selling Price</strong></label>
+                                                    <label class="small mb-1"><strong>Selling Price</strong>{!! $sectionKey === 'E' ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="number" name="items[{{ $bi->id }}][unit_price]"
-                                                        class="form-control form-control-sm price-input" step="0.01" min="0"
+                                                        class="form-control form-control-sm price-input" step="0.01" {{ $sectionKey === 'E' ? 'min="0.01" required' : 'min="0"' }}
                                                         value="{{ old("items.{$bi->id}.unit_price", $bi->unit_price ?? 0) }}"
-                                                        placeholder="0 = internal">
+                                                        placeholder="{{ $sectionKey === 'E' ? 'Required — billed' : '0 = internal' }}">
                                                 </div>
                                                 @endif
                                             </div>
@@ -241,6 +245,7 @@
                     'id'    => $i->id,
                     'code'  => $i->code,
                     'name'  => $i->name,
+                    'type'  => $i->item_type,
                     'uom'   => $i->smallestUom->code ?? '-',
                     'stock' => $i->stocks->sum('quantity'),
                 ])
@@ -262,8 +267,9 @@
             document.getElementById(`subtotal-${section}`).textContent = fmtRp(total);
         }
 
-        function buildItemOptions() {
-            return allItems.map(i =>
+        function buildItemOptions(section) {
+            const filtered = section === 'E' ? allItems.filter(i => i.type === 'SP') : allItems;
+            return filtered.map(i =>
                 `<option value="${i.id}" data-uom="${i.uom}" data-stock="${i.stock}">[${i.code}] ${i.name} (Stock: ${parseFloat(i.stock).toFixed(2)} ${i.uom})</option>`
             ).join('');
         }
@@ -287,7 +293,7 @@
                         <label class="small mb-1"><strong>Material <span class="text-danger">*</span></strong></label>
                         <select name="items[${idx}][item_id]" class="form-control form-control-sm new-item-select" required>
                             <option value="">-- Select Material --</option>
-                            ${buildItemOptions()}
+                            ${buildItemOptions(section)}
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -305,11 +311,11 @@
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <label class="small mb-1"><strong>Selling Price</strong></label>
+                        <label class="small mb-1"><strong>Selling Price</strong>${section === 'E' ? ' <span class="text-danger">*</span>' : ''}</label>
                         <div class="input-group input-group-sm">
                             <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
                             <input type="number" name="items[${idx}][unit_price]"
-                                class="form-control price-input" step="1" min="0" placeholder="0">
+                                class="form-control price-input" step="1" ${section === 'E' ? 'min="1" required' : 'min="0"'} placeholder="${section === 'E' ? 'Required' : '0'}">
                         </div>
                     </div>
                     <div class="col-md-1 text-right">

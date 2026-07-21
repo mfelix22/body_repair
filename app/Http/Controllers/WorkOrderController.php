@@ -64,7 +64,7 @@ class WorkOrderController extends Controller
             'customer_id'          => 'required|exists:customers,id',
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
-            'account_code'         => 'required|in:C,INT_WS,INT_W3',
+            'account_code'         => 'required|in:C,INT_WS,INT_W3,ASURANSI',
             'reference_wo_id'      => 'nullable|exists:work_orders,id',
             'work_date'            => 'required|date',
             'deadline'             => 'nullable|date',
@@ -211,7 +211,7 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice']);
+        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis']);
 
         // Pass active general labors for the Add Labor modal
         $masterLabors = Labor::where('is_active', true)->where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
@@ -260,7 +260,7 @@ class WorkOrderController extends Controller
             'customer_id'          => 'required|exists:customers,id',
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
-            'account_code'         => 'required|in:C,INT_WS,INT_W3',
+            'account_code'         => 'required|in:C,INT_WS,INT_W3,ASURANSI',
             'work_date'            => 'required|date',
             'deadline'             => 'nullable|date',
             'vehicle_info'         => 'nullable|string|max:200',

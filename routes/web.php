@@ -23,6 +23,7 @@ use App\Http\Controllers\StockController;
 use App\Http\Controllers\BonOutController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProformaInvoiceController;
+use App\Http\Controllers\EstimasiController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CreditNoteController;
@@ -156,6 +157,7 @@ Route::middleware('auth')->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase_orders.cancel');
     Route::post('purchase-orders/{purchaseOrder}/close-so', [PurchaseOrderController::class, 'closeSO'])->name('purchase_orders.close_so');
     Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase_orders.print')->middleware('signed');
+    Route::get('purchase-orders/{purchaseOrder}/print-preview', [PurchaseOrderController::class, 'printPreview'])->name('purchase_orders.print_preview');
 
     // Vendor Comparisons (FK-PCH)
     Route::resource('vendor-comparisons', VendorComparisonController::class)->names('vendor_comparisons');
@@ -229,6 +231,12 @@ Route::middleware('auth')->group(function () {
     Route::get('proforma-invoices/{proformaInvoice}/print', [ProformaInvoiceController::class, 'print'])->name('proforma_invoices.print')->middleware('signed');
     Route::post('proforma-invoices/{proformaInvoice}/lines/{line}/approve', [ProformaInvoiceController::class, 'approveLine'])->name('proforma_invoices.approve_line');
     Route::post('proforma-invoices/{proformaInvoice}/lines/{line}/reject', [ProformaInvoiceController::class, 'rejectLine'])->name('proforma_invoices.reject_line');
+
+    // Estimasi
+    Route::resource('estimasis', EstimasiController::class)->except(['edit', 'update', 'destroy']);
+    Route::post('estimasis/{estimasi}/approve', [EstimasiController::class, 'approve'])->name('estimasis.approve');
+    Route::post('estimasis/{estimasi}/reject', [EstimasiController::class, 'reject'])->name('estimasis.reject');
+    Route::get('estimasis/{estimasi}/print', [EstimasiController::class, 'print'])->name('estimasis.print')->middleware('signed');
 
 
     // Stock Management (Purchasing role has no access)

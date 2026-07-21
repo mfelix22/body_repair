@@ -132,6 +132,11 @@ class WorkOrder extends Model
         return $this->hasOne(ProformaInvoice::class)->whereIn('status', ['approved', 'no_discount']);
     }
 
+    public function estimasis(): HasMany
+    {
+        return $this->hasMany(Estimasi::class)->orderBy('id', 'desc');
+    }
+
     public function bonOut(): HasOne
     {
         return $this->hasOne(BonOut::class);

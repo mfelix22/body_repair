@@ -33,6 +33,8 @@
                                         </option>
                                         <option value="TE" {{ old('item_type') == 'TE' ? 'selected' : '' }}>TE - Tools &
                                             Equipment</option>
+                                        <option value="SP" {{ old('item_type') == 'SP' ? 'selected' : '' }}>SP -
+                                            Sparepart</option>
                                     </select>
                                     <small class="form-text text-muted">Code will be auto-generated (e.g., C-0001)</small>
                                     @error('item_type')

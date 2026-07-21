@@ -309,6 +309,7 @@
                                 'invoices.*',
                                 'credit_notes.*',
                                 'proforma_invoices.*',
+                                'estimasis.*',
                             ];
                             $opsOpen = request()->routeIs($opsRoutes);
                             $opsVisible =
@@ -317,6 +318,7 @@
                                 \App\Helpers\PermissionHelper::canView('bon_outs') ||
                                 \App\Helpers\PermissionHelper::canView('invoices') ||
                                 \App\Helpers\PermissionHelper::canView('proforma_invoices') ||
+                                \App\Helpers\PermissionHelper::canView('estimasis') ||
                                 auth()
                                     ->user()
                                     ->hasAnyRole([
@@ -369,6 +371,15 @@
                                                 class="nav-link {{ request()->routeIs('proforma_invoices.*') ? 'active' : '' }}">
                                                 <i class="fas fa-file-alt nav-icon"></i>
                                                 <p>Proforma Invoice</p>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if (\App\Helpers\PermissionHelper::canView('estimasis'))
+                                        <li class="nav-item">
+                                            <a href="{{ route('estimasis.index') }}"
+                                                class="nav-link {{ request()->routeIs('estimasis.*') ? 'active' : '' }}">
+                                                <i class="fas fa-file-invoice nav-icon"></i>
+                                                <p>Estimasi</p>
                                             </a>
                                         </li>
                                     @endif

@@ -41,7 +41,7 @@ class ItemController extends Controller
             return PermissionHelper::denyAccess('items', 'create');
         }
         $validated = $request->validate([
-            'item_type' => 'required|in:A,B,C,E,T,TE',
+            'item_type' => 'required|in:A,B,C,E,T,TE,SP',
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',

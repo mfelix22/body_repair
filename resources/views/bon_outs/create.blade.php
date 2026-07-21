@@ -85,13 +85,17 @@
                                 'B' => 'CAT',
                                 'C' => 'VERNIS',
                                 'D' => 'POLES dan KEBERSIHAN AKHIR',
+                                'E' => 'SPAREPART',
                             ];
                         @endphp
 
                         @foreach ($sections as $sectionKey => $sectionLabel)
                         <div class="card mb-3 section-card" id="section-card-{{ $sectionKey }}">
-                            <div class="card-header py-2" style="background:#f8f9fa;">
+                            <div class="card-header py-2" style="background:{{ $sectionKey === 'E' ? '#fff3cd' : '#f8f9fa' }};">
                                 <strong>{{ $sectionKey }}. &nbsp; {{ $sectionLabel }}</strong>
+                                @if ($sectionKey === 'E')
+                                    <small class="text-muted ml-2">— Sparepart used to replace parts (e.g. bumper). Always billed to the customer.</small>
+                                @endif
                                 <button type="button" class="btn btn-success btn-xs float-right add-section-btn"
                                     data-section="{{ $sectionKey }}">
                                     <i class="fas fa-plus"></i> Add Material
@@ -137,6 +141,7 @@
                         <option value="">-- Select Material --</option>
                         @foreach ($allItems as $item)
                             <option value="{{ $item->id }}"
+                                data-type="{{ $item->item_type }}"
                                 data-uom="{{ $item->smallestUom->code ?? '-' }}"
                                 data-stock="{{ $item->stocks->sum('quantity') }}">
                                 [{{ $item->code }}] {{ $item->name }}
@@ -160,7 +165,7 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <label class="small mb-1">Selling Price <small class="text-muted">(optional)</small></label>
+                    <label class="small mb-1 price-label">Selling Price <small class="text-muted price-optional-hint">(optional)</small></label>
                     <div class="input-group input-group-sm">
                         <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
                         <input type="number" class="form-control price-input"
@@ -213,6 +218,28 @@
             // Hide empty message
             const emptyMsg = container.querySelector('.empty-section-msg');
             if (emptyMsg) emptyMsg.style.display = 'none';
+
+            // Section E (Sparepart) — restrict material options to Sparepart items only,
+            // and require a selling price since these are always billed to the customer.
+            if (section === 'E') {
+                row.querySelectorAll('.material-select option').forEach(opt => {
+                    if (opt.value !== '' && opt.dataset.type !== 'SP') {
+                        opt.remove();
+                    }
+                });
+                const priceInput = row.querySelector('.price-input');
+                priceInput.setAttribute('required', 'required');
+                priceInput.setAttribute('min', '1');
+                const hint = row.querySelector('.price-optional-hint');
+                if (hint) hint.textContent = '(required — billed to customer)';
+                const priceLabel = row.querySelector('.price-label');
+                if (priceLabel) {
+                    const star = document.createElement('span');
+                    star.className = 'text-danger';
+                    star.textContent = ' *';
+                    priceLabel.appendChild(star);
+                }
+            }
 
             container.appendChild(row);
 

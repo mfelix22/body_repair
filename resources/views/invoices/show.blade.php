@@ -134,41 +134,6 @@
                         </div>
                     </div>
 
-                    <hr>
-                    <h6>Work Order Items</h6>
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($invoice->workOrder->items as $item)
-                                <tr>
-                                    <td>{{ $item->item->name }}</td>
-                                    <td>{{ number_format($item->actual_quantity ?? ($item->demand_quantity ?? 0), 2) }}
-                                        {{ $item->item->smallestUom->code }}</td>
-                                    <td>
-                                        @if (!is_null($item->unit_price) && (float) $item->unit_price > 0)
-                                            Rp {{ number_format($item->unit_price, 0, ',', '.') }}
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if (!is_null($item->total_price) && (float) $item->total_price > 0)
-                                            Rp {{ number_format($item->total_price, 0, ',', '.') }}
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
 
                     <hr>
                     <h6>Panels</h6>

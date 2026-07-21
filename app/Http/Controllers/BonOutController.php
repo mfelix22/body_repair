@@ -128,8 +128,17 @@ class BonOutController extends Controller
             'items.*.actual_quantity'    => 'required|numeric|min:0',
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
-            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D',
+            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D,E',
         ]);
+
+        // Sparepart section (E) items must be billed — require a selling price
+        foreach ($validated['items'] as $itemData) {
+            if (($itemData['bon_out_section'] ?? null) === 'E' && (float) ($itemData['actual_quantity'] ?? 0) > 0) {
+                if (empty($itemData['unit_price']) || (float) $itemData['unit_price'] <= 0) {
+                    return back()->withInput()->with('error', 'Sparepart (Section E) items must have a Selling Price greater than 0, since they are billed to the customer.');
+                }
+            }
+        }
 
         $workOrder = WorkOrder::with('items.item')->findOrFail($validated['work_order_id']);
 
@@ -354,8 +363,17 @@ class BonOutController extends Controller
             'items.*.actual_quantity'    => 'required|numeric|min:0',
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
-            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D',
+            'items.*.bon_out_section'    => 'nullable|in:A,B,C,D,E',
         ]);
+
+        // Sparepart section (E) items must be billed — require a selling price
+        foreach ($validated['items'] as $itemData) {
+            if (($itemData['bon_out_section'] ?? null) === 'E' && (float) ($itemData['actual_quantity'] ?? 0) > 0) {
+                if (empty($itemData['unit_price']) || (float) $itemData['unit_price'] <= 0) {
+                    return back()->withInput()->with('error', 'Sparepart (Section E) items must have a Selling Price greater than 0, since they are billed to the customer.');
+                }
+            }
+        }
 
         // Filter out zero-quantity rows for new items (existing rows can be 0 = not used today)
         $itemsToProcess = array_filter($validated['items'], function ($item) {

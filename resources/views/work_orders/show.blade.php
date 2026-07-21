@@ -22,6 +22,12 @@
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
                             @endif
+                            @if (\App\Helpers\PermissionHelper::canCreate('estimasis'))
+                                <a href="{{ route('estimasis.create', ['work_order_id' => $workOrder->id]) }}"
+                                    class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-file-invoice"></i> Estimasi
+                                </a>
+                            @endif
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
                                 <form action="{{ route('work_orders.start', $workOrder) }}" method="POST" class="d-inline"
                                     onsubmit="return confirm('Start work and issue materials from stock?')">
@@ -35,6 +41,12 @@
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
                                 <a href="{{ route('work_orders.edit', $workOrder) }}" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i> Edit
+                                </a>
+                            @endif
+                            @if (\App\Helpers\PermissionHelper::canCreate('estimasis'))
+                                <a href="{{ route('estimasis.create', ['work_order_id' => $workOrder->id]) }}"
+                                    class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-file-invoice"></i> Estimasi
                                 </a>
                             @endif
                             @if (\App\Helpers\PermissionHelper::canCreate('bon_outs'))
@@ -444,6 +456,61 @@
             </div>
         </div>
     </div>
+
+    {{-- ===== ESTIMASI HISTORY ===== --}}
+    @if ($workOrder->estimasis->isNotEmpty())
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-outline card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-file-invoice mr-1"></i> Estimasi History</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Estimasi #</th>
+                                    <th>Date</th>
+                                    <th>Subtotal</th>
+                                    <th>Discount</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($workOrder->estimasis as $est)
+                                    @php $estBadge = $est->getStatusBadge(); @endphp
+                                    <tr>
+                                        <td>
+                                            <a href="{{ route('estimasis.show', $est) }}">{{ $est->estimasi_number }}</a>
+                                        </td>
+                                        <td>{{ $est->created_at->format('d M Y') }}</td>
+                                        <td class="text-right">Rp {{ number_format($est->subtotal, 0, ',', '.') }}</td>
+                                        <td class="text-right">
+                                            @if ($est->discount_amount > 0)
+                                                Rp {{ number_format($est->discount_amount, 0, ',', '.') }}
+                                                ({{ number_format($est->discount_percentage, 1) }}%)
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-right">Rp {{ number_format($est->total, 0, ',', '.') }}</td>
+                                        <td><span class="badge badge-{{ $estBadge['color'] }}">{{ $estBadge['label'] }}</span></td>
+                                        <td>
+                                            <a href="{{ route('estimasis.show', $est) }}" class="btn btn-info btn-xs">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- ===== INVOICE HISTORY ===== --}}
     @if (
