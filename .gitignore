@@ -25,3 +25,6 @@ Thumbs.db
 *.md
 body_repair.sql
 /Backup
+/sync-to-server.sh
+/ssh_temp/
+.sync-exclude

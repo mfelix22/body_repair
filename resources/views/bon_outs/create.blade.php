@@ -134,7 +134,7 @@
         <div class="border rounded p-2 mb-2 material-row bg-white">
             <input type="hidden" name="items[__INDEX__][bon_out_section]" value="__SECTION__">
             <div class="row align-items-end">
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="small mb-1">Material <span class="text-danger">*</span></label>
                     <select class="form-control form-control-sm select2-material material-select"
                         name="items[__INDEX__][item_id]" data-index="__INDEX__" required>
@@ -171,6 +171,11 @@
                         <input type="number" class="form-control price-input"
                             name="items[__INDEX__][unit_price]" step="1" min="0" placeholder="0">
                     </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="small mb-1">Remark</label>
+                    <input type="text" class="form-control form-control-sm"
+                        name="items[__INDEX__][remark]" placeholder="e.g. RQ No">
                 </div>
                 <div class="col-md-1 text-right">
                     <label class="small mb-1">&nbsp;</label>

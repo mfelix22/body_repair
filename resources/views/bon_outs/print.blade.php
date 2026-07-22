@@ -394,7 +394,7 @@
                         <td class="text-center">{{ $bi->item->item_type ?? '' }}</td>
                         <td class="text-center">{{ number_format($qty, 2) }}</td>
                         <td class="text-center">{{ $bi->item->smallestUom->code ?? '-' }}</td>
-                        <td>{{ $bi->remark ?? '' }}</td>
+                        <td>{{ $bi->remark ?? ($bi->workOrderItem->remark ?? '') }}</td>
                     </tr>
                 @endforeach
                 {{-- Subtotal row --}}
@@ -450,7 +450,7 @@
                         <td class="text-center">{{ $bi->item->item_type ?? '' }}</td>
                         <td class="text-center">{{ number_format($qty, 2) }}</td>
                         <td class="text-center">{{ $bi->item->smallestUom->code ?? '-' }}</td>
-                        <td>{{ $bi->remark ?? '' }}</td>
+                        <td>{{ $bi->remark ?? ($bi->workOrderItem->remark ?? '') }}</td>
                     </tr>
                 @endforeach
             </tbody>

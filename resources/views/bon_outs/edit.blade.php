@@ -114,7 +114,7 @@
                                             <input type="hidden" name="items[{{ $bi->id }}][work_order_item_id]"  value="{{ $bi->work_order_item_id }}">
                                             <input type="hidden" name="items[{{ $bi->id }}][bon_out_section]"     value="{{ $sectionKey }}" class="section-hidden">
                                             <div class="row align-items-end">
-                                                <div class="col-md-5">
+                                                <div class="col-md-4">
                                                     <label class="small mb-1"><strong>Item</strong></label>
                                                     <div class="form-control form-control-sm bg-light">
                                                         <strong>[{{ $bi->item->code }}]</strong> {{ $bi->item->name }}
@@ -146,6 +146,13 @@
                                                         placeholder="{{ $sectionKey === 'E' ? 'Required — billed' : '0 = internal' }}">
                                                 </div>
                                                 @endif
+                                                <div class="col-md-2">
+                                                    <label class="small mb-1"><strong>Remark</strong></label>
+                                                    <input type="text" name="items[{{ $bi->id }}][remark]"
+                                                        class="form-control form-control-sm"
+                                                        value="{{ old("items.{$bi->id}.remark", $bi->remark) }}"
+                                                        placeholder="e.g. RQ No">
+                                                </div>
                                             </div>
                                         </div>
                                     @empty
@@ -214,6 +221,13 @@
                                                     placeholder="0 = internal">
                                             </div>
                                             @endif
+                                            <div class="col-md-2">
+                                                <label class="small mb-1"><strong>Remark</strong></label>
+                                                <input type="text" name="items[{{ $bi->id }}][remark]"
+                                                    class="form-control form-control-sm"
+                                                    value="{{ old("items.{$bi->id}.remark", $bi->remark) }}"
+                                                    placeholder="e.g. RQ No">
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach
@@ -289,7 +303,7 @@
                 <input type="hidden" name="items[${idx}][work_order_item_id]" value="">
                 <input type="hidden" name="items[${idx}][bon_out_section]"    value="${section}">
                 <div class="row align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label class="small mb-1"><strong>Material <span class="text-danger">*</span></strong></label>
                         <select name="items[${idx}][item_id]" class="form-control form-control-sm new-item-select" required>
                             <option value="">-- Select Material --</option>
@@ -317,6 +331,11 @@
                             <input type="number" name="items[${idx}][unit_price]"
                                 class="form-control price-input" step="1" ${section === 'E' ? 'min="1" required' : 'min="0"'} placeholder="${section === 'E' ? 'Required' : '0'}">
                         </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small mb-1"><strong>Remark</strong></label>
+                        <input type="text" name="items[${idx}][remark]"
+                            class="form-control form-control-sm" placeholder="e.g. RQ No">
                     </div>
                     <div class="col-md-1 text-right">
                         <label class="small mb-1">&nbsp;</label>

@@ -129,6 +129,7 @@ class BonOutController extends Controller
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
             'items.*.bon_out_section'    => 'nullable|in:A,B,C,D,E',
+            'items.*.remark'             => 'nullable|string|max:255',
         ]);
 
         // Sparepart section (E) items must be billed — require a selling price
@@ -364,6 +365,7 @@ class BonOutController extends Controller
             'items.*.work_order_item_id' => 'nullable|exists:work_order_items,id',
             'items.*.unit_price'         => 'nullable|numeric|min:0',
             'items.*.bon_out_section'    => 'nullable|in:A,B,C,D,E',
+            'items.*.remark'             => 'nullable|string|max:255',
         ]);
 
         // Sparepart section (E) items must be billed — require a selling price
@@ -397,6 +399,7 @@ class BonOutController extends Controller
                         'actual_quantity' => $itemData['actual_quantity'],
                         'unit_price'      => $itemData['unit_price'] ?? $bonOutItem->unit_price,
                         'bon_out_section' => $itemData['bon_out_section'] ?? $bonOutItem->bon_out_section,
+                        'remark'          => $itemData['remark'] ?? $bonOutItem->remark,
                     ]);
                     $existingIds[] = $bonOutItem->id;
                 }
@@ -426,6 +429,7 @@ class BonOutController extends Controller
                         'actual_quantity'    => $itemData['actual_quantity'],
                         'unit_price'         => $unitPrice,
                         'bon_out_section'    => $itemData['bon_out_section'] ?? null,
+                        'remark'             => $itemData['remark'] ?? null,
                     ]);
                 }
             }
@@ -556,7 +560,7 @@ class BonOutController extends Controller
             return PermissionHelper::denyAccess('bon_outs', 'view');
         }
 
-        $bonOut->load(['workOrder.customer', 'items.item.smallestUom', 'creator']);
+        $bonOut->load(['workOrder.customer', 'items.item.smallestUom', 'items.workOrderItem', 'creator']);
         return view('bon_outs.print', compact('bonOut'));
     }
 

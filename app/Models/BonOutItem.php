@@ -41,4 +41,9 @@ class BonOutItem extends Model
     {
         return $this->belongsTo(UOM::class);
     }
+
+    public function workOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrderItem::class);
+    }
 }
