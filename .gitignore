@@ -23,8 +23,13 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 *.md
+*.tar.gz
 body_repair.sql
 /Backup
 /sync-to-server.sh
 /ssh_temp/
 .sync-exclude
+/sync-daily.bat
+/sync-daily.log
+/compare-procurement.sh
+/backup-server.sh
