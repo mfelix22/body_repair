@@ -253,6 +253,7 @@
                             <option value="E">Equipment</option>
                             <option value="T">Tools</option>
                             <option value="TE">Tools &amp; Equipment</option>
+                            <option value="SP">Sparepart</option>
                         </select>
                     </div>
                     <div class="col-md-3 new-item-section" style="display:none;">

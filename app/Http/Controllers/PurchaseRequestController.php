@@ -92,7 +92,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
             $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
-            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE';
+            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
 
@@ -531,7 +531,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
             $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
-            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE';
+            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
 
