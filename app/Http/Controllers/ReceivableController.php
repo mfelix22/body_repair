@@ -135,6 +135,15 @@ class ReceivableController extends Controller
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
 
+        $incompleteItems = Item::whereIn('id', collect($validated['items'])->pluck('item_id')->unique())
+            ->where('is_complete', false)
+            ->pluck('name');
+        if ($incompleteItems->isNotEmpty()) {
+            return back()->withInput()->withErrors([
+                'items' => 'Cannot create Bon In: the following item(s) are incomplete and must be finished in Item master first: ' . $incompleteItems->implode(', ') . '.',
+            ]);
+        }
+
         $poDetails = $purchaseOrder->details->keyBy(function ($detail) {
             return $detail->item_id . '-' . $detail->uom_id;
         });
@@ -277,6 +286,15 @@ class ReceivableController extends Controller
             'items.*.quantity_received' => 'required|numeric|min:0.01',
         ]);
 
+        $incompleteItems = Item::whereIn('id', collect($validated['items'])->pluck('item_id')->unique())
+            ->where('is_complete', false)
+            ->pluck('name');
+        if ($incompleteItems->isNotEmpty()) {
+            return back()->withInput()->withErrors([
+                'items' => 'Cannot create Bon In: the following item(s) are incomplete and must be finished in Item master first: ' . $incompleteItems->implode(', ') . '.',
+            ]);
+        }
+
         DB::beginTransaction();
         try {
             // Generate receive number
@@ -335,6 +353,7 @@ class ReceivableController extends Controller
     {
         $receivable->load([
             'purchaseOrder.supplier',
+            'purchaseOrder.details',
             'supplier',
             'items.item.itemUoms.uom',
             'items.item.smallestUom',
@@ -500,6 +519,13 @@ class ReceivableController extends Controller
         }
         if (!in_array($receivable->status, ['on_progress', 'partial_received'])) {
             return back()->with('error', 'Only on progress or partial received Bon In can be completed.');
+        }
+
+        $incompleteItems = $receivable->items()->whereHas('item', function ($q) {
+            $q->where('is_complete', false);
+        })->with('item')->get()->pluck('item.name')->unique();
+        if ($incompleteItems->isNotEmpty()) {
+            return back()->with('error', 'Cannot complete Bon In: the following item(s) are incomplete and must be finished in Item master first: ' . $incompleteItems->implode(', ') . '.');
         }
 
         DB::beginTransaction();

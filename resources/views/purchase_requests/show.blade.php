@@ -19,7 +19,7 @@
                     <div class="card-tools">
                         @if (in_array($purchaseRequest->status, ['completed', 'printed', 'closed']))
                             @if (\App\Helpers\PermissionHelper::canPrint('purchase_requests') || auth()->user()->hasAnyRole(['purchasing']))
-                                <a href="{{ \URL::temporarySignedRoute('purchase_requests.print', now()->addMinutes(5), $purchaseRequest) }}"
+                                <a href="{{ \URL::temporarySignedRoute('purchase_requests.print_preview', now()->addMinutes(5), $purchaseRequest) }}"
                                     class="btn btn-secondary btn-sm" target="_blank">
                                     <i class="fas fa-print"></i> Print
                                 </a>

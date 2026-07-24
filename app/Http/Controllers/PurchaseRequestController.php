@@ -698,6 +698,24 @@ class PurchaseRequestController extends Controller
         return $pdf->download($prefix . '-' . $purchaseRequest->pr_number . '.pdf');
     }
 
+    public function printPreview(PurchaseRequest $purchaseRequest)
+    {
+        if (!PermissionHelper::canPrint('purchase_requests') && !auth()->user()->hasAnyRole(['purchasing'])) {
+            return PermissionHelper::denyAccess('purchase_requests', 'view');
+        }
+
+        if (!in_array($purchaseRequest->status, ['completed', 'printed', 'closed'])) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Only completed, printed, or closed PPB/PPJ can be previewed.');
+        }
+
+        $purchaseRequest->load(['requestor', 'deptHeadApprover', 'gmApprover', 'purchasingReceiver', 'details.item', 'details.uom']);
+
+        $pdf = Pdf::loadView('purchase_requests.print', compact('purchaseRequest'));
+        $prefix = $purchaseRequest->type === 'Jasa' ? 'PPJ' : 'PPB';
+        return $pdf->stream('PREVIEW-' . $prefix . '-' . $purchaseRequest->pr_number . '.pdf');
+    }
+
     public function close(Request $request, PurchaseRequest $purchaseRequest)
     {
         $user = auth()->user();

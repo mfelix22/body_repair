@@ -27,9 +27,12 @@ Thumbs.db
 body_repair.sql
 /Backup
 /sync-to-server.sh
+/sync-procurement.sh
 /ssh_temp/
 .sync-exclude
 /sync-daily.bat
+/sync-procurement.bat
 /sync-daily.log
+/sync-procurement.log
 /compare-procurement.sh
 /backup-server.sh
