@@ -39,9 +39,9 @@
                                 <div class="form-group">
                                     <label for="bon_out_type">Bon Out Type <span class="text-danger">*</span></label>
                                     <select name="bon_out_type" id="bon_out_type" class="form-control" required>
-                                        <option value="2" {{ old('bon_out_type', '2') == '2' ? 'selected' : '' }}>
+                                        <option value="2" {{ old('bon_out_type', request('bon_out_type', '2')) == '2' ? 'selected' : '' }}>
                                             Regular Purchase (External Sale)</option>
-                                        <option value="3" {{ old('bon_out_type') == '3' ? 'selected' : '' }}>Stock
+                                        <option value="3" {{ old('bon_out_type', request('bon_out_type', '2')) == '3' ? 'selected' : '' }}>Stock
                                             Adjustment Out</option>
                                     </select>
                                     <small class="text-muted" id="type-hint-2">For customers outside who buy your

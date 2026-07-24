@@ -375,7 +375,7 @@ class PermissionHelper
             // Operations
             'work_orders' => [
                 'service_advisor' => 'crud',
-                'warehouse' => 'crud',
+                'warehouse' => 'read',
                 'director' => 'crud',
                 'manager' => 'crud',
                 'audit' => 'read',
