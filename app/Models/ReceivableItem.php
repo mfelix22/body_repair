@@ -12,6 +12,13 @@ class ReceivableItem extends Model
         'uom_id',
         'quantity_ordered',
         'quantity_received',
+        'unit_price',
+    ];
+
+    protected $casts = [
+        'quantity_ordered' => 'decimal:2',
+        'quantity_received' => 'decimal:2',
+        'unit_price' => 'decimal:2',
     ];
 
     public function receivable()
