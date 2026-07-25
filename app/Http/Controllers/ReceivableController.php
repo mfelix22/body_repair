@@ -132,6 +132,7 @@ class ReceivableController extends Controller
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.uom_id' => 'required|exists:uoms,id',
+            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
 
@@ -179,6 +180,7 @@ class ReceivableController extends Controller
                 'uom_id' => $item['uom_id'],
                 'quantity_ordered' => $remainingQty,
                 'quantity_received' => $receivedQty,
+                'unit_price' => $item['unit_price'],
             ];
         }
 
@@ -232,6 +234,7 @@ class ReceivableController extends Controller
                     'uom_id' => $item['uom_id'],
                     'quantity_ordered' => $item['quantity_ordered'],
                     'quantity_received' => $item['quantity_received'],
+                    'unit_price' => $item['unit_price'],
                 ]);
             }
 
@@ -419,6 +422,7 @@ class ReceivableController extends Controller
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.uom_id' => 'required|exists:uoms,id',
             'items.*.quantity_ordered' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
 
@@ -449,6 +453,7 @@ class ReceivableController extends Controller
                     'uom_id' => $item['uom_id'],
                     'quantity_ordered' => $item['quantity_ordered'],
                     'quantity_received' => $item['quantity_received'],
+                    'unit_price' => $item['unit_price'],
                 ]);
             }
 
@@ -577,10 +582,15 @@ class ReceivableController extends Controller
 
                 // Calculate average cost
                 if ($hasPO) {
-                    // From PO: use PO unit price (converted to smallest UOM)
-                    if ($poDetail && $quantityInSmallestUom > 0) {
+                    // From PO: use the price recorded on the Bon In item (adjusted by warehouse if vendor price changed).
+                    // Falls back to the PO detail price for older Bon In records without an item price.
+                    $unitPrice = ($receivableItem->unit_price !== null)
+                        ? (float) $receivableItem->unit_price
+                        : ($poDetail ? (float) $poDetail->unit_price : 0);
+
+                    if ($unitPrice > 0 && $quantityInSmallestUom > 0) {
                         $taxMultiplier = ($po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;
-                        $receivedUnitCost = ($poDetail->unit_price * $taxMultiplier) / $conversionFactor;
+                        $receivedUnitCost = ($unitPrice * $taxMultiplier) / $conversionFactor;
                         $newQuantity = $oldQuantity + $quantityInSmallestUom;
                         $stock->avg_cost = $newQuantity > 0
                             ? (($oldQuantity * $oldAvgCost) + ($quantityInSmallestUom * $receivedUnitCost)) / $newQuantity

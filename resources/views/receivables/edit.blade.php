@@ -104,6 +104,7 @@
                                     <th>Item</th>
                                     <th>UOM</th>
                                     <th>Quantity Ordered</th>
+                                    <th>Unit Price</th>
                                     <th>Quantity Received <span class="text-danger">*</span></th>
                                     <th>Status</th>
                                 </tr>
@@ -128,6 +129,16 @@
                                             {{ number_format($item->quantity_ordered, 2) }}
                                             <input type="hidden" name="items[{{ $index }}][quantity_ordered]"
                                                 value="{{ $item->quantity_ordered }}">
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[{{ $index }}][unit_price]"
+                                                class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
+                                                step="0.01" min="0"
+                                                value="{{ old('items.' . $index . '.unit_price', $item->unit_price ?? 0) }}"
+                                                required>
+                                            @error('items.' . $index . '.unit_price')
+                                                <span class="invalid-feedback">{{ $message }}</span>
+                                            @enderror
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"

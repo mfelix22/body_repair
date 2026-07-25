@@ -83,6 +83,7 @@
                                     <th>Item</th>
                                     <th>UOM</th>
                                     <th>Remaining Quantity</th>
+                                    <th>Unit Price</th>
                                     <th>Quantity Received <span class="text-danger">*</span></th>
                                 </tr>
                             </thead>
@@ -107,6 +108,16 @@
                                         </td>
                                         <td>
                                             {{ number_format($remainingQty, 2) }}
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[{{ $index }}][unit_price]"
+                                                class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
+                                                step="0.01" min="0"
+                                                value="{{ old('items.' . $index . '.unit_price', $detail->unit_price ?? 0) }}"
+                                                required>
+                                            @error('items.' . $index . '.unit_price')
+                                                <span class="invalid-feedback">{{ $message }}</span>
+                                            @enderror
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"
