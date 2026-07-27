@@ -16,7 +16,7 @@
                     <h3 class="card-title">Purchase Order Details</h3>
                 </div>
 
-                <form action="{{ route('purchase_orders.store') }}" method="POST">
+                <form id="po-form" action="{{ route('purchase_orders.store') }}" method="POST">
                     @csrf
                     <div class="card-body">
                         <div class="row">
@@ -980,7 +980,7 @@
         document.getElementById('po_type').dispatchEvent(new Event('change'));
 
         // Warn if any unit price is still 0 before submitting
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.getElementById('po-form').addEventListener('submit', function(e) {
             const zeroPriceInputs = Array.from(document.querySelectorAll('.item-row .price'))
                 .filter(input => parseFloat(input.value) === 0);
             if (zeroPriceInputs.length > 0) {
@@ -1118,7 +1118,7 @@
 
                 // Build form data manually to ensure items are captured
                 const formData = new FormData();
-                const form = document.querySelector('form');
+                const form = document.getElementById('po-form');
 
                 // Add all basic form fields
                 for (const element of form.elements) {
