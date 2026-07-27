@@ -67,6 +67,10 @@
                         </div>
                     </div>
 
+                    @php
+                        $canViewCost = auth()->user() && auth()->user()->hasAnyRole(['accounting', 'warehouse', 'director', 'viewer', 'super_admin']);
+                    @endphp
+
                     <table class="table table-bordered table-striped table-hover" id="stocks-table">
                         <thead>
                             <tr>
@@ -76,6 +80,9 @@
                                 <th>Current Stock</th>
                                 <th>Reorder Level</th>
                                 <th>Status</th>
+                                @if ($canViewCost)
+                                    <th>Unit Cost</th>
+                                @endif
                                 <th>Alternative UOMs</th>
                             </tr>
                         </thead>
@@ -112,6 +119,15 @@
                                             <span class="badge badge-danger">Out of Stock</span>
                                         @endif
                                     </td>
+                                    @if ($canViewCost)
+                                        <td>
+                                            @if ($stock->avg_cost > 0)
+                                                <span class="text-monospace">Rp {{ number_format($stock->avg_cost, 2) }}</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td>
                                         @foreach ($stock->item->itemUoms as $itemUom)
                                             @if ($itemUom->uom_id !== $stock->item->smallest_uom_id)
@@ -215,7 +231,7 @@
                 ], // Sort by item name by default
                 columnDefs: [{
                         orderable: false,
-                        targets: [6]
+                        targets: [7]
                     } // Disable sorting on Alternative UOMs column
                 ],
                 language: {

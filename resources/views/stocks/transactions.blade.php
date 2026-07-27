@@ -130,7 +130,7 @@
                 <div class="card-body">
                     <table class="table table-bordered table-striped">
                         @php
-                            $canViewCost = auth()->user() && auth()->user()->hasAnyRole(['accounting', 'director','viewer', 'super_admin']);
+                            $canViewCost = auth()->user() && auth()->user()->hasAnyRole(['accounting', 'warehouse', 'director', 'viewer', 'super_admin']);
                         @endphp
                         <thead>
                             <tr>
