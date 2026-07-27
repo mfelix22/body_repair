@@ -133,6 +133,7 @@ class ReceivableController extends Controller
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.uom_id' => 'required|exists:uoms,id',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.conversion_to_smallest' => 'required|numeric|min:0.0001',
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
 
@@ -181,6 +182,7 @@ class ReceivableController extends Controller
                 'quantity_ordered' => $remainingQty,
                 'quantity_received' => $receivedQty,
                 'unit_price' => $item['unit_price'],
+                'conversion_to_smallest' => $item['conversion_to_smallest'],
             ];
         }
 
@@ -235,6 +237,7 @@ class ReceivableController extends Controller
                     'quantity_ordered' => $item['quantity_ordered'],
                     'quantity_received' => $item['quantity_received'],
                     'unit_price' => $item['unit_price'],
+                    'conversion_to_smallest' => $item['conversion_to_smallest'],
                 ]);
             }
 
@@ -423,6 +426,7 @@ class ReceivableController extends Controller
             'items.*.uom_id' => 'required|exists:uoms,id',
             'items.*.quantity_ordered' => 'required|numeric|min:0',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.conversion_to_smallest' => 'required|numeric|min:0.0001',
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
 
@@ -454,6 +458,7 @@ class ReceivableController extends Controller
                     'quantity_ordered' => $item['quantity_ordered'],
                     'quantity_received' => $item['quantity_received'],
                     'unit_price' => $item['unit_price'],
+                    'conversion_to_smallest' => $item['conversion_to_smallest'],
                 ]);
             }
 
@@ -562,11 +567,16 @@ class ReceivableController extends Controller
                 $isSmallestUom        = (int) $item->smallest_uom_id === (int) $uom->id;
                 $itemMasterConversion = (float) $itemUom->conversion_to_smallest;
                 $poDetailConversion   = $poDetail ? (float) $poDetail->conversion_to_smallest : 0;
+                $bonInConversion      = (float) ($receivableItem->conversion_to_smallest ?? 0);
+
+                // Warehouse-adjusted conversion (Isi/Kemasan) takes highest priority, then PO detail, then item master.
                 $conversionFactor     = $isSmallestUom
                     ? 1.0
-                    : (($poDetailConversion > 1 && $poDetailConversion !== $itemMasterConversion)
-                        ? $poDetailConversion
-                        : $itemMasterConversion);
+                    : (($bonInConversion > 0 && $bonInConversion !== $itemMasterConversion)
+                        ? $bonInConversion
+                        : (($poDetailConversion > 0 && $poDetailConversion !== $itemMasterConversion)
+                            ? $poDetailConversion
+                            : $itemMasterConversion));
 
                 $quantityInSmallestUom = $receivableItem->quantity_received * $conversionFactor;
 

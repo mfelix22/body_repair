@@ -203,6 +203,7 @@
                                 <th>UOM</th>
                                 <th>Quantity Ordered</th>
                                 <th>Quantity Received</th>
+                                <th>Isi/Kemasan</th>
                                 <th>Unit Price</th>
                                 <th>Variance</th>
                                 <th>In Smallest UOM</th>
@@ -216,7 +217,9 @@
                                         ->itemUoms()
                                         ->where('uom_id', $receivableItem->uom_id)
                                         ->first();
-                                    $conversionFactor = $itemUom ? $itemUom->conversion_to_smallest : 1;
+                                    $conversionFactor = $receivableItem->conversion_to_smallest
+                                        ? (float) $receivableItem->conversion_to_smallest
+                                        : ($itemUom ? (float) $itemUom->conversion_to_smallest : 1);
                                     $quantityInSmallest = $receivableItem->quantity_received * $conversionFactor;
                                 @endphp
                                 <tr>
@@ -224,6 +227,7 @@
                                     <td>{{ $receivableItem->uom->name }} ({{ $receivableItem->uom->code }})</td>
                                     <td>{{ number_format($receivableItem->quantity_ordered, 2) }}</td>
                                     <td><strong>{{ number_format($receivableItem->quantity_received, 2) }}</strong></td>
+                                    <td>{{ number_format($conversionFactor, 4) }}</td>
                                     <td>{{ number_format($receivableItem->unit_price ?? 0, 2) }}</td>
                                     <td>
                                         @if ($variance > 0)

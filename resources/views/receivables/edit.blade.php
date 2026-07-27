@@ -104,6 +104,7 @@
                                     <th>Item</th>
                                     <th>UOM</th>
                                     <th>Quantity Ordered</th>
+                                    <th>Isi/Kemasan <small class="text-muted">(Conversion)</small></th>
                                     <th>Unit Price</th>
                                     <th>Quantity Received <span class="text-danger">*</span></th>
                                     <th>Status</th>
@@ -113,6 +114,12 @@
                                 @foreach ($receivable->items as $index => $item)
                                     @php
                                         $variance = $item->quantity_received - $item->quantity_ordered;
+                                        $itemUomConversion = $item->item->itemUoms
+                                            ->firstWhere('uom_id', $item->uom_id)
+                                            ?->conversion_to_smallest;
+                                        $defaultConversion = (float) ($item->conversion_to_smallest ?? 0) > 1
+                                            ? (float) $item->conversion_to_smallest
+                                            : ((float) ($itemUomConversion ?? 1) ?: 1);
                                     @endphp
                                     <tr>
                                         <td>
@@ -129,6 +136,16 @@
                                             {{ number_format($item->quantity_ordered, 2) }}
                                             <input type="hidden" name="items[{{ $index }}][quantity_ordered]"
                                                 value="{{ $item->quantity_ordered }}">
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[{{ $index }}][conversion_to_smallest]"
+                                                class="form-control @error('items.' . $index . '.conversion_to_smallest') is-invalid @enderror"
+                                                step="0.0001" min="0.0001"
+                                                value="{{ old('items.' . $index . '.conversion_to_smallest', $defaultConversion) }}"
+                                                required>
+                                            @error('items.' . $index . '.conversion_to_smallest')
+                                                <span class="invalid-feedback">{{ $message }}</span>
+                                            @enderror
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][unit_price]"
