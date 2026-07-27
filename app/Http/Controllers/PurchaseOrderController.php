@@ -1207,8 +1207,29 @@ class PurchaseOrderController extends Controller
         // Get data without strict validation for preview
         $poType = $request->input('po_type', 'purchase_order');
         $orderDate = $request->input('order_date', now()->format('Y-m-d'));
-        $supplierName = $request->input('supplier_name', 'Supplier Name');
+        $supplierId = $request->input('supplier_id');
+        $supplierName = $request->input('supplier_name');
+        $supplierAddress = $request->input('supplier_address');
+        $supplierPhone = $request->input('supplier_phone');
+        $supplierContact = $request->input('supplier_contact_person');
+        $bankAccount = $request->input('bank_account');
         $items = $request->input('items', []);
+
+        // Fall back to supplier master data when the form hasn't been filled yet
+        if ($supplierId) {
+            $supplier = Supplier::find($supplierId);
+            if ($supplier) {
+                $supplierName = $supplierName ?: $supplier->name;
+                $supplierAddress = $supplierAddress ?: $supplier->address;
+                $supplierPhone = $supplierPhone ?: $supplier->phone;
+                $supplierContact = $supplierContact ?: $supplier->contact_person;
+                if (! $bankAccount && ($supplier->bank_name || $supplier->bank_account_no)) {
+                    $bankAccount = $supplier->bank_name
+                        . ($supplier->bank_account_no ? ' - ' . $supplier->bank_account_no : '')
+                        . ($supplier->bank_account_name ? ' a.n. ' . $supplier->bank_account_name : '');
+                }
+            }
+        }
 
         if (empty($items)) {
             return back()->with('error', 'Please add at least one item to preview. Items received: ' . json_encode($items));
@@ -1220,16 +1241,16 @@ class PurchaseOrderController extends Controller
         $tempPo->po_type = $poType;
         $tempPo->order_date = \Carbon\Carbon::parse($orderDate);
         $tempPo->expected_delivery_date = $request->input('expected_delivery_date') ? \Carbon\Carbon::parse($request->input('expected_delivery_date')) : null;
-        $tempPo->supplier_name = $supplierName;
-        $tempPo->supplier_address = $request->input('supplier_address');
-        $tempPo->supplier_phone = $request->input('supplier_phone');
-        $tempPo->supplier_contact_person = $request->input('supplier_contact_person');
+        $tempPo->supplier_name = $supplierName ?: 'Supplier Name';
+        $tempPo->supplier_address = $supplierAddress;
+        $tempPo->supplier_phone = $supplierPhone;
+        $tempPo->supplier_contact_person = $supplierContact;
         $tempPo->lokasi_pengerjaan = $request->input('lokasi_pengerjaan');
         $tempPo->lokasi_pengiriman = $request->input('lokasi_pengiriman');
         $tempPo->waktu_pengerjaan = $request->input('waktu_pengerjaan');
         $tempPo->payment_method = $request->input('payment_method');
         $tempPo->pembayaran = $request->input('pembayaran');
-        $tempPo->bank_account = $request->input('bank_account');
+        $tempPo->bank_account = $bankAccount;
         $tempPo->jatuh_tempo = $request->input('jatuh_tempo');
         $tempPo->payment_terms = $request->input('payment_terms');
         $tempPo->notes = $request->input('notes');
