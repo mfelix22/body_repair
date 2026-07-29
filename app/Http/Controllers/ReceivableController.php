@@ -562,21 +562,16 @@ class ReceivableController extends Controller
                     ? $po->details()->where('item_id', $item->id)->where('uom_id', $uom->id)->first()
                     : null;
 
-                // If the received UOM is already the item's smallest UOM, conversion is always 1.
-                // Use == (not ===) to safely compare across int/string casts from DB.
-                $isSmallestUom        = (int) $item->smallest_uom_id === (int) $uom->id;
                 $itemMasterConversion = (float) $itemUom->conversion_to_smallest;
                 $poDetailConversion   = $poDetail ? (float) $poDetail->conversion_to_smallest : 0;
                 $bonInConversion      = (float) ($receivableItem->conversion_to_smallest ?? 0);
 
                 // Warehouse-adjusted conversion (Isi/Kemasan) takes highest priority, then PO detail, then item master.
-                $conversionFactor     = $isSmallestUom
-                    ? 1.0
-                    : (($bonInConversion > 0 && $bonInConversion !== $itemMasterConversion)
-                        ? $bonInConversion
-                        : (($poDetailConversion > 0 && $poDetailConversion !== $itemMasterConversion)
-                            ? $poDetailConversion
-                            : $itemMasterConversion));
+                $conversionFactor     = ($bonInConversion > 0)
+                    ? $bonInConversion
+                    : (($poDetailConversion > 0)
+                        ? $poDetailConversion
+                        : $itemMasterConversion);
 
                 $quantityInSmallestUom = $receivableItem->quantity_received * $conversionFactor;
 
