@@ -143,12 +143,12 @@
         }
 
         .col-sku {
-            width: 10%;
+            width: 8%;
             text-align: center;
         }
 
         .col-desc {
-            width: 44%;
+            width: 28%;
         }
 
         .col-qty {
@@ -157,12 +157,22 @@
         }
 
         .col-unit {
-            width: 10%;
+            width: 8%;
             text-align: center;
         }
 
+        .col-price {
+            width: 12%;
+            text-align: right;
+        }
+
+        .col-total {
+            width: 14%;
+            text-align: right;
+        }
+
         .col-rem {
-            width: 28%;
+            width: 22%;
         }
 
         .empty-row td {
@@ -289,6 +299,8 @@
                 <th class="col-desc">Description</th>
                 <th class="col-qty">Qty</th>
                 <th class="col-unit">Unit</th>
+                <th class="col-price">Unit Price</th>
+                <th class="col-total">Total</th>
                 <th class="col-rem">Remarks</th>
             </tr>
         </thead>
@@ -301,6 +313,8 @@
                         {{ rtrim(rtrim(number_format($receivableItem->quantity_received, 2, '.', ''), '0'), '.') }}
                     </td>
                     <td class="col-unit red center">{{ $receivableItem->uom->code ?? $receivableItem->uom->name }}</td>
+                    <td class="col-price">{{ number_format($receivableItem->unit_price ?? 0, 2) }}</td>
+                    <td class="col-total">{{ number_format(($receivableItem->unit_price ?? 0) * $receivableItem->quantity_received, 2) }}</td>
                     <td class="col-rem"></td>
                 </tr>
             @endforeach
@@ -311,6 +325,8 @@
                     <td class="col-desc"></td>
                     <td class="col-qty"></td>
                     <td class="col-unit"></td>
+                    <td class="col-price"></td>
+                    <td class="col-total"></td>
                     <td class="col-rem"></td>
                 </tr>
             @endfor
