@@ -150,7 +150,7 @@
                                     <label for="lokasi_pengiriman">Lokasi Pengiriman (Delivery Location)</label>
                                     <input type="text" name="lokasi_pengiriman" id="lokasi_pengiriman"
                                         class="form-control" placeholder="e.g., Warehouse A, Kantor Pusat"
-                                        value="{{ old('lokasi_pengiriman', 'Gudang PT Hartono Auto Studio, JL. Demak 166-168 (masuk PT Hartono Raya Motor)') }}">
+                                        value="{{ old('lokasi_pengiriman', 'Jl. Daan Mogot No.99') }}">
                                 </div>
                             </div>
                         </div>
@@ -216,9 +216,11 @@
                                             CBD (Cash Before Delivery)</option>
                                         <option value="dp" {{ old('payment_method') === 'dp' ? 'selected' : '' }}>
                                             DP (Down Payment)</option>
+                                        <option value="cod" {{ old('payment_method') === 'cod' ? 'selected' : '' }}>
+                                            COD (Cash On Delivery)</option>
                                     </select>
                                     <small class="form-text text-muted">
-                                        Credit → selalu Non-Tunai. CBD / DP → pilih Tunai atau Non-Tunai.
+                                        Credit → selalu Non-Tunai. CBD / DP → pilih Tunai atau Non-Tunai. COD → selalu Tunai.
                                     </small>
                                     @error('payment_method')
                                         <span class="invalid-feedback">{{ $message }}</span>
@@ -388,6 +390,31 @@
                             </div>
                         </div>
                         <button type="button" class="btn btn-success btn-sm" id="add-item">Add Item</button>
+
+                        <div class="row mt-4">
+                            <div class="col-md-4 offset-md-8">
+                                <div class="form-group">
+                                    <label for="discount">Diskon (Nominal) <small class="text-muted">bukan persentase</small></label>
+                                    <input type="number" name="discount" id="discount" class="form-control"
+                                        step="0.01" min="0" placeholder="Rp"
+                                        value="{{ old('discount', 0) }}">
+                                </div>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Subtotal:</th>
+                                        <td class="text-right" id="summary-subtotal">Rp 0</td>
+                                    </tr>
+                                    <tr id="summary-discount-row" style="display:none;">
+                                        <th>Diskon:</th>
+                                        <td class="text-right" id="summary-discount" style="color:#c00;">— Rp 0</td>
+                                    </tr>
+                                    <tr style="border-top: 2px solid #333;">
+                                        <th>Total:</th>
+                                        <td class="text-right" id="summary-total"><strong>Rp 0</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="card-footer">
@@ -656,7 +683,21 @@
                 const price = parseFloat(priceInput.value) || 0;
                 const total = qty * price;
                 totalInput.value = total.toFixed(2);
+                updateSummary();
             }
+        }
+
+        function updateSummary() {
+            const subtotal = Array.from(document.querySelectorAll('.item-row .total')).reduce((sum, input) => {
+                return sum + (parseFloat(input.value) || 0);
+            }, 0);
+            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            const total = Math.max(0, subtotal - discount);
+
+            document.getElementById('summary-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            document.getElementById('summary-discount').textContent = '— Rp ' + discount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            document.getElementById('summary-total').innerHTML = '<strong>Rp ' + total.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '</strong>';
+            document.getElementById('summary-discount-row').style.display = discount > 0 ? 'table-row' : 'none';
         }
 
         function handleConversionInput() {
@@ -680,6 +721,7 @@
         function handleRemoveItem(e) {
             if (document.querySelectorAll('.item-row').length > 1) {
                 this.closest('.item-row').remove();
+                updateSummary();
             } else {
                 alert('At least one item is required.');
             }
@@ -1019,6 +1061,12 @@
                 pembayaranSelect.value = 'non_tunai';
                 pembayaranField.style.display = 'none';
                 bankAccountRow.style.display = 'flex';
+            } else if (method === 'cod') {
+                // COD — always Tunai (Cash)
+                pembayaranSelect.value = 'tunai';
+                pembayaranField.style.display = 'none';
+                bankAccountRow.style.display = 'none';
+                pembayaranSelect.required = false;
             } else {
                 // CBD or DP — user picks Tunai / Non-Tunai
                 pembayaranField.style.display = 'block';
@@ -1033,9 +1081,11 @@
 
         paymentMethodSelect.addEventListener('change', updatePaymentFields);
         pembayaranSelect.addEventListener('change', updateBankAccountRow);
+        document.getElementById('discount').addEventListener('input', updateSummary);
 
         // Run on page load (handles old() values on validation fail)
         updatePaymentFields();
+        updateSummary();
     </script>
 @endsection
 

@@ -108,8 +108,9 @@ class PurchaseOrderController extends Controller
             'include_ppn' => 'nullable|boolean',
             'pph_type' => 'nullable|in:none,pph_21,pph_23',
             'waktu_pengerjaan' => 'nullable|string|max:100',
-            'payment_method' => 'required|in:credit,cbd,dp',
+            'payment_method' => 'required|in:credit,cbd,dp,cod',
             'pembayaran' => 'required|in:tunai,non_tunai',
+            'discount' => 'nullable|numeric|min:0',
             'bank_account' => 'nullable|string|max:255',
             'jatuh_tempo' => 'nullable|string|max:100',
             'payment_terms' => 'nullable|string',
@@ -215,7 +216,8 @@ class PurchaseOrderController extends Controller
                 'pph_type'               => $validated['pph_type'] ?? 'none',
                 'waktu_pengerjaan'       => $validated['waktu_pengerjaan'] ?? null,
                 'payment_method'         => $validated['payment_method'],
-                'pembayaran'             => $validated['pembayaran'],
+                'pembayaran'             => $validated['payment_method'] === 'cod' ? 'tunai' : $validated['pembayaran'],
+                'discount'               => $validated['discount'] ?? 0,
                 'bank_account'           => $validated['bank_account'] ?? null,
                 'jatuh_tempo'            => $validated['jatuh_tempo'] ?? null,
                 'payment_terms'          => $validated['payment_terms'] ?? null,
@@ -258,7 +260,9 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            $po->update(['total_amount' => $totalAmount]);
+            $discount = (float) ($validated['discount'] ?? 0);
+            $totalAmount = max(0, $totalAmount - $discount);
+            $po->update(['total_amount' => $totalAmount, 'discount' => $discount]);
 
             // Save misc costs
             if (!empty($validated['misc_costs'])) {
@@ -367,8 +371,9 @@ class PurchaseOrderController extends Controller
             'include_ppn'         => 'nullable|boolean',
             'pph_type'            => 'nullable|in:none,pph_21,pph_23',
             'waktu_pengerjaan'    => 'nullable|string|max:100',
-            'payment_method'      => 'required|in:credit,cbd,dp',
+            'payment_method'      => 'required|in:credit,cbd,dp,cod',
             'pembayaran'          => 'required|in:tunai,non_tunai',
+            'discount'            => 'nullable|numeric|min:0',
             'bank_account'        => 'nullable|string|max:255',
             'jatuh_tempo'         => 'nullable|string|max:100',
             'payment_terms'       => 'nullable|string',
@@ -461,7 +466,8 @@ class PurchaseOrderController extends Controller
                 'pph_type'               => $validated['pph_type'] ?? 'none',
                 'waktu_pengerjaan'       => $validated['waktu_pengerjaan'] ?? null,
                 'payment_method'         => $validated['payment_method'],
-                'pembayaran'             => $validated['pembayaran'],
+                'pembayaran'             => $validated['payment_method'] === 'cod' ? 'tunai' : $validated['pembayaran'],
+                'discount'               => $validated['discount'] ?? 0,
                 'bank_account'           => $validated['bank_account'] ?? null,
                 'jatuh_tempo'            => $validated['jatuh_tempo'] ?? null,
                 'payment_terms'          => $validated['payment_terms'] ?? null,
@@ -480,6 +486,7 @@ class PurchaseOrderController extends Controller
 
                 $purchaseOrder->details()->delete();
                 $totalAmount = 0;
+                $discount = (float) ($validated['discount'] ?? 0);
                 foreach ($validated['items'] as $itemData) {
                     $totalPrice   = $itemData['quantity'] * $itemData['unit_price'];
                     $totalAmount += $totalPrice;
@@ -513,7 +520,8 @@ class PurchaseOrderController extends Controller
                             ->increment('ordered_quantity', $itemData['quantity']);
                     }
                 }
-                $purchaseOrder->update(['total_amount' => $totalAmount]);
+                $totalAmount = max(0, $totalAmount - $discount);
+                $purchaseOrder->update(['total_amount' => $totalAmount, 'discount' => $discount]);
 
                 // Rebuild misc costs
                 $purchaseOrder->miscCosts()->delete();
@@ -1190,7 +1198,7 @@ class PurchaseOrderController extends Controller
 
         $pr->update([
             'status' => 'closed',
-            'cancellation_reason' => 'Auto-closed: all items fully ordered. Last completed PO: '.$purchaseOrder->po_number.'.',
+            'cancellation_reason' => 'Auto-closed: all items fully ordered. Last completed PO: ' . $purchaseOrder->po_number . '.',
         ]);
     }
 
@@ -1249,13 +1257,14 @@ class PurchaseOrderController extends Controller
         $tempPo->lokasi_pengiriman = $request->input('lokasi_pengiriman');
         $tempPo->waktu_pengerjaan = $request->input('waktu_pengerjaan');
         $tempPo->payment_method = $request->input('payment_method');
-        $tempPo->pembayaran = $request->input('pembayaran');
+        $tempPo->pembayaran = $request->input('payment_method') === 'cod' ? 'tunai' : $request->input('pembayaran');
         $tempPo->bank_account = $bankAccount;
         $tempPo->jatuh_tempo = $request->input('jatuh_tempo');
         $tempPo->payment_terms = $request->input('payment_terms');
         $tempPo->notes = $request->input('notes');
         $tempPo->include_ppn = $request->input('include_ppn', false);
         $tempPo->pph_type = $request->input('pph_type', 'none');
+        $tempPo->discount = (float) $request->input('discount', 0);
         $tempPo->status = 'on_progress';
         $tempPo->total_amount = 0;
 
@@ -1288,6 +1297,7 @@ class PurchaseOrderController extends Controller
             $details->push($detail);
         }
         $tempPo->details = $details;
+        $tempPo->total_amount = max(0, $tempPo->total_amount - $tempPo->discount);
 
         // Handle misc costs — use Eloquent-like objects with 'amount' key for ->sum('amount') to work
         $miscCosts = collect();
@@ -1306,7 +1316,7 @@ class PurchaseOrderController extends Controller
         // Generate PDF and return directly
         $pdf = Pdf::loadView('purchase_orders.print', ['purchaseOrder' => $tempPo]);
         $filename = 'PREVIEW-' . $tempPo->po_number . '.pdf';
-        
+
         return $pdf->stream($filename);
     }
 
@@ -1431,8 +1441,19 @@ class PurchaseOrderController extends Controller
         }
 
         // Column widths
-        $colWidths = ['A' => 22, 'B' => 28, 'C' => 14, 'D' => 18, 'E' => 18,
-                      'F' => 6,  'G' => 38, 'H' => 8,  'I' => 8,  'J' => 16, 'K' => 16];
+        $colWidths = [
+            'A' => 22,
+            'B' => 28,
+            'C' => 14,
+            'D' => 18,
+            'E' => 18,
+            'F' => 6,
+            'G' => 38,
+            'H' => 8,
+            'I' => 8,
+            'J' => 16,
+            'K' => 16
+        ];
         foreach ($colWidths as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }

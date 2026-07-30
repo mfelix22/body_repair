@@ -217,10 +217,13 @@
                                             <option value="dp"
                                                 {{ old('payment_method', $purchaseOrder->payment_method) === 'dp' ? 'selected' : '' }}>
                                                 DP (Down Payment)</option>
+                                            <option value="cod"
+                                                {{ old('payment_method', $purchaseOrder->payment_method) === 'cod' ? 'selected' : '' }}>
+                                                COD (Cash On Delivery)</option>
                                         </select>
                                         <small class="form-text text-muted">Credit → selalu Non-Tunai. CBD / DP → pilih
                                             Tunai
-                                            atau Non-Tunai.</small>
+                                            atau Non-Tunai. COD → selalu Tunai.</small>
                                         @error('payment_method')
                                             <span class="invalid-feedback">{{ $message }}</span>
                                         @enderror
@@ -238,6 +241,9 @@
                                     }
                                     if ($existingMethod === 'credit') {
                                         $existingPembayaran = 'non_tunai';
+                                    }
+                                    if ($existingMethod === 'cod') {
+                                        $existingPembayaran = 'tunai';
                                     }
                                     $showBank = $existingPembayaran === 'non_tunai';
                                 @endphp
@@ -477,6 +483,31 @@
                                 style="{{ $purchaseOrder->purchase_request_id ? '' : 'display:none;' }}">
                                 <i class="fas fa-list"></i> Add Item from PR
                             </button>
+
+                            <div class="row mt-4">
+                                <div class="col-md-4 offset-md-8">
+                                    <div class="form-group">
+                                        <label for="discount">Diskon (Nominal) <small class="text-muted">bukan persentase</small></label>
+                                        <input type="number" name="discount" id="discount" class="form-control"
+                                            step="0.01" min="0" placeholder="Rp"
+                                            value="{{ old('discount', $purchaseOrder->discount ?? 0) }}">
+                                    </div>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Subtotal:</th>
+                                            <td class="text-right" id="summary-subtotal">Rp 0</td>
+                                        </tr>
+                                        <tr id="summary-discount-row" style="display:none;">
+                                            <th>Diskon:</th>
+                                            <td class="text-right" id="summary-discount" style="color:#c00;">— Rp 0</td>
+                                        </tr>
+                                        <tr style="border-top: 2px solid #333;">
+                                            <th>Total:</th>
+                                            <td class="text-right" id="summary-total"><strong>Rp 0</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </fieldset>
                     </div>
 
@@ -724,6 +755,20 @@
             const qty = parseFloat(row.querySelector('.qty').value) || 0;
             const price = parseFloat(row.querySelector('.price').value) || 0;
             row.querySelector('.total').value = (qty * price).toFixed(2);
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const subtotal = Array.from(document.querySelectorAll('.item-row .total')).reduce((sum, input) => {
+                return sum + (parseFloat(input.value) || 0);
+            }, 0);
+            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            const total = Math.max(0, subtotal - discount);
+
+            document.getElementById('summary-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            document.getElementById('summary-discount').textContent = '— Rp ' + discount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            document.getElementById('summary-total').innerHTML = '<strong>Rp ' + total.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '</strong>';
+            document.getElementById('summary-discount-row').style.display = discount > 0 ? 'table-row' : 'none';
         }
 
         function handleConversionInput() {
@@ -747,6 +792,7 @@
         function handleRemoveItem() {
             if (document.querySelectorAll('.item-row').length > 1) {
                 this.closest('.item-row').remove();
+                updateSummary();
             } else {
                 alert('At least one item is required.');
             }
@@ -1059,6 +1105,10 @@
                 if (pembayaranSelect) pembayaranSelect.value = 'non_tunai';
                 if (pembayaranField) pembayaranField.style.display = 'none';
                 if (bankAccountRow) bankAccountRow.style.display = 'flex';
+            } else if (method === 'cod') {
+                if (pembayaranSelect) pembayaranSelect.value = 'tunai';
+                if (pembayaranField) pembayaranField.style.display = 'none';
+                if (bankAccountRow) bankAccountRow.style.display = 'none';
             } else {
                 if (pembayaranField) pembayaranField.style.display = 'block';
                 updateBankAccountRow();
@@ -1067,7 +1117,10 @@
 
         if (paymentMethodSelect) paymentMethodSelect.addEventListener('change', updatePaymentFields);
         if (pembayaranSelect) pembayaranSelect.addEventListener('change', updateBankAccountRow);
+        const discountInput = document.getElementById('discount');
+        if (discountInput) discountInput.addEventListener('input', updateSummary);
         updatePaymentFields();
+        updateSummary();
 
         // Warn on zero prices before submit
         const formEl = document.querySelector('form');
