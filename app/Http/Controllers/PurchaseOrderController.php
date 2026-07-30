@@ -174,7 +174,7 @@ class PurchaseOrderController extends Controller
             $now = now();
             $year = $now->format('y');
             $month = $now->month;
-            $companyCode = config('app.company_code', 'HAS.SBY');
+            $companyCode = config('app.company_code', 'HAS.JKT');
 
             $romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
             $romanMonth = $romanNumerals[$month];

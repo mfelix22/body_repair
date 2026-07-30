@@ -20,11 +20,11 @@ return [
     | Company Code
     |--------------------------------------------------------------------------
     |
-    | This value is used in PO number generation (e.g., HAS.SBY)
+    | This value is used in PO number generation (e.g., HAS.JKT)
     |
     */
 
-    'company_code' => env('COMPANY_CODE', 'HAS.SBY'),
+    'company_code' => env('COMPANY_CODE', 'HAS.JKT'),
 
     /*
     |--------------------------------------------------------------------------
