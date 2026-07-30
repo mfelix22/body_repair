@@ -182,20 +182,38 @@ class PurchaseOrderController extends Controller
             $monthStart = $now->clone()->startOfMonth();
             $monthEnd   = $now->clone()->endOfMonth();
 
-            // Lock rows to get accurate sequence inside the transaction
-            $countAllThisMonth = PurchaseOrder::whereBetween('created_at', [$monthStart, $monthEnd])
-                ->lockForUpdate()->count();
-            $poSequence = str_pad($countAllThisMonth + 1, 3, '0', STR_PAD_LEFT);
-            $poNumber   = "{$poSequence}/{$companyCode}/{$romanMonth}/{$year}";
+            // Find the highest existing PO sequence for this company/month/year
+            $lastPo = PurchaseOrder::where('po_number', 'LIKE', "%/{$companyCode}/{$romanMonth}/{$year}")
+                ->orderByRaw('CAST(SUBSTRING_INDEX(po_number, \'/\', 1) AS UNSIGNED) DESC')
+                ->lockForUpdate()
+                ->first();
 
-            $typePrefix = $validated['po_type'] === 'service_order' ? 'J' : 'B';
-            $yearPad    = $now->format('y');
-            $monthPad   = str_pad($month, 2, '0', STR_PAD_LEFT);
-            $countTypeThisMonth = PurchaseOrder::where('po_type', $validated['po_type'])
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->lockForUpdate()->count();
-            $typeSequence = str_pad($countTypeThisMonth + 1, 3, '0', STR_PAD_LEFT);
-            $ppbNumber    = "{$typePrefix}{$yearPad}{$monthPad}{$typeSequence}";
+            $poSequence = 1;
+            if ($lastPo) {
+                $poSequence = ((int) explode('/', $lastPo->po_number)[0]) + 1;
+            }
+            $poNumber = str_pad($poSequence, 3, '0', STR_PAD_LEFT) . "/{$companyCode}/{$romanMonth}/{$year}";
+
+            // PPB/PPJ number should match the linked PR number
+            $ppbNumber = null;
+            if (!empty($validated['purchase_request_id'])) {
+                $linkedPr = PurchaseRequest::find($validated['purchase_request_id']);
+                if ($linkedPr) {
+                    $ppbNumber = $linkedPr->pr_number;
+                }
+            }
+
+            // Fallback only when no PR is linked
+            if (empty($ppbNumber)) {
+                $typePrefix = $validated['po_type'] === 'service_order' ? 'J' : 'B';
+                $yearPad    = $now->format('y');
+                $monthPad   = str_pad($month, 2, '0', STR_PAD_LEFT);
+                $countTypeThisMonth = PurchaseOrder::where('po_type', $validated['po_type'])
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
+                    ->lockForUpdate()->count();
+                $typeSequence = str_pad($countTypeThisMonth + 1, 3, '0', STR_PAD_LEFT);
+                $ppbNumber    = "{$typePrefix}{$yearPad}{$monthPad}{$typeSequence}";
+            }
 
             $po = PurchaseOrder::create([
                 'po_number'              => $poNumber,
