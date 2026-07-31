@@ -589,15 +589,12 @@ class ReceivableController extends Controller
                 if ($hasPO) {
                     // From PO: use the price recorded on the Bon In item (adjusted by warehouse if vendor price changed).
                     // Falls back to the PO detail price for older Bon In records without an item price.
-                    $usesWarehousePrice = $receivableItem->unit_price !== null;
-                    $unitPrice = $usesWarehousePrice
+                    $unitPrice = ($receivableItem->unit_price !== null)
                         ? (float) $receivableItem->unit_price
                         : ($poDetail ? (float) $poDetail->unit_price : 0);
 
                     if ($unitPrice > 0 && $quantityInSmallestUom > 0) {
-                        // Warehouse-adjusted prices are stored raw; do not add PPN.
-                        // Only apply PPN multiplier when falling back to the original PO detail price.
-                        $taxMultiplier = (!$usesWarehousePrice && $po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;
+                        $taxMultiplier = ($po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;
                         $receivedUnitCost = ($unitPrice * $taxMultiplier) / $conversionFactor;
                         $newQuantity = $oldQuantity + $quantityInSmallestUom;
                         $stock->avg_cost = $newQuantity > 0

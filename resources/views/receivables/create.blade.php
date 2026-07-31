@@ -41,6 +41,16 @@
                                         <th>Supplier:</th>
                                         <td>{{ $purchaseOrder->supplier->name ?? $purchaseOrder->supplier_name }}</td>
                                     </tr>
+                                    <tr>
+                                        <th>PPN Included:</th>
+                                        <td>
+                                            @if ($purchaseOrder->include_ppn)
+                                                <span class="badge badge-info">Yes</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
 

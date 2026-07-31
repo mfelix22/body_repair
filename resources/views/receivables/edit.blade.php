@@ -61,6 +61,16 @@
                                             <td>{{ $receivable->purchaseOrder->supplier->name ?? $receivable->purchaseOrder->supplier_name }}
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <th>PPN Included:</th>
+                                            <td>
+                                                @if ($receivable->purchaseOrder->include_ppn)
+                                                    <span class="badge badge-info">Yes</span>
+                                                @else
+                                                    <span class="badge badge-secondary">No</span>
+                                                @endif
+                                            </td>
+                                        </tr>
                                     @else
                                         <tr>
                                             <th>Supplier:</th>

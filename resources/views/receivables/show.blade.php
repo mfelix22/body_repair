@@ -133,6 +133,20 @@
                                     <td>{{ $receivable->received_date->format('M d, Y') }}</td>
                                 </tr>
                                 <tr>
+                                    <th>PPN Included:</th>
+                                    <td>
+                                        @if ($receivable->purchaseOrder && $receivable->purchaseOrder->id)
+                                            @if ($receivable->purchaseOrder->include_ppn)
+                                                <span class="badge badge-info">Yes</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">No PO</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th>Status:</th>
                                     <td>
                                         @if ($receivable->status === 'on_progress')
