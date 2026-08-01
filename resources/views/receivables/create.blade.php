@@ -137,15 +137,8 @@
                                                 <span class="invalid-feedback">{{ $message }}</span>
                                             @enderror
                                         </td>
-                                        <td>
-                                            <input type="number" name="items[{{ $index }}][unit_price]"
-                                                class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
-                                                step="0.01" min="0"
-                                                value="{{ old('items.' . $index . '.unit_price', $detail->unit_price ?? 0) }}"
-                                                required>
-                                            @error('items.' . $index . '.unit_price')
-                                                <span class="invalid-feedback">{{ $message }}</span>
-                                            @enderror
+                                        <td class="text-right">
+                                            {{ number_format($detail->unit_price ?? 0, 2) }}
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"

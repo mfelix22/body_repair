@@ -132,7 +132,6 @@ class ReceivableController extends Controller
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.uom_id' => 'required|exists:uoms,id',
-            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.conversion_to_smallest' => 'required|numeric|min:0.0001',
             'items.*.quantity_received' => 'required|numeric|min:0',
         ]);
@@ -181,7 +180,7 @@ class ReceivableController extends Controller
                 'uom_id' => $item['uom_id'],
                 'quantity_ordered' => $remainingQty,
                 'quantity_received' => $receivedQty,
-                'unit_price' => $item['unit_price'],
+                'unit_price' => $poDetail->unit_price ?? 0,
                 'conversion_to_smallest' => $item['conversion_to_smallest'],
             ];
         }
@@ -418,17 +417,22 @@ class ReceivableController extends Controller
                 ->with('error', 'Only Bon In with on_progress or partial_received status can be updated.');
         }
 
-        $validated = $request->validate([
+        $rules = [
             'received_date' => 'required|date',
             'notes' => 'nullable|string',
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.uom_id' => 'required|exists:uoms,id',
             'items.*.quantity_ordered' => 'required|numeric|min:0',
-            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.conversion_to_smallest' => 'required|numeric|min:0.0001',
             'items.*.quantity_received' => 'required|numeric|min:0',
-        ]);
+        ];
+
+        if (!$receivable->purchase_order_id) {
+            $rules['items.*.unit_price'] = 'required|numeric|min:0';
+        }
+
+        $validated = $request->validate($rules);
 
         DB::beginTransaction();
         try {
@@ -450,14 +454,23 @@ class ReceivableController extends Controller
 
             // Delete old items and create new ones
             $receivable->items()->delete();
+
+            $poDetails = null;
+            if ($receivable->purchase_order_id) {
+                $purchaseOrder = PurchaseOrder::with('details')->findOrFail($receivable->purchase_order_id);
+                $poDetails = $purchaseOrder->details->keyBy(fn ($detail) => $detail->item_id . '-' . $detail->uom_id);
+            }
+
             foreach ($validated['items'] as $item) {
+                $poDetail = $poDetails ? $poDetails->get($item['item_id'] . '-' . $item['uom_id']) : null;
+
                 ReceivableItem::create([
                     'receivable_id' => $receivable->id,
                     'item_id' => $item['item_id'],
                     'uom_id' => $item['uom_id'],
                     'quantity_ordered' => $item['quantity_ordered'],
                     'quantity_received' => $item['quantity_received'],
-                    'unit_price' => $item['unit_price'],
+                    'unit_price' => $poDetail ? $poDetail->unit_price : ($item['unit_price'] ?? 0),
                     'conversion_to_smallest' => $item['conversion_to_smallest'],
                 ]);
             }
@@ -511,6 +524,7 @@ class ReceivableController extends Controller
 
         $receivable->load([
             'purchaseOrder.supplier',
+            'purchaseOrder.details',
             'supplier',
             'items.item',
             'items.uom'
@@ -587,11 +601,8 @@ class ReceivableController extends Controller
 
                 // Calculate average cost
                 if ($hasPO) {
-                    // From PO: use the price recorded on the Bon In item (adjusted by warehouse if vendor price changed).
-                    // Falls back to the PO detail price for older Bon In records without an item price.
-                    $unitPrice = ($receivableItem->unit_price !== null)
-                        ? (float) $receivableItem->unit_price
-                        : ($poDetail ? (float) $poDetail->unit_price : 0);
+                    // From PO: always use the PO detail price so warehouse cannot adjust the unit cost.
+                    $unitPrice = $poDetail ? (float) $poDetail->unit_price : 0;
 
                     if ($unitPrice > 0 && $quantityInSmallestUom > 0) {
                         $taxMultiplier = ($po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;

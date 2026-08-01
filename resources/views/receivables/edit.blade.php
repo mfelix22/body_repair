@@ -158,14 +158,18 @@
                                             @enderror
                                         </td>
                                         <td>
-                                            <input type="number" name="items[{{ $index }}][unit_price]"
-                                                class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
-                                                step="0.01" min="0"
-                                                value="{{ old('items.' . $index . '.unit_price', $item->unit_price ?? 0) }}"
-                                                required>
-                                            @error('items.' . $index . '.unit_price')
-                                                <span class="invalid-feedback">{{ $message }}</span>
-                                            @enderror
+                                            @if ($receivable->purchaseOrder && $receivable->purchaseOrder->id)
+                                                {{ number_format($item->unit_price ?? 0, 2) }}
+                                            @else
+                                                <input type="number" name="items[{{ $index }}][unit_price]"
+                                                    class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
+                                                    step="0.01" min="0"
+                                                    value="{{ old('items.' . $index . '.unit_price', $item->unit_price ?? 0) }}"
+                                                    required>
+                                                @error('items.' . $index . '.unit_price')
+                                                    <span class="invalid-feedback">{{ $message }}</span>
+                                                @enderror
+                                            @endif
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"

@@ -175,6 +175,12 @@
             width: 22%;
         }
 
+        /* Price columns are hidden on the printed page but kept in the code/HTML. */
+        .col-price,
+        .col-total {
+            display: none;
+        }
+
         .empty-row td {
             height: 22px;
         }
@@ -306,6 +312,12 @@
         </thead>
         <tbody>
             @foreach ($receivable->items as $receivableItem)
+                @php
+                    $poDetail = $receivable->purchaseOrder
+                        ? $receivable->purchaseOrder->details->first(fn ($d) => $d->item_id == $receivableItem->item_id && $d->uom_id == $receivableItem->uom_id)
+                        : null;
+                    $unitPrice = $poDetail ? $poDetail->unit_price : ($receivableItem->unit_price ?? 0);
+                @endphp
                 <tr>
                     <td class="col-sku red center">{{ $receivableItem->item->code ?? '-' }}</td>
                     <td class="col-desc red center">{{ $receivableItem->item->name }}</td>
@@ -313,8 +325,8 @@
                         {{ rtrim(rtrim(number_format($receivableItem->quantity_received, 2, '.', ''), '0'), '.') }}
                     </td>
                     <td class="col-unit red center">{{ $receivableItem->uom->code ?? $receivableItem->uom->name }}</td>
-                    <td class="col-price">{{ number_format($receivableItem->unit_price ?? 0, 2) }}</td>
-                    <td class="col-total">{{ number_format(($receivableItem->unit_price ?? 0) * $receivableItem->quantity_received, 2) }}</td>
+                    <td class="col-price">{{ number_format($unitPrice, 2) }}</td>
+                    <td class="col-total">{{ number_format($unitPrice * $receivableItem->quantity_received, 2) }}</td>
                     <td class="col-rem"></td>
                 </tr>
             @endforeach
