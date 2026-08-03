@@ -5,7 +5,6 @@ services:
   # ─── Laravel App (pre-built image from GHCR) ───────────────────────────────────
   app:
     image: ghcr.io/mfelix22/body_repair:main
-    pull_policy: always
     container_name: body_repair_app
     restart: unless-stopped
     ports:
