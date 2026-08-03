@@ -428,10 +428,6 @@ class ReceivableController extends Controller
             'items.*.quantity_received' => 'required|numeric|min:0',
         ];
 
-        if (!$receivable->purchase_order_id) {
-            $rules['items.*.unit_price'] = 'required|numeric|min:0';
-        }
-
         $validated = $request->validate($rules);
 
         DB::beginTransaction();
@@ -458,7 +454,7 @@ class ReceivableController extends Controller
             $poDetails = null;
             if ($receivable->purchase_order_id) {
                 $purchaseOrder = PurchaseOrder::with('details')->findOrFail($receivable->purchase_order_id);
-                $poDetails = $purchaseOrder->details->keyBy(fn ($detail) => $detail->item_id . '-' . $detail->uom_id);
+                $poDetails = $purchaseOrder->details->keyBy(fn($detail) => $detail->item_id . '-' . $detail->uom_id);
             }
 
             foreach ($validated['items'] as $item) {
