@@ -45,11 +45,9 @@
                     <div class="tab-content" id="poTabsContent">
                         {{-- PPB Tab --}}
                         <div class="tab-pane fade show active" id="ppb" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
                                 <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by item name..." style="max-width:240px">
-                                <input type="text" id="ppb-customer-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by customer/supplier name..." style="max-width:240px">
+                                    placeholder="Filter by item name..." style="max-width:320px">
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'purchase_order']) }}"
                                    class="btn btn-sm btn-success ml-2">
                                     <i class="fas fa-file-excel"></i> Export Excel
@@ -74,8 +72,7 @@
                                     <tbody>
                                         @forelse ($purchaseOrders as $po)
                                             <tr
-                                                data-items="{{ strtolower($po->details->pluck('item.name')->filter()->implode(' ')) }}"
-                                                data-supplier="{{ strtolower($po->supplier_name) }}">
+                                                data-items="{{ strtolower($po->details->pluck('item.name')->filter()->implode(' ')) }}">
                                                 <td><strong>{{ $po->po_number }}</strong></td>
                                                 <td>{{ $po->supplier_name }}</td>
                                                 <td>{{ $po->order_date->format('M d, Y') }}</td>
@@ -122,11 +119,9 @@
 
                         {{-- PPJ Tab --}}
                         <div class="tab-pane fade" id="ppj" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
                                 <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by service description..." style="max-width:240px">
-                                <input type="text" id="ppj-customer-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by customer/supplier name..." style="max-width:240px">
+                                    placeholder="Filter by service description..." style="max-width:320px">
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'service_order']) }}"
                                    class="btn btn-sm btn-success ml-2">
                                     <i class="fas fa-file-excel"></i> Export Excel
@@ -151,8 +146,7 @@
                                     <tbody>
                                         @forelse ($serviceOrders as $so)
                                             <tr
-                                                data-items="{{ strtolower($so->details->pluck('service_description')->filter()->implode(' ')) }}"
-                                                data-supplier="{{ strtolower($so->supplier_name) }}">
+                                                data-items="{{ strtolower($so->details->pluck('service_description')->filter()->implode(' ')) }}">
                                                 <td><strong>{{ $so->po_number }}</strong></td>
                                                 <td>{{ $so->supplier_name }}</td>
                                                 <td>{{ $so->order_date->format('M d, Y') }}</td>
@@ -242,38 +236,24 @@
                 };
             }
 
-            // Item and customer/supplier filter: match against data attributes on each <tr>
+            // Item filter: match against data-items attribute on each <tr>
             // Use settings.aoData[dataIndex].nTr to get the correct row node regardless of pagination
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 var tableId = settings.nTable.id;
-                var isPpb = tableId === 'ppb-table';
-
-                var itemInput = isPpb ?
+                var input = tableId === 'ppb-table' ?
                     $('#ppb-item-filter').val() :
                     ($('#ppj-item-filter').val() || '');
-                var customerInput = isPpb ?
-                    $('#ppb-customer-filter').val() :
-                    ($('#ppj-customer-filter').val() || '');
-
+                if (!input) return true;
                 var rowNode = settings.aoData[dataIndex].nTr;
                 if (!rowNode) return true;
-
-                var $row = $(rowNode);
-                if (itemInput) {
-                    var items = ($row.data('items') || '').toLowerCase();
-                    if (items.indexOf(itemInput.toLowerCase()) === -1) return false;
-                }
-                if (customerInput) {
-                    var supplier = ($row.data('supplier') || '').toLowerCase();
-                    if (supplier.indexOf(customerInput.toLowerCase()) === -1) return false;
-                }
-                return true;
+                var items = ($(rowNode).data('items') || '').toLowerCase();
+                return items.indexOf(input.toLowerCase()) !== -1;
             });
 
             // Init PPB table immediately (it's visible on load)
             var ppbTable = $('#ppb-table').DataTable(makeDtConfig());
 
-            $('#ppb-item-filter, #ppb-customer-filter').on('keyup', function() {
+            $('#ppb-item-filter').on('keyup', function() {
                 ppbTable.draw();
             });
 
@@ -281,7 +261,7 @@
             var ppjTable = null;
             $('#ppj-tab').one('shown.bs.tab', function() {
                 ppjTable = $('#ppj-table').DataTable(makeDtConfig());
-                $('#ppj-item-filter, #ppj-customer-filter').on('keyup', function() {
+                $('#ppj-item-filter').on('keyup', function() {
                     ppjTable.draw();
                 });
             });
