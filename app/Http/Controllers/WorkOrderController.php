@@ -14,6 +14,7 @@ use App\Models\ItemUOM;
 use App\Models\Labor;
 use App\Models\Panel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class WorkOrderController extends Controller
@@ -147,7 +148,7 @@ class WorkOrderController extends Controller
             'labor_total'       => 0,
             'material_total'    => 0,
             'grand_total'       => 0,
-            'created_by'        => auth()->id(),
+            'created_by'        => Auth::id(),
         ]);
 
         if (!empty($validated['items'])) {
