@@ -135,10 +135,7 @@
                                             {{ $item->item->name }}
                                             <input type="hidden" name="items[{{ $index }}][item_id]"
                                                 value="{{ $item->item_id }}">
-                                            @if (!$receivable->purchase_order_id)
-                                                <input type="hidden" name="items[{{ $index }}][unit_price]"
-                                                    value="{{ $item->unit_price ?? 0 }}">
-                                            @endif
+
                                         </td>
                                         <td>
                                             {{ $item->uom->name }} ({{ $item->uom->code }})
