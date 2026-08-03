@@ -9,6 +9,7 @@
 @section('page_title', 'Purchase Orders & Service Orders')
 
 @section('content')
+    @php($canViewPrices = \App\Helpers\PermissionHelper::canViewPrices())
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -61,7 +62,7 @@
                                             <th>Supplier</th>
                                             <th>Order Date</th>
                                             <th>Items</th>
-                                            @if (\App\Helpers\PermissionHelper::canViewPrices())
+                                            @if ($canViewPrices)
                                                 <th>Total Amount</th>
                                             @endif
                                             <th>Status</th>
@@ -77,7 +78,7 @@
                                                 <td>{{ $po->supplier_name }}</td>
                                                 <td>{{ $po->order_date->format('M d, Y') }}</td>
                                                 <td>{{ $po->details_count }} items</td>
-                                                @if (\App\Helpers\PermissionHelper::canViewPrices())
+                                                @if ($canViewPrices)
                                                     <td><strong>Rp {{ number_format($po->total_amount, 0, ',', '.') }}</strong></td>
                                                 @endif
                                                 <td>
@@ -108,7 +109,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted">No Purchase Orders found
+                                                <td colspan="{{ $canViewPrices ? 8 : 7 }}" class="text-center text-muted">No Purchase Orders found
                                                 </td>
                                             </tr>
                                         @endforelse
@@ -135,7 +136,7 @@
                                             <th>Supplier</th>
                                             <th>Order Date</th>
                                             <th>Services</th>
-                                            @if (\App\Helpers\PermissionHelper::canViewPrices())
+                                            @if ($canViewPrices)
                                                 <th>Total Amount</th>
                                             @endif
                                             <th>Status</th>
@@ -151,7 +152,7 @@
                                                 <td>{{ $so->supplier_name }}</td>
                                                 <td>{{ $so->order_date->format('M d, Y') }}</td>
                                                 <td>{{ $so->details_count }} services</td>
-                                                @if (\App\Helpers\PermissionHelper::canViewPrices())
+                                                @if ($canViewPrices)
                                                     <td><strong>Rp {{ number_format($so->total_amount, 0, ',', '.') }}</strong></td>
                                                 @endif
                                                 <td>
@@ -182,7 +183,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted">No Service Orders found
+                                                <td colspan="{{ $canViewPrices ? 8 : 7 }}" class="text-center text-muted">No Service Orders found
                                                 </td>
                                             </tr>
                                         @endforelse
@@ -206,6 +207,8 @@
     <script src="{{ asset('admin/plugins/datatables-buttons/js/buttons.html5.min.js') }}"></script>
     <script src="{{ asset('admin/plugins/datatables-buttons/js/buttons.print.min.js') }}"></script>
     <script>
+        var canViewPrices = @json($canViewPrices);
+
         $(document).ready(function() {
             function makeDtConfig() {
                 return {
@@ -230,7 +233,7 @@
                         },
                         {
                             orderable: false,
-                            targets: 7
+                            targets: canViewPrices ? 7 : 6
                         }
                     ]
                 };
