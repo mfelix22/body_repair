@@ -459,6 +459,23 @@ class WorkOrderController extends Controller
             ->with('success', 'Work Order completed successfully. Finance can now create the Invoice.');
     }
 
+    public function cancel(WorkOrder $workOrder)
+    {
+        if (!PermissionHelper::canUpdate('work_orders')) {
+            return PermissionHelper::denyAccess('work_orders', 'update');
+        }
+
+        if ($workOrder->status !== 'on_progress') {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'Only pending Work Orders can be cancelled.');
+        }
+
+        $workOrder->update(['status' => 'cancelled']);
+
+        return redirect()->route('work_orders.index')
+            ->with('success', 'Work Order cancelled successfully.');
+    }
+
     /**
      * Add an extra priced labor to a WO.
      * Allowed while WO has no invoice and no proforma.

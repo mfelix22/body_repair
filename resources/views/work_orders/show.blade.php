@@ -36,6 +36,13 @@
                                         <i class="fas fa-play"></i> Start Work
                                     </button>
                                 </form>
+                                <form action="{{ route('work_orders.cancel', $workOrder) }}" method="POST" class="d-inline"
+                                    onsubmit="return confirm('Cancel this Work Order? This cannot be undone.')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </form>
                             @endif
                         @elseif($workOrder->status === 'in_progress')
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
