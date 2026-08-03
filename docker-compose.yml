@@ -2,11 +2,10 @@ version: '3.8'
 
 services:
 
-  # ─── Laravel App (PHP + Apache) ───────────────────────────────────────────────
+  # ─── Laravel App (pre-built image from GHCR) ───────────────────────────────────
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/mfelix22/body_repair:main
+    pull_policy: always
     container_name: body_repair_app
     restart: unless-stopped
     ports:
