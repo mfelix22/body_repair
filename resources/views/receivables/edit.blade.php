@@ -115,7 +115,6 @@
                                     <th>UOM</th>
                                     <th>Quantity Ordered</th>
                                     <th>Isi/Kemasan <small class="text-muted">(Conversion)</small></th>
-                                    <th>Unit Price</th>
                                     <th>Quantity Received <span class="text-danger">*</span></th>
                                     <th>Status</th>
                                 </tr>
@@ -136,6 +135,10 @@
                                             {{ $item->item->name }}
                                             <input type="hidden" name="items[{{ $index }}][item_id]"
                                                 value="{{ $item->item_id }}">
+                                            @if (!$receivable->purchase_order_id)
+                                                <input type="hidden" name="items[{{ $index }}][unit_price]"
+                                                    value="{{ $item->unit_price ?? 0 }}">
+                                            @endif
                                         </td>
                                         <td>
                                             {{ $item->uom->name }} ({{ $item->uom->code }})
@@ -156,20 +159,6 @@
                                             @error('items.' . $index . '.conversion_to_smallest')
                                                 <span class="invalid-feedback">{{ $message }}</span>
                                             @enderror
-                                        </td>
-                                        <td>
-                                            @if ($receivable->purchaseOrder && $receivable->purchaseOrder->id)
-                                                {{ number_format($item->unit_price ?? 0, 2) }}
-                                            @else
-                                                <input type="number" name="items[{{ $index }}][unit_price]"
-                                                    class="form-control @error('items.' . $index . '.unit_price') is-invalid @enderror"
-                                                    step="0.01" min="0"
-                                                    value="{{ old('items.' . $index . '.unit_price', $item->unit_price ?? 0) }}"
-                                                    required>
-                                                @error('items.' . $index . '.unit_price')
-                                                    <span class="invalid-feedback">{{ $message }}</span>
-                                                @enderror
-                                            @endif
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"

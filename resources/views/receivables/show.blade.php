@@ -218,7 +218,6 @@
                                 <th>Quantity Ordered</th>
                                 <th>Quantity Received</th>
                                 <th>Isi/Kemasan</th>
-                                <th>Unit Price</th>
                                 <th>Variance</th>
                                 <th>In Smallest UOM</th>
                             </tr>
@@ -242,7 +241,6 @@
                                     <td>{{ number_format($receivableItem->quantity_ordered, 2) }}</td>
                                     <td><strong>{{ number_format($receivableItem->quantity_received, 2) }}</strong></td>
                                     <td>{{ number_format($conversionFactor, 4) }}</td>
-                                    <td>{{ number_format($receivableItem->unit_price ?? 0, 2) }}</td>
                                     <td>
                                         @if ($variance > 0)
                                             <span class="text-success">+{{ number_format($variance, 2) }}</span>

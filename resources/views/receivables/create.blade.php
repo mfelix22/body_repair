@@ -94,7 +94,6 @@
                                     <th>UOM</th>
                                     <th>Remaining Quantity</th>
                                     <th>Isi/Kemasan <small class="text-muted">(Conversion)</small></th>
-                                    <th>Unit Price</th>
                                     <th>Quantity Received <span class="text-danger">*</span></th>
                                 </tr>
                             </thead>
@@ -136,9 +135,6 @@
                                             @error('items.' . $index . '.conversion_to_smallest')
                                                 <span class="invalid-feedback">{{ $message }}</span>
                                             @enderror
-                                        </td>
-                                        <td class="text-right">
-                                            {{ number_format($detail->unit_price ?? 0, 2) }}
                                         </td>
                                         <td>
                                             <input type="number" name="items[{{ $index }}][quantity_received]"

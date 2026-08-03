@@ -305,19 +305,11 @@
                 <th class="col-desc">Description</th>
                 <th class="col-qty">Qty</th>
                 <th class="col-unit">Unit</th>
-                <th class="col-price">Unit Price</th>
-                <th class="col-total">Total</th>
                 <th class="col-rem">Remarks</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($receivable->items as $receivableItem)
-                @php
-                    $poDetail = $receivable->purchaseOrder
-                        ? $receivable->purchaseOrder->details->first(fn ($d) => $d->item_id == $receivableItem->item_id && $d->uom_id == $receivableItem->uom_id)
-                        : null;
-                    $unitPrice = $poDetail ? $poDetail->unit_price : ($receivableItem->unit_price ?? 0);
-                @endphp
                 <tr>
                     <td class="col-sku red center">{{ $receivableItem->item->code ?? '-' }}</td>
                     <td class="col-desc red center">{{ $receivableItem->item->name }}</td>
@@ -325,8 +317,6 @@
                         {{ rtrim(rtrim(number_format($receivableItem->quantity_received, 2, '.', ''), '0'), '.') }}
                     </td>
                     <td class="col-unit red center">{{ $receivableItem->uom->code ?? $receivableItem->uom->name }}</td>
-                    <td class="col-price">{{ number_format($unitPrice, 2) }}</td>
-                    <td class="col-total">{{ number_format($unitPrice * $receivableItem->quantity_received, 2) }}</td>
                     <td class="col-rem"></td>
                 </tr>
             @endforeach
@@ -337,8 +327,6 @@
                     <td class="col-desc"></td>
                     <td class="col-qty"></td>
                     <td class="col-unit"></td>
-                    <td class="col-price"></td>
-                    <td class="col-total"></td>
                     <td class="col-rem"></td>
                 </tr>
             @endfor
