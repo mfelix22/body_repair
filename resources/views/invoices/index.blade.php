@@ -63,7 +63,7 @@
                         @endif
                     </form>
 
-                    <table class="table table-bordered table-striped">
+                    <table id="invoices-table" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>Invoice #</th>
@@ -163,6 +163,13 @@
 
     @push('scripts')
         <script>
+            $(function() {
+                $('#invoices-table').DataTable({
+                    order: [[2, 'desc']],
+                    pageLength: 25,
+                });
+            });
+
             $('#cancelModal').on('show.bs.modal', function(e) {
                 var btn = $(e.relatedTarget);
                 var url = btn.data('cancel-url');
