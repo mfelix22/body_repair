@@ -17,6 +17,7 @@ use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\LaborController;
+use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\BonOutController;
@@ -196,6 +197,8 @@ Route::middleware('auth')->group(function () {
     Route::get('labors/template', [LaborController::class, 'downloadTemplate'])->name('labors.template');
     Route::post('labors/import', [LaborController::class, 'import'])->name('labors.import');
     Route::resource('labors', LaborController::class)->except(['show']);
+    // Insurance Master
+    Route::resource('insurances', InsuranceController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
 
 
     // Invoices

@@ -289,7 +289,7 @@
 
     {{-- ===== INFO SECTION ===== --}}
     @php
-        $accountLabels = ['C' => 'CASH', 'INT_WS' => 'INTERNAL WS', 'INT_W3' => 'INTERNAL W3'];
+        $accountLabels = ['C' => 'CASH', 'INT_WS' => 'INTERNAL WS', 'INT_W3' => 'INTERNAL W3', 'ASURANSI' => 'ASURANSI'];
         $accountDisplay = $accountLabels[$workOrder->account_code ?? 'C'] ?? $workOrder->account_code;
 
         $monthsId = [
@@ -356,6 +356,13 @@
                         <td>:</td>
                         <td class="val">{{ $accountDisplay }}</td>
                     </tr>
+                    @if ($workOrder->account_code === 'ASURANSI')
+                        <tr>
+                            <td>Insurance Name</td>
+                            <td>:</td>
+                            <td class="val">{{ $workOrder->insurance?->name ?? '-' }}</td>
+                        </tr>
+                    @endif
                     <tr>
                         <td>Customer Name</td>
                         <td>:</td>
@@ -453,13 +460,13 @@
         </tbody>
     </table>
 
-    {{-- ===== LABOR TABLE ===== --}}
+    {{-- ===== PANEL TABLE ===== --}}
     @if ($baseLabors->isNotEmpty())
     <table class="section-table">
         <thead>
             <tr>
-                <td style="width:15%">Labor Code</td>
-                <td style="width:45%">Labor</td>
+                <td style="width:15%">Panel Code</td>
+                <td style="width:45%">Panel</td>
                 <td style="width:10%;text-align:center;">Qty</td>
                 <td style="width:15%;text-align:right;">Rate</td>
                 <td style="width:15%;text-align:right;">Total</td>
@@ -479,13 +486,13 @@
     </table>
     @endif
 
-    {{-- ===== EXTRA LABOR TABLE (only if any) ===== --}}
+    {{-- ===== EXTRA PANEL TABLE (only if any) ===== --}}
     @if ($extraLabors->isNotEmpty())
     <table class="section-table">
         <thead>
             <tr>
-                <td style="width:15%">Labor Code</td>
-                <td style="width:45%">Extra Labor</td>
+                <td style="width:15%">Panel Code</td>
+                <td style="width:45%">Extra Panel</td>
                 <td style="width:10%;text-align:center;">Qty</td>
                 <td style="width:15%;text-align:right;">Rate</td>
                 <td style="width:15%;text-align:right;">Total</td>

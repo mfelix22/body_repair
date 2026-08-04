@@ -94,19 +94,16 @@ class EstimasiController extends Controller
 
         $validated = $request->validate([
             'work_order_id' => 'required|exists:work_orders,id',
-            'discount_percentage' => 'required|numeric|min:0|max:100',
+            'discount_percentage_panel' => 'required|numeric|min:0|max:100',
+            'discount_percentage_sparepart' => 'required|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        $pct = (float) $validated['discount_percentage'];
-
-        $approverErrors = $this->validateApproversExist($pct);
-        if (!empty($approverErrors)) {
-            return back()->withInput()->withErrors($approverErrors);
-        }
+        $panelPct     = (float) $validated['discount_percentage_panel'];
+        $sparepartPct = (float) $validated['discount_percentage_sparepart'];
 
         try {
-            $estimasi = DB::transaction(function () use ($validated, $user, $pct) {
+            $estimasi = DB::transaction(function () use ($validated, $user, $panelPct, $sparepartPct) {
                 $wo = WorkOrder::lockForUpdate()->findOrFail($validated['work_order_id']);
 
                 if (!in_array($wo->status, ['on_progress', 'in_progress'])) {
@@ -116,40 +113,58 @@ class EstimasiController extends Controller
                 $seq = $wo->estimasis()->count() + 1;
                 $estimasiNumber = $wo->wo_number . '/EST-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
-                $subtotal    = (float) $wo->grand_total + $wo->sparepartTotal();
-                $discountAmt = round($subtotal * $pct / 100, 2);
-                $total       = $subtotal - $discountAmt;
+                $panelSubtotal     = (float) $wo->grand_total;
+                $sparepartSubtotal = $wo->sparepartTotal();
+                $subtotal          = $panelSubtotal + $sparepartSubtotal;
 
-                if ($pct <= 0) {
-                    return Estimasi::create([
-                        'estimasi_number'      => $estimasiNumber,
-                        'work_order_id'        => $wo->id,
-                        'created_by'           => $user->id,
-                        'subtotal'             => $subtotal,
-                        'discount_percentage'  => 0,
-                        'discount_amount'      => 0,
-                        'total'                => $subtotal,
-                        'status'               => 'no_discount',
-                        'approvals_required'   => 0,
-                        'notes'                => $validated['notes'] ?? null,
+                $panelDiscountAmt     = round($panelSubtotal * $panelPct / 100, 2);
+                $sparepartDiscountAmt = round($sparepartSubtotal * $sparepartPct / 100, 2);
+                $discountAmt          = $panelDiscountAmt + $sparepartDiscountAmt;
+                $total                = $subtotal - $discountAmt;
+
+                // Blended percentage of the overall subtotal — used only to decide
+                // the approval tier (single approval flow, 1 or 2 sequential approvers).
+                $blendedPct = $subtotal > 0 ? round($discountAmt / $subtotal * 100, 2) : 0;
+
+                $approverErrors = $this->validateApproversExist($blendedPct);
+                if (!empty($approverErrors)) {
+                    throw new \RuntimeException(reset($approverErrors));
+                }
+
+                $baseAttributes = [
+                    'estimasi_number'              => $estimasiNumber,
+                    'work_order_id'                => $wo->id,
+                    'created_by'                   => $user->id,
+                    'subtotal'                     => $subtotal,
+                    'panel_subtotal'                => $panelSubtotal,
+                    'panel_discount_percentage'     => $panelPct,
+                    'panel_discount_amount'         => $panelDiscountAmt,
+                    'sparepart_subtotal'            => $sparepartSubtotal,
+                    'sparepart_discount_percentage' => $sparepartPct,
+                    'sparepart_discount_amount'     => $sparepartDiscountAmt,
+                    'notes'                         => $validated['notes'] ?? null,
+                ];
+
+                if ($blendedPct <= 0) {
+                    return Estimasi::create($baseAttributes + [
+                        'discount_percentage' => 0,
+                        'discount_amount'     => 0,
+                        'total'               => $subtotal,
+                        'status'              => 'no_discount',
+                        'approvals_required'  => 0,
                     ]);
                 }
 
                 $approvers = $this->getApprovers();
 
-                return Estimasi::create([
-                    'estimasi_number'     => $estimasiNumber,
-                    'work_order_id'       => $wo->id,
-                    'created_by'          => $user->id,
-                    'subtotal'            => $subtotal,
-                    'discount_percentage' => $pct,
+                return Estimasi::create($baseAttributes + [
+                    'discount_percentage' => $blendedPct,
                     'discount_amount'     => $discountAmt,
                     'total'               => $total,
                     'status'              => 'pending_approval',
-                    'approvals_required'  => $pct <= 20 ? 1 : 2,
+                    'approvals_required'  => $blendedPct <= 20 ? 1 : 2,
                     'approver1_id'        => $approvers['manager']->id,
-                    'approver2_id'        => $pct > 20 ? $approvers['director']->id : null,
-                    'notes'               => $validated['notes'] ?? null,
+                    'approver2_id'        => $blendedPct > 20 ? $approvers['director']->id : null,
                 ]);
             });
         } catch (\RuntimeException $e) {

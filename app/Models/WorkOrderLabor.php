@@ -18,13 +18,18 @@ class WorkOrderLabor extends Model
         'rate',
         'total_price',
         'is_extra',
+        'is_three_coat',
+        'is_special_repair',
     ];
 
     protected $casts = [
-        'qty'         => 'decimal:2',
-        'hours'       => 'decimal:2',
-        'rate'        => 'decimal:2',
-        'total_price' => 'decimal:2',
+        'qty'               => 'decimal:2',
+        'hours'             => 'decimal:2',
+        'rate'              => 'decimal:2',
+        'total_price'       => 'decimal:2',
+        'is_extra'          => 'boolean',
+        'is_three_coat'     => 'boolean',
+        'is_special_repair' => 'boolean',
     ];
 
     public function workOrder(): BelongsTo

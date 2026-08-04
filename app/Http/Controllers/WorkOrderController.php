@@ -12,6 +12,7 @@ use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\Labor;
+use App\Models\Insurance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -49,8 +50,9 @@ class WorkOrderController extends Controller
             ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
         $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
+        $insurances   = Insurance::where('is_active', true)->orderBy('name')->get();
 
-        return view('work_orders.create', compact('customers', 'items', 'completedWos', 'masterLabors'));
+        return view('work_orders.create', compact('customers', 'items', 'completedWos', 'masterLabors', 'insurances'));
     }
 
     public function store(Request $request)
@@ -64,6 +66,7 @@ class WorkOrderController extends Controller
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
             'account_code'         => 'required|in:C,INT_WS,INT_W3,ASURANSI',
+            'insurance_id'         => 'required_if:account_code,ASURANSI|nullable|exists:insurances,id',
             'reference_wo_id'      => 'nullable|exists:work_orders,id',
             'work_date'            => 'required|date',
             'deadline'             => 'nullable|date',
@@ -85,6 +88,8 @@ class WorkOrderController extends Controller
             'labors.*.labor_id'    => 'nullable|exists:labors,id',
             'labors.*.qty'         => 'nullable|numeric|min:0.01',
             'labors.*.remarks'     => 'nullable|string',
+            'labors.*.is_three_coat'     => 'nullable|boolean',
+            'labors.*.is_special_repair' => 'nullable|boolean',
         ]);
 
         $priceTier = $validated['vehicle_price_tier'] ?? null;
@@ -125,6 +130,7 @@ class WorkOrderController extends Controller
             'billing_customer_id'  => $validated['billing_customer_id'] ?? null,
             'vehicle_id'           => $vehicleId,
             'account_code'      => $validated['account_code'],
+            'insurance_id'      => $validated['insurance_id'] ?? null,
             'work_date'         => $validated['work_date'],
             'deadline'          => $validated['deadline'] ?? null,
             'vehicle_info'      => $validated['vehicle_info'] ?? null,
@@ -165,7 +171,10 @@ class WorkOrderController extends Controller
                 }
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
+                $isThreeCoat = (bool) ($laborData['is_three_coat'] ?? false);
+                $isSpecialRepair = (bool) ($laborData['is_special_repair'] ?? false);
                 $rate = self::getLaborRateForTier($labor, $priceTier);
+                $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
@@ -176,6 +185,8 @@ class WorkOrderController extends Controller
                     'total_price'   => $totalPrice,
                     'remarks'       => $laborData['remarks'] ?? null,
                     'is_extra'      => false,
+                    'is_three_coat'     => $isThreeCoat,
+                    'is_special_repair' => $isSpecialRepair,
                 ]);
             }
         }
@@ -219,9 +230,10 @@ class WorkOrderController extends Controller
             ->orderBy('work_date', 'desc')
             ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
+        $insurances   = Insurance::where('is_active', true)->orderBy('name')->get();
         $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors'));
+        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors', 'insurances'));
     }
 
     public function update(Request $request, WorkOrder $workOrder)
@@ -257,6 +269,8 @@ class WorkOrderController extends Controller
             'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
             'labors.*.remarks'        => 'nullable|string',
+            'labors.*.is_three_coat'     => 'nullable|boolean',
+            'labors.*.is_special_repair' => 'nullable|boolean',
         ]);
 
         $priceTier = $validated['vehicle_price_tier'] ?? null;
@@ -286,6 +300,7 @@ class WorkOrderController extends Controller
             'billing_customer_id'  => $validated['billing_customer_id'] ?? null,
             'vehicle_id'           => $vehicleId,
             'account_code'      => $validated['account_code'],
+            'insurance_id'      => $validated['insurance_id'] ?? null,
             'work_date'         => $validated['work_date'],
             'deadline'          => $validated['deadline'] ?? null,
             'vehicle_info'      => $validated['vehicle_info'] ?? null,
@@ -330,7 +345,10 @@ class WorkOrderController extends Controller
                 }
                 $labor = Labor::findOrFail($laborData['labor_id']);
                 $qty = (float) ($laborData['qty'] ?? 1);
+                $isThreeCoat = (bool) ($laborData['is_three_coat'] ?? false);
+                $isSpecialRepair = (bool) ($laborData['is_special_repair'] ?? false);
                 $rate = self::getLaborRateForTier($labor, $priceTier);
+                $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $workOrder->id,
@@ -341,6 +359,8 @@ class WorkOrderController extends Controller
                     'total_price'   => $totalPrice,
                     'remarks'       => $laborData['remarks'] ?? null,
                     'is_extra'      => false,
+                    'is_three_coat'     => $isThreeCoat,
+                    'is_special_repair' => $isSpecialRepair,
                 ]);
             }
         }
@@ -520,6 +540,27 @@ class WorkOrderController extends Controller
             '800_2000' => (float) ($labor->price_800_2000 ?? $labor->price ?? 0),
             default    => (float) ($labor->price ?? 0),
         };
+    }
+
+    /** Flat surcharge added to the panel rate when "Three Coat/Candy" is ticked. */
+    public const THREE_COAT_SURCHARGE = 1250000.0;
+
+    /** Multiplier applied to the panel rate when "Special Repair" is ticked. */
+    public const SPECIAL_REPAIR_MULTIPLIER = 1.5;
+
+    /**
+     * Apply the "Three Coat/Candy" (+Rp 1.250.000) and "Special Repair" (x1.5)
+     * surcharges chosen by the Service Advisor for a panel to its base rate.
+     */
+    public static function applyPanelSurcharges(float $rate, bool $isThreeCoat, bool $isSpecialRepair): float
+    {
+        if ($isSpecialRepair) {
+            $rate *= self::SPECIAL_REPAIR_MULTIPLIER;
+        }
+        if ($isThreeCoat) {
+            $rate += self::THREE_COAT_SURCHARGE;
+        }
+        return $rate;
     }
 
     public function destroy(WorkOrder $workOrder)

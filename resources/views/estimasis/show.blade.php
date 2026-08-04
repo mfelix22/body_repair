@@ -174,15 +174,45 @@
                     <h6 class="font-weight-bold mt-4">Pricing Summary</h6>
                     <table class="table table-bordered table-sm" style="max-width:450px;">
                         <tr>
+                            <th>Panel Subtotal</th>
+                            <td class="text-right">Rp {{ number_format($estimasi->panel_subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Panel Discount</th>
+                            <td class="text-right text-danger">
+                                @if ($estimasi->panel_discount_amount > 0 && $estimasi->status !== 'rejected')
+                                    — Rp {{ number_format($estimasi->panel_discount_amount, 0, ',', '.') }}
+                                    <small class="text-muted">({{ number_format($estimasi->panel_discount_percentage, 2) }}%)</small>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Sparepart Subtotal</th>
+                            <td class="text-right">Rp {{ number_format($estimasi->sparepart_subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sparepart Discount</th>
+                            <td class="text-right text-danger">
+                                @if ($estimasi->sparepart_discount_amount > 0 && $estimasi->status !== 'rejected')
+                                    — Rp {{ number_format($estimasi->sparepart_discount_amount, 0, ',', '.') }}
+                                    <small class="text-muted">({{ number_format($estimasi->sparepart_discount_percentage, 2) }}%)</small>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
                             <th>WO Subtotal</th>
                             <td class="text-right">Rp {{ number_format($estimasi->subtotal, 0, ',', '.') }}</td>
                         </tr>
                         <tr>
-                            <th>Discount</th>
+                            <th>Total Discount</th>
                             <td class="text-right text-danger">
                                 @if ($estimasi->discount_amount > 0 && $estimasi->status !== 'rejected')
                                     — Rp {{ number_format($estimasi->discount_amount, 0, ',', '.') }}
-                                    <small class="text-muted">({{ number_format($estimasi->discount_percentage, 2) }}%)</small>
+                                    <small class="text-muted">({{ number_format($estimasi->discount_percentage, 2) }}% blended)</small>
                                 @else
                                     <span class="text-muted">—</span>
                                 @endif

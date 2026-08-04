@@ -188,7 +188,16 @@
                                             <a href="{{ route('labors.index') }}"
                                                 class="nav-link {{ request()->routeIs('labors.*') ? 'active' : '' }}">
                                                 <i class="fas fa-wrench nav-icon"></i>
-                                                <p>Labor</p>
+                                                <p>Panel</p>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if (\App\Helpers\PermissionHelper::canView('insurances'))
+                                        <li class="nav-item">
+                                            <a href="{{ route('insurances.index') }}"
+                                                class="nav-link {{ request()->routeIs('insurances.*') ? 'active' : '' }}">
+                                                <i class="fas fa-shield-alt nav-icon"></i>
+                                                <p>Insurances</p>
                                             </a>
                                         </li>
                                     @endif

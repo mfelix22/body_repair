@@ -296,6 +296,15 @@ class PermissionHelper
                 'accounting'      => 'read',
                 'viewer'          => 'read',
             ],
+            'insurances' => [
+                'service_advisor' => 'crud',
+                'director'        => 'crud',
+                'manager'         => 'crud',
+                'audit'           => 'read',
+                'finance'         => 'read',
+                'accounting'      => 'read',
+                'viewer'          => 'read',
+            ],
             'suppliers' => [
                 'purchasing' => 'crud',
                 'director' => 'crud',

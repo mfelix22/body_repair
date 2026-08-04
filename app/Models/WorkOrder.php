@@ -15,6 +15,7 @@ class WorkOrder extends Model
         'billing_customer_id',
         'vehicle_id',
         'account_code',
+        'insurance_id',
         'reference_wo_id',
         'work_date',
         'deadline',
@@ -53,6 +54,11 @@ class WorkOrder extends Model
     public function referenceWo(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class, 'reference_wo_id');
+    }
+
+    public function insurance(): BelongsTo
+    {
+        return $this->belongsTo(Insurance::class);
     }
 
     public function customer(): BelongsTo

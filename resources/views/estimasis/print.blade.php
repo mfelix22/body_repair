@@ -308,6 +308,10 @@
         $subtotal = (float) $estimasi->subtotal;
         $discountPercentage = (float) ($estimasi->discount_percentage ?? 0);
         $discountAmount = $estimasi->status === 'approved' ? (float) ($estimasi->discount_amount ?? 0) : 0;
+        $panelDiscountPercentage = (float) ($estimasi->panel_discount_percentage ?? 0);
+        $panelDiscountAmount = $estimasi->status === 'approved' ? (float) ($estimasi->panel_discount_amount ?? 0) : 0;
+        $sparepartDiscountPercentage = (float) ($estimasi->sparepart_discount_percentage ?? 0);
+        $sparepartDiscountAmount = $estimasi->status === 'approved' ? (float) ($estimasi->sparepart_discount_amount ?? 0) : 0;
         $grandTotal = $estimasi->status === 'approved' ? (float) $estimasi->total : $subtotal;
 
         $basePanels  = $wo->panelLabors->where('is_extra', false);
@@ -575,14 +579,24 @@
                         <td><strong>Subtotal</strong></td>
                         <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
-                    @if ($discountAmount > 0)
+                    @if ($panelDiscountAmount > 0)
                         <tr>
                             <td>
-                                <strong>Discount</strong>
-                                <small class="text-muted">({{ number_format($discountPercentage, 2) }}%)</small>
+                                <strong>Discount Panel</strong>
+                                <small class="text-muted">({{ number_format($panelDiscountPercentage, 2) }}%)</small>
                             </td>
                             <td class="text-right" style="color:#c00;">
-                                — Rp {{ number_format($discountAmount, 0, ',', '.') }}</td>
+                                — Rp {{ number_format($panelDiscountAmount, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($sparepartDiscountAmount > 0)
+                        <tr>
+                            <td>
+                                <strong>Discount Sparepart</strong>
+                                <small class="text-muted">({{ number_format($sparepartDiscountPercentage, 2) }}%)</small>
+                            </td>
+                            <td class="text-right" style="color:#c00;">
+                                — Rp {{ number_format($sparepartDiscountAmount, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     <tr class="grand-total">

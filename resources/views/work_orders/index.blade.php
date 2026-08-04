@@ -28,7 +28,7 @@
                                 <th>Nomor Polisi</th>
                                 <th>Work Date</th>
                                 <th>Items</th>
-                                <th>Labor</th>
+                                <th>Panel</th>
                                 <th>Total</th>
                                 <th>Status</th>
                                 <th>Actions</th>

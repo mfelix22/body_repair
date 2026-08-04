@@ -61,6 +61,23 @@
                                     </select>
                                 </div>
 
+                                <div class="form-group" id="insurance_group" style="display:none;">
+                                    <label for="insurance_id">Nama Asuransi <span class="text-danger">*</span></label>
+                                    <select name="insurance_id" id="insurance_id"
+                                        class="form-control select2 @error('insurance_id') is-invalid @enderror">
+                                        <option value="">-- Pilih Asuransi --</option>
+                                        @foreach ($insurances as $insurance)
+                                            <option value="{{ $insurance->id }}"
+                                                {{ old('insurance_id', $workOrder->insurance_id) == $insurance->id ? 'selected' : '' }}>
+                                                {{ $insurance->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('insurance_id')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
                                 {{-- Reference WO (visible only when INT_W3) --}}
                                 <div class="form-group" id="reference_wo_group" style="display:none;">
                                     <label for="reference_wo_id">Reference Work Order <span
@@ -193,19 +210,19 @@
                                 </div>
                             </div>
 
-                            {{-- Col 3: Labor + Tier + Price Summary --}}
+                            {{-- Col 3: Panel + Tier + Price Summary --}}
                             <div class="col-md-4">
-                                <h6><i class="fas fa-wrench"></i> Labor</h6>
-                                <p class="text-muted small mb-2">Pilih pekerjaan umum yang dikerjakan.</p>
+                                <h6><i class="fas fa-wrench"></i> Panel</h6>
+                                <p class="text-muted small mb-2">Pilih panel yang dikerjakan.</p>
 
                                 <div id="labors-container">
                                     @foreach ($workOrder->generalLabors->where('is_extra', false) as $index => $labor)
                                         <div class="labor-row card mb-2 border-left-info">
                                             <div class="card-body py-2">
                                                 <div class="form-group mb-1">
-                                                    <label class="mb-1"><strong>Labor</strong></label>
+                                                    <label class="mb-1"><strong>Panel</strong></label>
                                                     <select name="labors[{{ $index }}][labor_id]" class="form-control form-control-sm labor-select">
-                                                        <option value="">-- Pilih Labor --</option>
+                                                        <option value="">-- Pilih Panel --</option>
                                                         @foreach ($masterLabors as $ml)
                                                             <option value="{{ $ml->id }}"
                                                                 data-price="{{ $ml->price }}"
@@ -233,6 +250,20 @@
                                                         <input type="text" class="form-control form-control-sm labor-total-display" readonly value="{{ $labor->total_price ? number_format($labor->total_price, 0, ',', '.') : '' }}">
                                                     </div>
                                                 </div>
+                                                <div class="row mt-1">
+                                                    <div class="col-6">
+                                                        <div class="custom-control custom-checkbox">
+                                                            <input type="checkbox" class="custom-control-input labor-three-coat" id="three_coat_{{ $index }}" name="labors[{{ $index }}][is_three_coat]" value="1" {{ $labor->is_three_coat ? 'checked' : '' }}>
+                                                            <label class="custom-control-label small" for="three_coat_{{ $index }}">Three Coat/Candy (+Rp 1.250.000)</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="custom-control custom-checkbox">
+                                                            <input type="checkbox" class="custom-control-input labor-special-repair" id="special_repair_{{ $index }}" name="labors[{{ $index }}][is_special_repair]" value="1" {{ $labor->is_special_repair ? 'checked' : '' }}>
+                                                            <label class="custom-control-label small" for="special_repair_{{ $index }}">Special Repair (x1.5)</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <div class="text-right mt-1">
                                                     <button type="button" class="btn btn-danger btn-xs remove-labor"><i class="fas fa-trash"></i></button>
                                                 </div>
@@ -241,7 +272,7 @@
                                     @endforeach
                                 </div>
                                 <button type="button" class="btn btn-info btn-sm mb-3" id="add-labor">
-                                    <i class="fas fa-plus"></i> Tambah Labor
+                                    <i class="fas fa-plus"></i> Tambah Panel
                                 </button>
 
                                 <div class="form-group">
@@ -257,7 +288,7 @@
                                     @error('vehicle_price_tier')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
-                                    <small class="text-muted">Menentukan tarif untuk semua labor di atas.</small>
+                                    <small class="text-muted">Menentukan tarif untuk semua panel di atas.</small>
                                 </div>
 
                                 @php
@@ -266,7 +297,7 @@
                                 <div id="labor_price_summary" style="{{ $baseLaborTotal > 0 ? '' : 'display:none;' }}">
                                     <table class="table table-sm table-bordered mb-0">
                                         <tr>
-                                            <td>Total Labor</td>
+                                            <td>Total Panel</td>
                                             <td class="text-right"><strong id="display_labor_total">Rp {{ number_format($baseLaborTotal, 0, ',', '.') }}</strong></td>
                                         </tr>
                                         <tr class="table-success">
@@ -278,6 +309,58 @@
 
                             </div>
                         </div>
+
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6><i class="fas fa-cogs"></i> Pergantian Sparepart</h6>
+                                    <p class="text-muted small mb-2">Pilih sparepart yang akan diganti.</p>
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Pergantian Sparepart</th>
+                                                <th style="width: 130px;">Harga Satuan</th>
+                                                <th style="width: 80px;">Qty</th>
+                                                <th style="width: 130px;">Jumlah</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="items-container">
+                                            @foreach ($workOrder->items as $index => $woItem)
+                                                @php
+                                                    $item = $items->firstWhere('id', $woItem->item_id);
+                                                    $price = optional($item?->stocks->where('location', 'default')->first())->avg_cost ?? 0;
+                                                    $lineTotal = $price * $woItem->demand_quantity;
+                                                @endphp
+                                                <tr class="item-row">
+                                                    <td>
+                                                        <select name="items[{{ $index }}][item_id]" class="form-control form-control-sm item-select">
+                                                            <option value=""></option>
+                                                            @foreach ($items->where('item_type', 'SP') as $item)
+                                                                <option value="{{ $item->id }}"
+                                                                    data-uom="{{ optional($item->smallestUom)->name ?? '-' }}"
+                                                                    data-stock="{{ optional($item->stocks->where('location', 'default')->first())->quantity ?? 0 }}"
+                                                                    data-price="{{ optional($item->stocks->where('location', 'default')->first())->avg_cost ?? 0 }}"
+                                                                    {{ $woItem->item_id == $item->id ? 'selected' : '' }}>
+                                                                    {{ $item->code }} — {{ $item->name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
+                                                    <td><input type="text" class="form-control form-control-sm item-price text-right" readonly value="{{ $price ? number_format($price, 0, ',', '.') : '0' }}"></td>
+                                                    <td><input type="number" name="items[{{ $index }}][demand_quantity]" class="form-control form-control-sm item-qty text-right" step="0.01" min="0.01" value="{{ $woItem->demand_quantity }}"></td>
+                                                    <td><input type="text" class="form-control form-control-sm item-total text-right" readonly value="{{ $lineTotal ? number_format($lineTotal, 0, ',', '.') : '0' }}"></td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-danger btn-xs remove-item"><i class="fas fa-trash"></i></button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                    <button type="button" class="btn btn-warning btn-sm mb-3" id="add-sparepart">
+                                        <i class="fas fa-plus"></i> Tambah Sparepart
+                                    </button>
+                                </div>
+                            </div>
 
                     </div>
 
@@ -314,11 +397,16 @@
             return parseFloat(opt.dataset.price) || 0;
         }
 
+        const THREE_COAT_SURCHARGE = 1250000;
+        const SPECIAL_REPAIR_MULTIPLIER = 1.5;
+
         function updateRowTotal(row, tierKey) {
             const select = row.querySelector('.labor-select');
             const qtyInput = row.querySelector('.labor-qty');
             const rateInput = row.querySelector('.labor-rate');
             const totalInput = row.querySelector('.labor-total-display');
+            const threeCoatInput = row.querySelector('.labor-three-coat');
+            const specialRepairInput = row.querySelector('.labor-special-repair');
             if (!select || !qtyInput) return 0;
 
             if (!select.value) {
@@ -328,7 +416,9 @@
             }
 
             const opt = select.options[select.selectedIndex];
-            const price = getPriceFromOption(opt, tierKey);
+            let price = getPriceFromOption(opt, tierKey);
+            if (specialRepairInput && specialRepairInput.checked) price *= SPECIAL_REPAIR_MULTIPLIER;
+            if (threeCoatInput && threeCoatInput.checked) price += THREE_COAT_SURCHARGE;
             const qty = parseFloat(qtyInput.value) || 0;
             const rowTotal = price * qty;
             if (rateInput) rateInput.value = price;
@@ -364,6 +454,7 @@
         // Build item options HTML
         @php
             $itemsFormatted = $items->map(function ($item) {
+                $defaultStock = $item->stocks->where('location', 'default')->first();
                 $stock = (float) $item->stocks->sum('quantity');
                 $stockFormatted = $stock == floor($stock) ? number_format($stock, 0, '', '') : rtrim(rtrim(number_format($stock, 2, '.', ''), '0'), '.');
                 return [
@@ -371,6 +462,7 @@
                     'code' => $item->code,
                     'name' => $item->name,
                     'stock' => $stockFormatted,
+                    'price' => (float) (optional($defaultStock)->avg_cost ?? 0),
                     'smallest_uom' => $item->smallestUom,
                 ];
             });
@@ -379,11 +471,11 @@
 
         function buildItemOptions(selectedItemId = null) {
             const sid = (selectedItemId !== null && selectedItemId !== undefined) ? String(selectedItemId) : '';
-            let html = '<option value="">Select Item (Optional)</option>';
+            let html = '<option value="">Pilih Sparepart</option>';
             itemsData.forEach(item => {
                 const isSelected = sid !== '' && String(item.id) === sid;
                 html +=
-                    `<option value="${item.id}" data-stock="${item.stock}" data-uom="${item.smallest_uom?.code || '-'}" data-code="${item.code}" ${isSelected ? 'selected' : ''}>[${item.code}] ${item.name}</option>`;
+                    `<option value="${item.id}" data-stock="${item.stock}" data-uom="${item.smallest_uom?.code || '-'}" data-price="${item.price}" data-code="${item.code}" ${isSelected ? 'selected' : ''}>[${item.code}] ${item.name}</option>`;
             });
             return html;
         }
@@ -391,49 +483,48 @@
         // Stub - will be overridden once jQuery/Select2 are loaded
         function initItemSelect2() {}
 
-        const addItemBtn = document.getElementById('add-item');
+        function updateItemRow(row, selectedOpt = null) {
+            const select = row.querySelector('.item-select');
+            let price = 0;
+            if (selectedOpt && selectedOpt.dataset.price) {
+                price = parseFloat(selectedOpt.dataset.price) || 0;
+            } else if (select && select.value) {
+                const opt = select.querySelector('option[value="' + select.value + '"]');
+                if (opt && opt.dataset.price) {
+                    price = parseFloat(opt.dataset.price) || 0;
+                }
+            }
+            const qtyInput = row.querySelector('.item-qty');
+            const qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
+            const priceInput = row.querySelector('.item-price');
+            const totalInput = row.querySelector('.item-total');
+            if (priceInput) priceInput.value = price ? price.toLocaleString('id-ID') : '0';
+            if (totalInput) totalInput.value = (price * qty) ? (price * qty).toLocaleString('id-ID') : '0';
+        }
+
+        const addItemBtn = document.getElementById('add-sparepart');
         if (addItemBtn) addItemBtn.addEventListener('click', function() {
             const container = document.getElementById('items-container');
             const itemOptions = buildItemOptions();
 
-            const newItemRow = document.createElement('div');
-            newItemRow.className = 'item-row card mb-2 border-left-primary';
+            const newItemRow = document.createElement('tr');
+            newItemRow.className = 'item-row';
             newItemRow.innerHTML = `
-                <div class="card-body py-2">
-                    <div class="row align-items-center">
-                        <div class="col-md-4">
-                            <div class="form-group mb-0">
-                                <label><strong>Item</strong></label>
-                                <select name="items[${itemIndex}][item_id]" class="form-control item-select">
-                                    ${itemOptions}
-                                </select>
-                                <small class="form-text text-muted item-stock"></small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group mb-0">
-                                <label><strong>Qty</strong></label>
-                                <div class="input-group">
-                                    <input type="number" name="items[${itemIndex}][demand_quantity]" class="form-control qty" step="0.01" min="0.01" placeholder="0.00">
-                                    <div class="input-group-append"><span class="input-group-text uom-display">-</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group mb-0">
-                                <label><strong>Remark</strong></label>
-                                <input type="text" name="items[${itemIndex}][remark]" class="form-control" placeholder="e.g., Bundling HRM, WIP 39780">
-                            </div>
-                        </div>
-                        <div class="col-md-2 mt-3">
-                            <button type="button" class="btn btn-danger btn-sm remove-item"><i class="fas fa-trash"></i> Remove</button>
-                        </div>
-                    </div>
-                </div>`;
+                <td>
+                    <select name="items[${itemIndex}][item_id]" class="form-control form-control-sm item-select">
+                        ${itemOptions}
+                    </select>
+                </td>
+                <td><input type="text" class="form-control form-control-sm item-price text-right" readonly></td>
+                <td><input type="number" name="items[${itemIndex}][demand_quantity]" class="form-control form-control-sm item-qty text-right" step="0.01" min="0.01" value="1"></td>
+                <td><input type="text" class="form-control form-control-sm item-total text-right" readonly></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-xs remove-item"><i class="fas fa-trash"></i></button>
+                </td>`;
             container.appendChild(newItemRow);
             itemIndex++;
-            attachItemListeners();
             initItemSelect2();
+            updateItemRow(newItemRow);
         });
 
         const addLaborBtn = document.getElementById('add-labor');
@@ -444,9 +535,9 @@
             newLaborRow.innerHTML = `
                 <div class="card-body py-2">
                     <div class="form-group mb-1">
-                        <label class="mb-1"><strong>Labor</strong></label>
+                        <label class="mb-1"><strong>Panel</strong></label>
                         <select name="labors[${laborIndex}][labor_id]" class="form-control form-control-sm labor-select">
-                            <option value="">-- Pilih Labor --</option>
+                            <option value="">-- Pilih Panel --</option>
                             @foreach ($masterLabors as $ml)
                                 <option value="{{ $ml->id }}"
                                     data-price="{{ $ml->price }}"
@@ -469,6 +560,20 @@
                         <div class="col-4">
                             <label class="mb-1 small"><strong>Total</strong></label>
                             <input type="text" class="form-control form-control-sm labor-total-display" readonly>
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input labor-three-coat" id="three_coat_${laborIndex}" name="labors[${laborIndex}][is_three_coat]" value="1">
+                                <label class="custom-control-label small" for="three_coat_${laborIndex}">Three Coat/Candy (+Rp 1.250.000)</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input labor-special-repair" id="special_repair_${laborIndex}" name="labors[${laborIndex}][is_special_repair]" value="1">
+                                <label class="custom-control-label small" for="special_repair_${laborIndex}">Special Repair (x1.5)</label>
+                            </div>
                         </div>
                     </div>
                     <div class="text-right mt-1">
@@ -497,12 +602,25 @@
             if (e.target.classList.contains('labor-qty')) {
                 updatePriceDisplay();
             }
+            if (e.target.classList.contains('item-qty')) {
+                const row = e.target.closest('.item-row');
+                if (row) updateItemRow(row);
+            }
+        });
+
+        // Event delegation for the Three Coat/Candy & Special Repair checkboxes
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('labor-three-coat') || e.target.classList.contains('labor-special-repair')) {
+                updatePriceDisplay();
+            }
         });
 
         attachLaborListeners();
 
         function attachItemListeners() {
-            document.querySelectorAll('.item-select').forEach(select => {
+            documentryS.querySelector('.item-stock').textContente=ctor.valle ?
+                        `Stock: ${o(t.'.iastm.stock} ${opt.datas-t.uos}` : '';
+                    rle.quetySelect'r('.uom-display').textContentf= orE.dataset.uom || '-'ch(select => {
                 select.onchange = function() {
                     const row = this.closest('.item-row');
                     const opt = this.options[this.selectedIndex];
@@ -553,6 +671,12 @@
                 $('#reference_wo_group').hide();
                 $('#reference_wo_id').val('');
             }
+            if (accountCode === 'ASURANSI') {
+                $('#insurance_group').show();
+            } else {
+                $('#insurance_group').hide();
+                $('#insurance_id').val('');
+            }
         }
 
         $('#account_code').on('change', function() {
@@ -565,16 +689,13 @@
                 if (!$(this).hasClass('select2-hidden-accessible')) {
                     const savedVal = $(this).val();
                     $(this).select2({
-                        placeholder: 'Select Item (Optional)',
+                        placeholder: 'Pilih Sparepart',
                         allowClear: true,
                         theme: 'bootstrap4',
                         width: '100%'
                     }).on('change', function() {
                         const row = this.closest('.item-row');
-                        const opt = this.options[this.selectedIndex];
-                        row.querySelector('.item-stock').textContent = opt.value ?
-                            'Stock: ' + (opt.dataset.stock || '0') + ' ' + (opt.dataset.uom || '') : '';
-                        row.querySelector('.uom-display').textContent = opt.dataset.uom || '-';
+                        if (row) updateItemRow(row);
                     });
                     if (savedVal) {
                         $(this).val(savedVal).trigger('change');

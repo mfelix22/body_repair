@@ -273,7 +273,7 @@
                                 @endif
                                 @if ($laborTotal > 0)
                                     <tr>
-                                        <th>Total Labor:</th>
+                                        <th>Total Panel:</th>
                                         <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
@@ -285,7 +285,7 @@
                                 @endif
                                 @if ($extraLabor > 0)
                                     <tr>
-                                        <th>Extra Labor:</th>
+                                        <th>Extra Panel:</th>
                                         <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
@@ -345,6 +345,7 @@
                                     <th class="text-center">Qty</th>
                                     <th class="text-right">Rate (Rp)</th>
                                     <th class="text-right">Total (Rp)</th>
+                                    <th>Flags</th>
                                     <th>Remarks</th>
                                 </tr>
                             </thead>
@@ -356,6 +357,14 @@
                                         <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
                                         <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
                                         <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>
+                                            @if ($wol->is_three_coat)
+                                                <span class="badge badge-info">Three Coat/Candy</span>
+                                            @endif
+                                            @if ($wol->is_special_repair)
+                                                <span class="badge badge-warning">Special Repair</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $wol->remarks ?? '-' }}</td>
                                     </tr>
                                 @endforeach
@@ -367,17 +376,18 @@
 
                     {{-- Base Labors --}}
                     <div class="d-flex align-items-center mb-2 mt-3">
-                        <h6 class="mb-0">Labor yang Dikerjakan</h6>
+                        <h6 class="mb-0">Panel yang Dikerjakan</h6>
                     </div>
                     @if ($baseLabors->isNotEmpty())
                         <table class="table table-striped table-bordered">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Code</th>
-                                    <th>Labor</th>
+                                    <th>Panel</th>
                                     <th class="text-center">Qty</th>
                                     <th class="text-right">Rate (Rp)</th>
                                     <th class="text-right">Total (Rp)</th>
+                                    <th>Flags</th>
                                     <th>Remarks</th>
                                 </tr>
                             </thead>
@@ -389,22 +399,30 @@
                                         <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
                                         <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
                                         <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>
+                                            @if ($wol->is_three_coat)
+                                                <span class="badge badge-info">Three Coat/Candy</span>
+                                            @endif
+                                            @if ($wol->is_special_repair)
+                                                <span class="badge badge-warning">Special Repair</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $wol->remarks ?? '-' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     @else
-                        <p class="text-muted">Belum ada labor.</p>
+                        <p class="text-muted">Belum ada panel.</p>
                     @endif
 
-                    {{-- Extra Labors --}}
+                    {{-- Extra Panels --}}
                     <div class="d-flex align-items-center mb-2 mt-3">
-                        <h6 class="mb-0 mr-3">Extra Labor</h6>
+                        <h6 class="mb-0 mr-3">Extra Panel</h6>
                         @if ($canAddLabor)
                             <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
                                 data-target="#addLaborModal">
-                                <i class="fas fa-plus"></i> Add Extra Labor
+                                <i class="fas fa-plus"></i> Add Extra Panel
                             </button>
                         @endif
                     </div>
@@ -436,7 +454,7 @@
                                             <td>
                                                 <form action="{{ route('work_orders.remove_labor', [$workOrder, $wol]) }}"
                                                     method="POST" class="d-inline"
-                                                    onsubmit="return confirm('Remove this extra labor?')">
+                                                    onsubmit="return confirm('Remove this extra panel?')">
                                                     @csrf @method('DELETE')
                                                     <button class="btn btn-danger btn-xs"><i class="fas fa-times"></i></button>
                                                 </form>
@@ -449,7 +467,7 @@
                             @if ($totalExtraLabor > 0)
                                 <tfoot>
                                     <tr class="table-success">
-                                        <td colspan="{{ $canAddLabor ? 4 : 3 }}" class="text-right font-weight-bold">Extra Labor Total:</td>
+                                        <td colspan="{{ $canAddLabor ? 4 : 3 }}" class="text-right font-weight-bold">Extra Panel Total:</td>
                                         <td class="text-right font-weight-bold">{{ number_format($totalExtraLabor, 0, ',', '.') }}</td>
                                         <td colspan="2"></td>
                                     </tr>
@@ -457,7 +475,7 @@
                             @endif
                         </table>
                     @else
-                        <p class="text-muted">Tidak ada extra labor.</p>
+                        <p class="text-muted">Tidak ada extra panel.</p>
                     @endif
                 </div>
             </div>
@@ -581,7 +599,7 @@
         </div>
     @endif
 
-    {{-- ===== ADD LABOR MODAL ===== --}}
+    {{-- ===== ADD PANEL MODAL ===== --}}
     @if ($canAddLabor)
         <div class="modal fade" id="addLaborModal" tabindex="-1" role="dialog">
             <div class="modal-dialog" role="document">
@@ -589,7 +607,7 @@
                     <form action="{{ route('work_orders.add_labor', $workOrder) }}" method="POST">
                         @csrf
                         <div class="modal-header">
-                            <h5 class="modal-title"><i class="fas fa-hard-hat"></i> Add Extra Labor to
+                            <h5 class="modal-title"><i class="fas fa-hard-hat"></i> Add Extra Panel to
                                 {{ $workOrder->wo_number }}</h5>
                             <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                         </div>
@@ -599,9 +617,9 @@
                             @endif
 
                             <div class="form-group">
-                                <label>Labor <span class="text-danger">*</span></label>
+                                <label>Panel <span class="text-danger">*</span></label>
                                 <select name="labor_id" id="laborSelect" class="form-control select2" required>
-                                    <option value="">— Pilih Labor —</option>
+                                    <option value="">— Pilih Panel —</option>
                                     @foreach ($masterLabors as $ml)
                                         <option value="{{ $ml->id }}"
                                             data-price="{{ (float) $ml->price }}"

@@ -45,6 +45,23 @@
                                         @enderror
                                     </div>
 
+                                    <div class="form-group" id="insurance_group" style="display:none;">
+                                        <label for="insurance_id">Nama Asuransi <span class="text-danger">*</span></label>
+                                        <select name="insurance_id" id="insurance_id"
+                                            class="form-control select2 @error('insurance_id') is-invalid @enderror">
+                                            <option value="">-- Pilih Asuransi --</option>
+                                            @foreach ($insurances as $insurance)
+                                                <option value="{{ $insurance->id }}"
+                                                    {{ old('insurance_id') == $insurance->id ? 'selected' : '' }}>
+                                                    {{ $insurance->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('insurance_id')
+                                            <span class="invalid-feedback">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+
                                     {{-- Reference WO (visible only when INT_W3) --}}
                                     <div class="form-group" id="reference_wo_group" style="display:none;">
                                         <label for="reference_wo_id">Reference Work Order <span
@@ -195,18 +212,18 @@
                                     </div>
                                 </div>
 
-                                {{-- Col 3: Labor + Tier + Price Summary --}}
+                                {{-- Col 3: Panel + Tier + Price Summary --}}
                                 <div class="col-md-4">
-                                <h6><i class="fas fa-wrench"></i> Labor</h6>
-                                <p class="text-muted small mb-2">Pilih pekerjaan umum yang dikerjakan.</p>
+                                <h6><i class="fas fa-wrench"></i> Panel</h6>
+                                <p class="text-muted small mb-2">Pilih panel yang dikerjakan.</p>
 
                                 <div id="labors-container">
                                     <div class="labor-row card mb-2 border-left-info">
                                         <div class="card-body py-2">
                                             <div class="form-group mb-1">
-                                                <label class="mb-1"><strong>Labor</strong></label>
+                                                <label class="mb-1"><strong>Panel</strong></label>
                                                 <select name="labors[0][labor_id]" class="form-control form-control-sm labor-select">
-                                                    <option value="">-- Pilih Labor --</option>
+                                                    <option value="">-- Pilih Panel --</option>
                                                     @foreach ($masterLabors as $ml)
                                                         <option value="{{ $ml->id }}"
                                                             data-price="{{ $ml->price }}"
@@ -233,6 +250,20 @@
                                                     <input type="text" class="form-control form-control-sm labor-total-display" readonly>
                                                 </div>
                                             </div>
+                                            <div class="row mt-1">
+                                                <div class="col-6">
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input labor-three-coat" id="three_coat_0" name="labors[0][is_three_coat]" value="1">
+                                                        <label class="custom-control-label small" for="three_coat_0">Three Coat/Candy (+Rp 1.250.000)</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input labor-special-repair" id="special_repair_0" name="labors[0][is_special_repair]" value="1">
+                                                        <label class="custom-control-label small" for="special_repair_0">Special Repair (x1.5)</label>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="text-right mt-1">
                                                 <button type="button" class="btn btn-danger btn-xs remove-labor"><i class="fas fa-trash"></i></button>
                                             </div>
@@ -240,7 +271,7 @@
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-info btn-sm mb-3" id="add-labor">
-                                    <i class="fas fa-plus"></i> Tambah Labor
+                                    <i class="fas fa-plus"></i> Tambah Panel
                                 </button>
 
                                 <div class="form-group">
@@ -256,13 +287,13 @@
                                     @error('vehicle_price_tier')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
-                                    <small class="text-muted">Menentukan tarif untuk semua labor di atas.</small>
+                                    <small class="text-muted">Menentukan tarif untuk semua panel di atas.</small>
                                 </div>
 
                                 <div id="labor_price_summary" style="display:none;">
                                     <table class="table table-sm table-bordered mb-0">
                                         <tr>
-                                            <td>Total Labor</td>
+                                            <td>Total Panel</td>
                                             <td class="text-right"><strong id="display_labor_total">Rp 0</strong></td>
                                         </tr>
                                         <tr class="table-success">
@@ -355,11 +386,16 @@
                 return parseFloat(opt.dataset.price) || 0;
             }
 
+            const THREE_COAT_SURCHARGE = 1250000;
+            const SPECIAL_REPAIR_MULTIPLIER = 1.5;
+
             function updateRowTotal(row, tierKey) {
                 const select = row.querySelector('.labor-select');
                 const qtyInput = row.querySelector('.labor-qty');
                 const rateInput = row.querySelector('.labor-rate');
                 const totalInput = row.querySelector('.labor-total-display');
+                const threeCoatInput = row.querySelector('.labor-three-coat');
+                const specialRepairInput = row.querySelector('.labor-special-repair');
                 if (!select || !qtyInput) return 0;
 
                 if (!select.value) {
@@ -369,7 +405,9 @@
                 }
 
                 const opt = select.options[select.selectedIndex];
-                const price = getPriceFromOption(opt, tierKey);
+                let price = getPriceFromOption(opt, tierKey);
+                if (specialRepairInput && specialRepairInput.checked) price *= SPECIAL_REPAIR_MULTIPLIER;
+                if (threeCoatInput && threeCoatInput.checked) price += THREE_COAT_SURCHARGE;
                 const qty = parseFloat(qtyInput.value) || 0;
                 const rowTotal = price * qty;
                 if (rateInput) rateInput.value = price;
@@ -415,9 +453,9 @@
                 newRow.innerHTML = `
                 <div class="card-body py-2">
                     <div class="form-group mb-1">
-                        <label class="mb-1"><strong>Labor</strong></label>
+                        <label class="mb-1"><strong>Panel</strong></label>
                         <select name="labors[${laborIndex}][labor_id]" class="form-control form-control-sm labor-select">
-                            <option value="">-- Pilih Labor --</option>
+                            <option value="">-- Pilih Panel --</option>
                             @foreach ($masterLabors as $ml)
                                 <option value="{{ $ml->id }}"
                                     data-price="{{ $ml->price }}"
@@ -440,6 +478,20 @@
                         <div class="col-4">
                             <label class="mb-1 small"><strong>Total</strong></label>
                             <input type="text" class="form-control form-control-sm labor-total-display" readonly>
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input labor-three-coat" id="three_coat_${laborIndex}" name="labors[${laborIndex}][is_three_coat]" value="1">
+                                <label class="custom-control-label small" for="three_coat_${laborIndex}">Three Coat/Candy (+Rp 1.250.000)</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input labor-special-repair" id="special_repair_${laborIndex}" name="labors[${laborIndex}][is_special_repair]" value="1">
+                                <label class="custom-control-label small" for="special_repair_${laborIndex}">Special Repair (x1.5)</label>
+                            </div>
                         </div>
                     </div>
                     <div class="text-right mt-1">
@@ -547,6 +599,13 @@
                 }
             });
 
+            // Event delegation for the Three Coat/Candy & Special Repair checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('labor-three-coat') || e.target.classList.contains('labor-special-repair')) {
+                    updatePriceDisplay();
+                }
+            });
+
             attachLaborListeners();
 
             // ===== STRIP BLANK ROWS BEFORE SUBMIT =====
@@ -633,6 +692,12 @@
                 } else {
                     $('#reference_wo_group').hide();
                     $('#reference_wo_id').val('');
+                }
+                if (accountCode === 'ASURANSI') {
+                    $('#insurance_group').show();
+                } else {
+                    $('#insurance_group').hide();
+                    $('#insurance_id').val('');
                 }
             }
 

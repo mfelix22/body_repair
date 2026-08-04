@@ -47,26 +47,54 @@
                             </tr>
                         </table>
 
-                        <div class="form-group">
-                            <label for="discount_percentage">Discount (%)</label>
-                            <input type="number" step="0.01" min="0" max="100" name="discount_percentage"
-                                id="discount_percentage" class="form-control" value="{{ old('discount_percentage', 0) }}"
-                                data-subtotal="{{ $estimasiSubtotal }}">
-                            <small class="form-text text-muted">
-                                Leave at 0 for a plain estimate with no discount (no approval required).<br>
-                                &le; 20% requires <strong>Manager</strong> approval only.
-                                &gt; 20% requires <strong>Manager + Director</strong> approval.
-                            </small>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="discount_percentage_panel">Discount Panel (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" name="discount_percentage_panel"
+                                    id="discount_percentage_panel" class="form-control"
+                                    value="{{ old('discount_percentage_panel', 0) }}"
+                                    data-subtotal="{{ $workOrder->grand_total }}">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="discount_percentage_sparepart">Discount Sparepart (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" name="discount_percentage_sparepart"
+                                    id="discount_percentage_sparepart" class="form-control"
+                                    value="{{ old('discount_percentage_sparepart', 0) }}"
+                                    data-subtotal="{{ $sparepartTotal }}">
+                            </div>
                         </div>
+                        <small class="form-text text-muted mb-3 d-block">
+                            Leave both at 0 for a plain estimate with no discount (no approval required).<br>
+                            Overall discount &le; 20% of the Work Order Total requires <strong>Manager</strong> approval only.
+                            &gt; 20% requires <strong>Manager + Director</strong> approval.
+                        </small>
 
                         <table class="table table-bordered table-sm" style="max-width:420px;">
+                            <tr>
+                                <th>Panel Subtotal</th>
+                                <td class="text-right" id="preview-panel-subtotal">
+                                    Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Panel Discount</th>
+                                <td class="text-right text-danger" id="preview-panel-discount">Rp 0</td>
+                            </tr>
+                            <tr>
+                                <th>Sparepart Subtotal</th>
+                                <td class="text-right" id="preview-sparepart-subtotal">
+                                    Rp {{ number_format($sparepartTotal, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Sparepart Discount</th>
+                                <td class="text-right text-danger" id="preview-sparepart-discount">Rp 0</td>
+                            </tr>
                             <tr>
                                 <th>Subtotal</th>
                                 <td class="text-right" id="preview-subtotal">
                                     Rp {{ number_format($estimasiSubtotal, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <th>Discount Amount</th>
+                                <th>Total Discount</th>
                                 <td class="text-right text-danger" id="preview-discount">Rp 0</td>
                             </tr>
                             <tr class="font-weight-bold">
@@ -96,24 +124,41 @@
 @push('scripts')
     <script>
         (function() {
-            const input = document.getElementById('discount_percentage');
-            const subtotal = parseFloat(input.dataset.subtotal) || 0;
+            const panelInput = document.getElementById('discount_percentage_panel');
+            const sparepartInput = document.getElementById('discount_percentage_sparepart');
+            const panelSubtotal = parseFloat(panelInput.dataset.subtotal) || 0;
+            const sparepartSubtotal = parseFloat(sparepartInput.dataset.subtotal) || 0;
 
             function fmt(n) {
                 return 'Rp ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             }
 
-            function update() {
-                let pct = parseFloat(input.value) || 0;
+            function clampPct(v) {
+                let pct = parseFloat(v) || 0;
                 if (pct < 0) pct = 0;
                 if (pct > 100) pct = 100;
-                const discount = Math.round(subtotal * pct / 100);
+                return pct;
+            }
+
+            function update() {
+                const panelPct = clampPct(panelInput.value);
+                const sparepartPct = clampPct(sparepartInput.value);
+
+                const panelDiscount = Math.round(panelSubtotal * panelPct / 100);
+                const sparepartDiscount = Math.round(sparepartSubtotal * sparepartPct / 100);
+
+                const subtotal = panelSubtotal + sparepartSubtotal;
+                const discount = panelDiscount + sparepartDiscount;
                 const total = subtotal - discount;
+
+                document.getElementById('preview-panel-discount').textContent = fmt(panelDiscount);
+                document.getElementById('preview-sparepart-discount').textContent = fmt(sparepartDiscount);
                 document.getElementById('preview-discount').textContent = fmt(discount);
                 document.getElementById('preview-total').textContent = fmt(total);
             }
 
-            input.addEventListener('input', update);
+            panelInput.addEventListener('input', update);
+            sparepartInput.addEventListener('input', update);
             update();
         })();
     </script>
