@@ -183,6 +183,15 @@
                                             </a>
                                         </li>
                                     @endif
+                                    @if (\App\Helpers\PermissionHelper::canView('labors'))
+                                        <li class="nav-item">
+                                            <a href="{{ route('labors.index') }}"
+                                                class="nav-link {{ request()->routeIs('labors.*') ? 'active' : '' }}">
+                                                <i class="fas fa-wrench nav-icon"></i>
+                                                <p>Labor</p>
+                                            </a>
+                                        </li>
+                                    @endif
                                     @if (\App\Helpers\PermissionHelper::canView('uoms'))
                                         <li class="nav-item">
                                             <a href="{{ route('uoms.index') }}"

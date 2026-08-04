@@ -677,8 +677,12 @@
                                 if (uomEl) {
                                     uomEl.textContent = opt.dataset.uom || '-';
                                 }
+                                updateItemRow(row);
                             }
                         });
+
+                        const currentRow = $(selects[i]).closest('.item-row')[0];
+                        if (currentRow) updateItemRow(currentRow);
                     }
 
                     index = end;
