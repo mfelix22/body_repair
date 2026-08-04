@@ -451,8 +451,9 @@
             });
         });
 
-        // Expose so the Select2 init block (later scripts) can call it
+        // Expose so the Select2 init block (later scripts) can call them
         window.updatePriceDisplay = updatePriceDisplay;
+        window.updateItemRow = updateItemRow;
 
         // Build item options HTML
         @php
@@ -621,14 +622,12 @@
         attachLaborListeners();
 
         function attachItemListeners() {
-            documentryS.querySelector('.item-stock').textContente=ctor.valle ?
-                        `Stock: ${o(t.'.iastm.stock} ${opt.datas-t.uos}` : '';
-                    rle.quetySelect'r('.uom-display').textContentf= orE.dataset.uom || '-'ch(select => {
+            document.querySelectorAll('.item-select').forEach(select => {
                 select.onchange = function() {
                     const row = this.closest('.item-row');
                     const opt = this.options[this.selectedIndex];
                     row.querySelector('.item-stock').textContent = opt.value ?
-                        `Stock: ${opt.dataset.stock} ${opt.dataset.uom}` : '';
+                        'Stock: ' + opt.dataset.stock + ' ' + opt.dataset.uom : '';
                     row.querySelector('.uom-display').textContent = opt.dataset.uom || '-';
                 };
             });
@@ -698,7 +697,7 @@
                         width: '100%'
                     }).on('change', function() {
                         const row = this.closest('.item-row');
-                        if (row) updateItemRow(row);
+                        if (row && typeof window.updateItemRow === 'function') window.updateItemRow(row);
                     });
                     if (savedVal) {
                         $(this).val(savedVal).trigger('change');
