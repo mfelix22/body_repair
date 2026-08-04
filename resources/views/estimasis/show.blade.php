@@ -135,6 +135,41 @@
                         @endif
                     @endif
 
+                    @php
+                        $woItems = $estimasi->workOrder->items ?? collect();
+                    @endphp
+                    @if ($woItems->isNotEmpty())
+                        <h6 class="font-weight-bold mt-4">Pergantian Sparepart</h6>
+                        <table class="table table-bordered table-sm" style="max-width:650px;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Sparepart</th>
+                                    <th class="text-right" style="width:130px;">Harga Satuan</th>
+                                    <th class="text-right" style="width:80px;">Qty</th>
+                                    <th class="text-right" style="width:130px;">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($woItems as $woItem)
+                                    @php
+                                        $price = $woItem->total_price !== null
+                                            ? (float) $woItem->unit_price
+                                            : (float) ($woItem->item->selling_price ?? 0);
+                                        $lineTotal = $woItem->total_price !== null
+                                            ? (float) $woItem->total_price
+                                            : $price * (float) $woItem->demand_quantity;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $woItem->item->code ?? '-' }} — {{ $woItem->item->name ?? '-' }}</td>
+                                        <td class="text-right">Rp {{ number_format($price, 0, ',', '.') }}</td>
+                                        <td class="text-right">{{ number_format($woItem->demand_quantity, 0) }}</td>
+                                        <td class="text-right">Rp {{ number_format($lineTotal, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+
                     {{-- Pricing Summary --}}
                     <h6 class="font-weight-bold mt-4">Pricing Summary</h6>
                     <table class="table table-bordered table-sm" style="max-width:450px;">

@@ -73,13 +73,16 @@ class EstimasiController extends Controller
         }
 
         $workOrderId = $request->query('work_order_id');
-        $workOrder = WorkOrder::with('customer')->whereIn('status', ['on_progress', 'in_progress'])->find($workOrderId);
+        $workOrder = WorkOrder::with('customer', 'items.item')->whereIn('status', ['on_progress', 'in_progress'])->find($workOrderId);
 
         if (!$workOrder) {
             return redirect()->route('dashboard')->with('error', 'Work Order not found or is not Pending/Working.');
         }
 
-        return view('estimasis.create', compact('workOrder'));
+        $sparepartTotal = $workOrder->sparepartTotal();
+        $estimasiSubtotal = (float) $workOrder->grand_total + $sparepartTotal;
+
+        return view('estimasis.create', compact('workOrder', 'sparepartTotal', 'estimasiSubtotal'));
     }
 
     public function store(Request $request)
@@ -113,7 +116,7 @@ class EstimasiController extends Controller
                 $seq = $wo->estimasis()->count() + 1;
                 $estimasiNumber = $wo->wo_number . '/EST-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
-                $subtotal    = (float) $wo->grand_total;
+                $subtotal    = (float) $wo->grand_total + $wo->sparepartTotal();
                 $discountAmt = round($subtotal * $pct / 100, 2);
                 $total       = $subtotal - $discountAmt;
 
@@ -166,7 +169,7 @@ class EstimasiController extends Controller
 
     public function show(Estimasi $estimasi)
     {
-        $estimasi->load(['workOrder.customer', 'creator', 'approver1', 'approver2']);
+        $estimasi->load(['workOrder.customer', 'workOrder.items.item', 'creator', 'approver1', 'approver2']);
 
         $user = auth()->user();
         $pendingMyApproval = $estimasi->isPendingMyApproval($user->id);

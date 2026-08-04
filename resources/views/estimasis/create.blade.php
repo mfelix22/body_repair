@@ -34,8 +34,16 @@
                                 <td>{{ optional($workOrder->customer)->name ?? '-' }}</td>
                             </tr>
                             <tr>
+                                <th>Panel + Labor Total</th>
+                                <td>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Pergantian Sparepart</th>
+                                <td>Rp {{ number_format($sparepartTotal, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
                                 <th>Work Order Total</th>
-                                <td><strong>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong></td>
+                                <td><strong>Rp {{ number_format($estimasiSubtotal, 0, ',', '.') }}</strong></td>
                             </tr>
                         </table>
 
@@ -43,7 +51,7 @@
                             <label for="discount_percentage">Discount (%)</label>
                             <input type="number" step="0.01" min="0" max="100" name="discount_percentage"
                                 id="discount_percentage" class="form-control" value="{{ old('discount_percentage', 0) }}"
-                                data-subtotal="{{ (float) $workOrder->grand_total }}">
+                                data-subtotal="{{ $estimasiSubtotal }}">
                             <small class="form-text text-muted">
                                 Leave at 0 for a plain estimate with no discount (no approval required).<br>
                                 &le; 20% requires <strong>Manager</strong> approval only.
@@ -55,7 +63,7 @@
                             <tr>
                                 <th>Subtotal</th>
                                 <td class="text-right" id="preview-subtotal">
-                                    Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                                    Rp {{ number_format($estimasiSubtotal, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
                                 <th>Discount Amount</th>
@@ -64,7 +72,7 @@
                             <tr class="font-weight-bold">
                                 <th>Total</th>
                                 <td class="text-right" id="preview-total">
-                                    Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                                    Rp {{ number_format($estimasiSubtotal, 0, ',', '.') }}</td>
                             </tr>
                         </table>
 

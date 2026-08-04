@@ -12,7 +12,6 @@ use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\Labor;
-use App\Models\Panel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -49,10 +48,9 @@ class WorkOrderController extends Controller
             ->orderBy('work_date', 'desc')
             ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
-        $masterPanels = Panel::where('is_active', true)->orderBy('panel_code')->get();
-        $masterLabors = Labor::where('is_active', true)->where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
+        $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.create', compact('customers', 'items', 'completedWos', 'masterPanels', 'masterLabors'));
+        return view('work_orders.create', compact('customers', 'items', 'completedWos', 'masterLabors'));
     }
 
     public function store(Request $request)
@@ -83,10 +81,6 @@ class WorkOrderController extends Controller
             'items.*.item_id'      => 'required|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'       => 'nullable|string|max:255',
-            'panels'               => 'nullable|array',
-            'panels.*.panel_id'    => 'required|exists:panels,id',
-            'panels.*.qty'         => 'nullable|numeric|min:0.01',
-            'panels.*.remarks'     => 'nullable|string',
             'labors'               => 'nullable|array',
             'labors.*.labor_id'    => 'nullable|exists:labors,id',
             'labors.*.qty'         => 'nullable|numeric|min:0.01',
@@ -164,25 +158,6 @@ class WorkOrderController extends Controller
             }
         }
 
-        if (!empty($validated['panels'])) {
-            foreach ($validated['panels'] as $panelData) {
-                $panel = Panel::findOrFail($panelData['panel_id']);
-                $qty = (float) ($panelData['qty'] ?? 1);
-                $rate = self::getPanelRateForTier($panel, $priceTier);
-                $totalPrice = $qty * $rate;
-                WorkOrderLabor::create([
-                    'work_order_id' => $wo->id,
-                    'panel_id'      => $panel->id,
-                    'description'   => $panel->description,
-                    'qty'           => $qty,
-                    'rate'          => $rate,
-                    'total_price'   => $totalPrice,
-                    'remarks'       => $panelData['remarks'] ?? null,
-                    'is_extra'      => false,
-                ]);
-            }
-        }
-
         if (!empty($validated['labors'])) {
             foreach ($validated['labors'] as $laborData) {
                 if (empty($laborData['labor_id'])) {
@@ -214,8 +189,8 @@ class WorkOrderController extends Controller
     {
         $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis']);
 
-        // Pass active general labors for the Add Labor modal
-        $masterLabors = Labor::where('is_active', true)->where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
+        // Pass active labors for the Add Labor modal
+        $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
         return view('work_orders.show', compact('workOrder', 'masterLabors'));
     }
@@ -244,10 +219,9 @@ class WorkOrderController extends Controller
             ->orderBy('work_date', 'desc')
             ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
-        $masterPanels = Panel::where('is_active', true)->orderBy('panel_code')->get();
-        $masterLabors = Labor::where('is_active', true)->where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
+        $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterPanels', 'masterLabors'));
+        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors'));
     }
 
     public function update(Request $request, WorkOrder $workOrder)
@@ -279,10 +253,6 @@ class WorkOrderController extends Controller
             'items.*.item_id'   => 'required|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'    => 'nullable|string|max:255',
-            'panels'                  => 'nullable|array',
-            'panels.*.panel_id'       => 'required|exists:panels,id',
-            'panels.*.qty'            => 'nullable|numeric|min:0.01',
-            'panels.*.remarks'        => 'nullable|string',
             'labors'                  => 'nullable|array',
             'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
@@ -348,26 +318,6 @@ class WorkOrderController extends Controller
                     'remark'          => $itemData['remark'] ?? null,
                     'unit_price'      => null,
                     'total_price'     => null,
-                ]);
-            }
-        }
-
-        // Add new panels
-        if (!empty($validated['panels'])) {
-            foreach ($validated['panels'] as $panelData) {
-                $panel = Panel::findOrFail($panelData['panel_id']);
-                $qty = (float) ($panelData['qty'] ?? 1);
-                $rate = self::getPanelRateForTier($panel, $priceTier);
-                $totalPrice = $qty * $rate;
-                WorkOrderLabor::create([
-                    'work_order_id' => $workOrder->id,
-                    'panel_id'      => $panel->id,
-                    'description'   => $panel->description,
-                    'qty'           => $qty,
-                    'rate'          => $rate,
-                    'total_price'   => $totalPrice,
-                    'remarks'       => $panelData['remarks'] ?? null,
-                    'is_extra'      => false,
                 ]);
             }
         }
@@ -569,21 +519,6 @@ class WorkOrderController extends Controller
             '500_800'  => (float) ($labor->price_500_800  ?? $labor->price ?? 0),
             '800_2000' => (float) ($labor->price_800_2000 ?? $labor->price ?? 0),
             default    => (float) ($labor->price ?? 0),
-        };
-    }
-
-    /**
-     * Return the correct price for a Panel based on the vehicle price tier chosen by SA.
-     * Falls back to the base price if tier columns are null.
-     */
-    public static function getPanelRateForTier(Panel $panel, ?string $tier): float
-    {
-        return match ($tier) {
-            '0_300'    => (float) ($panel->price_0_300    ?? $panel->price ?? 0),
-            '300_500'  => (float) ($panel->price_300_500  ?? $panel->price ?? 0),
-            '500_800'  => (float) ($panel->price_500_800  ?? $panel->price ?? 0),
-            '800_2000' => (float) ($panel->price_800_2000 ?? $panel->price ?? 0),
-            default    => (float) ($panel->price ?? 0),
         };
     }
 

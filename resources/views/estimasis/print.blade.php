@@ -316,6 +316,18 @@
         $panelTotal = (float) $basePanels->sum('total_price');
         $baseLaborTotal = (float) $baseLabors->sum('total_price');
         $extraLaborTotal = (float) $extraLabors->sum('total_price');
+
+        // Panel is merged into the Labor total for now (Panel + Labor will be
+        // combined into a single "Labor" table later).
+        $laborTotal = $panelTotal + $baseLaborTotal;
+
+        $sparepartItems = $wo->items;
+        $sparepartTotal = (float) $sparepartItems->sum(function ($woItem) {
+            if ($woItem->total_price !== null) {
+                return (float) $woItem->total_price;
+            }
+            return (float) ($woItem->item->selling_price ?? 0) * (float) $woItem->demand_quantity;
+        });
     @endphp
 
     {{-- ===== PRINT BUTTON ===== --}}
@@ -429,48 +441,6 @@
         </tr>
     </table>
 
-    <div class="section-label">Panel yang Dikerjakan</div>
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width:12%">Panel Code</th>
-                <th style="width:38%">Panel</th>
-                <th style="width:8%" class="text-center">Qty</th>
-                <th style="width:18%">Rate</th>
-                <th style="width:10%">Discount</th>
-                <th style="width:14%">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($basePanels as $panel)
-                <tr>
-                    <td>{{ $panel->panel?->panel_code ?? '-' }}</td>
-                    <td>{{ $panel->description }}</td>
-                    <td class="text-center">{{ number_format($panel->qty, 0) }}</td>
-                    <td class="text-right">Rp {{ number_format($panel->rate ?? 0, 0, ',', '.') }}</td>
-                    <td class="text-center">
-                        {{ $discountAmount > 0 ? number_format($discountPercentage, 1) . '%' : '-' }}
-                    </td>
-                    <td class="text-right">Rp {{ number_format($panel->total_price ?? 0, 0, ',', '.') }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="6" class="text-center" style="color:#999;">—</td>
-                </tr>
-            @endforelse
-            @for ($i = $basePanels->count(); $i < 3; $i++)
-                <tr class="empty-row">
-                    <td>&nbsp;</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            @endfor
-        </tbody>
-    </table>
-
     @if ($baseLabors->isNotEmpty())
         <div class="section-label">Labor yang Dikerjakan</div>
         <table class="items-table">
@@ -527,6 +497,42 @@
         </table>
     @endif
 
+    @if ($sparepartItems->isNotEmpty())
+        <div class="section-label">Pergantian Sparepart</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width:12%">Kode</th>
+                    <th style="width:38%">Sparepart</th>
+                    <th style="width:8%" class="text-center">Qty</th>
+                    <th style="width:18%">Harga Satuan</th>
+                    <th style="width:10%">Discount</th>
+                    <th style="width:14%">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($sparepartItems as $woItem)
+                    @php
+                        $spPrice = $woItem->total_price !== null
+                            ? (float) $woItem->unit_price
+                            : (float) ($woItem->item->selling_price ?? 0);
+                        $spTotal = $woItem->total_price !== null
+                            ? (float) $woItem->total_price
+                            : $spPrice * (float) $woItem->demand_quantity;
+                    @endphp
+                    <tr>
+                        <td>{{ $woItem->item->code ?? '-' }}</td>
+                        <td>{{ $woItem->item->name ?? '-' }}</td>
+                        <td class="text-center">{{ number_format($woItem->demand_quantity, 0) }}</td>
+                        <td class="text-right">Rp {{ number_format($spPrice, 0, ',', '.') }}</td>
+                        <td class="text-center">-</td>
+                        <td class="text-right">Rp {{ number_format($spTotal, 0, ',', '.') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     @if ($estimasi->notes)
         <div style="margin-top:10px; font-size:11px; line-height:1.5;">
             <strong>Notes :</strong><br>
@@ -547,20 +553,22 @@
             </td>
             <td style="width:45%;">
                 <table class="totals-table">
-                    <tr>
-                        <td style="width:45%"><strong>Total Panel</strong></td>
-                        <td class="text-right">Rp {{ number_format($panelTotal, 0, ',', '.') }}</td>
-                    </tr>
-                    @if ($baseLaborTotal > 0)
+                    @if ($laborTotal > 0)
                         <tr>
-                            <td><strong>Total Labor</strong></td>
-                            <td class="text-right">Rp {{ number_format($baseLaborTotal, 0, ',', '.') }}</td>
+                            <td style="width:45%"><strong>Total Labor</strong></td>
+                            <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     @if ($extraLaborTotal > 0)
                         <tr>
                             <td><strong>Total Extra Labor</strong></td>
                             <td class="text-right">Rp {{ number_format($extraLaborTotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($sparepartTotal > 0)
+                        <tr>
+                            <td><strong>Total Sparepart</strong></td>
+                            <td class="text-right">Rp {{ number_format($sparepartTotal, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     <tr>

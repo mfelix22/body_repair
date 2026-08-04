@@ -19,7 +19,7 @@ class LaborController extends Controller
         if (!PermissionHelper::canView('labors')) {
             return PermissionHelper::denyAccess('labors', 'view');
         }
-        $labors = Labor::where('labor_code', 'not like', 'PNL-%')->orderBy('labor_code')->get();
+        $labors = Labor::orderBy('labor_code')->get();
         return view('labors.index', compact('labors'));
     }
 

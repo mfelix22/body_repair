@@ -172,6 +172,23 @@ class WorkOrder extends Model
     }
 
     /**
+     * Estimated total for spareparts demanded at WO creation that have not yet
+     * been priced/issued via Bon Out (total_price is still null). Uses the
+     * master Item selling_price as the quoted price. Items already priced via
+     * Bon Out are excluded here since they are already counted in material_total.
+     */
+    public function sparepartTotal(): float
+    {
+        $this->loadMissing('items.item');
+        return (float) $this->items
+            ->whereNull('total_price')
+            ->sum(function ($item) {
+                $price = (float) ($item->item->selling_price ?? 0);
+                return $price * (float) $item->demand_quantity;
+            });
+    }
+
+    /**
      * Calculate totals from items and labor.
      * Base labor comes from master labors selected at WO creation.
      * Extra billed materials (from Bon Out) and extra priced labors are added on top.
