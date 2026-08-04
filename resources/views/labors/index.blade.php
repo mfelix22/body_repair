@@ -1,13 +1,13 @@
 @extends('layouts.admin')
-@section('title', 'Labor Master')
-@section('page_title', 'Labor Master')
+@section('title', 'Panel')
+@section('page_title', 'Panel')
 
 @section('content')
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Labor Master List</h3>
+                    <h3 class="card-title">List Panel</h3>
                     <div class="card-tools">
                         @if (\App\Helpers\PermissionHelper::canCreate('labors'))
                             <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
@@ -15,7 +15,7 @@
                                 <i class="fas fa-file-excel"></i> Import Excel
                             </button>
                             <a href="{{ route('labors.create') }}" class="btn btn-primary btn-sm ml-1">
-                                <i class="fas fa-plus"></i> Add Labor
+                                <i class="fas fa-plus"></i> Add Panel
                             </a>
                         @endif
                     </div>
