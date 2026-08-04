@@ -478,7 +478,7 @@
             itemsData.forEach(item => {
                 const isSelected = sid !== '' && String(item.id) === sid;
                 html +=
-                    `<option value="${item.id}" data-stock="${item.stock}" data-uom="${item.smallest_uom?.code || '-'}" data-price="${item.price}" data-code="${item.code}" ${isSelected ? 'selected' : ''}>[${item.code}] ${item.name}</option>`;
+                    `<option value="${item.id}" data-stock="${item.stock}" data-uom="${(item.smallest_uom && item.smallest_uom.code) || '-'}" data-price="${item.price}" data-code="${item.code}" ${isSelected ? 'selected' : ''}>[${item.code}] ${item.name}</option>`;
             });
             return html;
         }
