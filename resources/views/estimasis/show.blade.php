@@ -154,7 +154,7 @@
                                     @php
                                         $price = $woItem->total_price !== null
                                             ? (float) $woItem->unit_price
-                                            : (float) ($woItem->item->selling_price ?? 0);
+                                            : (float) (optional($woItem->item->stock)->avg_cost ?? 0);
                                         $lineTotal = $woItem->total_price !== null
                                             ? (float) $woItem->total_price
                                             : $price * (float) $woItem->demand_quantity;

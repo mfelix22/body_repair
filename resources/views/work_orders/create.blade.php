@@ -298,7 +298,7 @@
                                                             <option value="{{ $item->id }}"
                                                                 data-uom="{{ optional($item->smallestUom)->name ?? '-' }}"
                                                                 data-stock="{{ optional($item->stocks->where('location', 'default')->first())->quantity ?? 0 }}"
-                                                                data-price="{{ $item->selling_price ?? 0 }}">
+                                                                data-price="{{ optional($item->stocks->where('location', 'default')->first())->avg_cost ?? 0 }}">
                                                                 {{ $item->code }} — {{ $item->name }}
                                                             </option>
                                                         @endforeach
@@ -466,7 +466,7 @@
                             <option value="{{ $item->id }}"
                                 data-uom="{{ optional($item->smallestUom)->name ?? '-' }}"
                                 data-stock="{{ optional($item->stocks->where('location', 'default')->first())->quantity ?? 0 }}"
-                                data-price="{{ $item->selling_price ?? 0 }}">
+                                data-price="{{ optional($item->stocks->where('location', 'default')->first())->avg_cost ?? 0 }}">
                                 {{ $item->code }} — {{ $item->name }}
                             </option>
                         @endforeach

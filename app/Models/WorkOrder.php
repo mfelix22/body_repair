@@ -174,16 +174,16 @@ class WorkOrder extends Model
     /**
      * Estimated total for spareparts demanded at WO creation that have not yet
      * been priced/issued via Bon Out (total_price is still null). Uses the
-     * master Item selling_price as the quoted price. Items already priced via
+     * default stock average cost as the quoted price. Items already priced via
      * Bon Out are excluded here since they are already counted in material_total.
      */
     public function sparepartTotal(): float
     {
-        $this->loadMissing('items.item');
+        $this->loadMissing('items.item.stock');
         return (float) $this->items
             ->whereNull('total_price')
             ->sum(function ($item) {
-                $price = (float) ($item->item->selling_price ?? 0);
+                $price = (float) (optional($item->item->stock)->avg_cost ?? 0);
                 return $price * (float) $item->demand_quantity;
             });
     }
