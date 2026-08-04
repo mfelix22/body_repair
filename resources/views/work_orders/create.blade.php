@@ -483,10 +483,17 @@
                 if (typeof initItemSelect2 === 'function') initItemSelect2();
             });
 
-            function updateItemRow(row) {
+            function updateItemRow(row, selectedOpt = null) {
                 const select = row.querySelector('.item-select');
-                const opt = select ? select.options[select.selectedIndex] : null;
-                const price = (opt && opt.dataset.price) ? parseFloat(opt.dataset.price) : 0;
+                let price = 0;
+                if (selectedOpt && selectedOpt.dataset.price) {
+                    price = parseFloat(selectedOpt.dataset.price) || 0;
+                } else if (select && select.value) {
+                    const opt = select.querySelector('option[value="' + select.value + '"]');
+                    if (opt && opt.dataset.price) {
+                        price = parseFloat(opt.dataset.price) || 0;
+                    }
+                }
                 const qtyInput = row.querySelector('.item-qty');
                 const qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
                 const priceInput = row.querySelector('.item-price');
@@ -664,10 +671,10 @@
                             theme: 'bootstrap4',
                             width: '100%',
                             dropdownAutoWidth: true
-                        }).on('change', function() {
+                        }).on('select2:select', function(e) {
                             const row = this.closest('.item-row');
-                            const opt = this.options[this.selectedIndex];
-                            if (row) {
+                            const opt = e.params.data && e.params.data.element ? e.params.data.element : this.options[this.selectedIndex];
+                            if (row && opt) {
                                 const stockEl = row.querySelector('.item-stock');
                                 const uomEl = row.querySelector('.uom-display');
                                 if (stockEl) {
@@ -677,8 +684,11 @@
                                 if (uomEl) {
                                     uomEl.textContent = opt.dataset.uom || '-';
                                 }
-                                updateItemRow(row);
+                                updateItemRow(row, opt);
                             }
+                        }).on('select2:unselect', function() {
+                            const row = this.closest('.item-row');
+                            if (row) updateItemRow(row);
                         });
 
                         const currentRow = $(selects[i]).closest('.item-row')[0];
