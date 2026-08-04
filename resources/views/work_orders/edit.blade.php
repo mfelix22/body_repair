@@ -451,6 +451,9 @@
             });
         });
 
+        // Expose so the Select2 init block (later scripts) can call it
+        window.updatePriceDisplay = updatePriceDisplay;
+
         // Build item options HTML
         @php
             $itemsFormatted = $items->map(function ($item) {
@@ -730,7 +733,7 @@
                     allowClear: true,
                     width: '100%'
                 }).on('change', function() {
-                    updatePriceDisplay();
+                    if (typeof window.updatePriceDisplay === 'function') window.updatePriceDisplay();
                 });
                 if (savedVal) {
                     $(this).val(savedVal).trigger('change');
