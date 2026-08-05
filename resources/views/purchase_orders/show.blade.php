@@ -546,6 +546,8 @@
                                     <th>Quantity</th>
                                     @if ($canViewPrices)
                                         <th>Unit Price</th>
+                                        <th>Disc %</th>
+                                        <th>Disc (Rp)</th>
                                         <th>Total Price</th>
                                     @endif
                                 @else
@@ -554,6 +556,8 @@
                                     <th>Quantity</th>
                                     @if ($canViewPrices)
                                         <th>Unit Price</th>
+                                        <th>Disc %</th>
+                                        <th>Disc (Rp)</th>
                                         <th>Total Price</th>
                                     @endif
                                     <th>Received</th>
@@ -572,6 +576,8 @@
                                         <td>{{ number_format($detail->quantity, 2) }}</td>
                                         @if ($canViewPrices)
                                             <td>Rp {{ number_format($detail->unit_price, 2, ',', '.') }}</td>
+                                            <td>{{ $detail->discount_percentage > 0 ? number_format($detail->discount_percentage, 2) . '%' : '-' }}</td>
+                                            <td>{{ $detail->discount > 0 ? 'Rp ' . number_format($detail->discount, 0, ',', '.') : '-' }}</td>
                                             <td><strong>Rp {{ number_format($detail->total_price, 0, ',', '.') }}</strong>
                                             </td>
                                         @endif
@@ -581,6 +587,8 @@
                                         <td>{{ number_format($detail->quantity, 2) }}</td>
                                         @if ($canViewPrices)
                                             <td>Rp {{ number_format($detail->unit_price, 2, ',', '.') }}</td>
+                                            <td>{{ $detail->discount_percentage > 0 ? number_format($detail->discount_percentage, 2) . '%' : '-' }}</td>
+                                            <td>{{ $detail->discount > 0 ? 'Rp ' . number_format($detail->discount, 0, ',', '.') : '-' }}</td>
                                             <td>Rp {{ number_format($detail->total_price, 0, ',', '.') }}</td>
                                         @endif
                                         <td>{{ number_format($detail->received_quantity, 2) }}</td>

@@ -110,7 +110,6 @@ class PurchaseOrderController extends Controller
             'waktu_pengerjaan' => 'nullable|string|max:100',
             'payment_method' => 'required|in:credit,cbd,dp,cod',
             'pembayaran' => 'required|in:tunai,non_tunai',
-            'discount' => 'nullable|numeric|min:0',
             'bank_account' => 'nullable|string|max:255',
             'jatuh_tempo' => 'nullable|string|max:100',
             'payment_terms' => 'nullable|string',
@@ -121,6 +120,8 @@ class PurchaseOrderController extends Controller
             'items.*.purchase_request_detail_id' => 'nullable|exists:purchase_request_details,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.discount' => 'nullable|numeric|min:0',
+            'items.*.discount_percentage' => 'nullable|numeric|min:0',
             'items.*.remarks' => 'nullable|string',
         ];
 
@@ -144,7 +145,7 @@ class PurchaseOrderController extends Controller
 
         // 1. Check total amount is not zero
         $preTotal = array_sum(array_map(
-            fn($i) => (float)($i['quantity'] ?? 0) * (float)($i['unit_price'] ?? 0),
+            fn($i) => max(0, (float)($i['quantity'] ?? 0) * (float)($i['unit_price'] ?? 0) - (float)($i['discount'] ?? 0)),
             $validated['items']
         ));
         if ($preTotal <= 0) {
@@ -235,7 +236,6 @@ class PurchaseOrderController extends Controller
                 'waktu_pengerjaan'       => $validated['waktu_pengerjaan'] ?? null,
                 'payment_method'         => $validated['payment_method'],
                 'pembayaran'             => $validated['payment_method'] === 'cod' ? 'tunai' : $validated['pembayaran'],
-                'discount'               => $validated['discount'] ?? 0,
                 'bank_account'           => $validated['bank_account'] ?? null,
                 'jatuh_tempo'            => $validated['jatuh_tempo'] ?? null,
                 'payment_terms'          => $validated['payment_terms'] ?? null,
@@ -244,9 +244,13 @@ class PurchaseOrderController extends Controller
             ]);
 
             $totalAmount = 0;
+            $totalDiscount = 0;
             foreach ($validated['items'] as $itemData) {
-                $totalPrice   = $itemData['quantity'] * $itemData['unit_price'];
+                $grossPrice   = $itemData['quantity'] * $itemData['unit_price'];
+                $itemDiscount = (float) ($itemData['discount'] ?? 0);
+                $totalPrice   = max(0, $grossPrice - $itemDiscount);
                 $totalAmount += $totalPrice;
+                $totalDiscount += $itemDiscount;
                 $prDetailId   = !empty($itemData['purchase_request_detail_id']) ? $itemData['purchase_request_detail_id'] : null;
 
                 $detailData = [
@@ -254,6 +258,8 @@ class PurchaseOrderController extends Controller
                     'quantity'                   => $itemData['quantity'],
                     'unit_price'                 => $itemData['unit_price'],
                     'total_price'                => $totalPrice,
+                    'discount'                   => $itemDiscount,
+                    'discount_percentage'        => (float) ($itemData['discount_percentage'] ?? 0),
                     'received_quantity'          => 0,
                     'purchase_request_detail_id' => $prDetailId,
                     'remarks'                    => $itemData['remarks'] ?? null,
@@ -278,9 +284,7 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            $discount = (float) ($validated['discount'] ?? 0);
-            $totalAmount = max(0, $totalAmount - $discount);
-            $po->update(['total_amount' => $totalAmount, 'discount' => $discount]);
+            $po->update(['total_amount' => $totalAmount, 'discount' => $totalDiscount]);
 
             // Save misc costs
             if (!empty($validated['misc_costs'])) {
@@ -485,7 +489,6 @@ class PurchaseOrderController extends Controller
                 'waktu_pengerjaan'       => $validated['waktu_pengerjaan'] ?? null,
                 'payment_method'         => $validated['payment_method'],
                 'pembayaran'             => $validated['payment_method'] === 'cod' ? 'tunai' : $validated['pembayaran'],
-                'discount'               => $validated['discount'] ?? 0,
                 'bank_account'           => $validated['bank_account'] ?? null,
                 'jatuh_tempo'            => $validated['jatuh_tempo'] ?? null,
                 'payment_terms'          => $validated['payment_terms'] ?? null,
@@ -504,10 +507,13 @@ class PurchaseOrderController extends Controller
 
                 $purchaseOrder->details()->delete();
                 $totalAmount = 0;
-                $discount = (float) ($validated['discount'] ?? 0);
+                $totalDiscount = 0;
                 foreach ($validated['items'] as $itemData) {
-                    $totalPrice   = $itemData['quantity'] * $itemData['unit_price'];
+                    $grossPrice   = $itemData['quantity'] * $itemData['unit_price'];
+                    $itemDiscount = (float) ($itemData['discount'] ?? 0);
+                    $totalPrice   = max(0, $grossPrice - $itemDiscount);
                     $totalAmount += $totalPrice;
+                    $totalDiscount += $itemDiscount;
                     $prDetailId   = !empty($itemData['purchase_request_detail_id']) ? $itemData['purchase_request_detail_id'] : null;
 
                     $detailData = [
@@ -515,6 +521,8 @@ class PurchaseOrderController extends Controller
                         'quantity'                   => $itemData['quantity'],
                         'unit_price'                 => $itemData['unit_price'],
                         'total_price'                => $totalPrice,
+                        'discount'                   => $itemDiscount,
+                        'discount_percentage'        => (float) ($itemData['discount_percentage'] ?? 0),
                         'received_quantity'          => 0,
                         'remarks'                    => $itemData['remarks'] ?? null,
                         'purchase_request_detail_id' => $prDetailId,
@@ -538,8 +546,7 @@ class PurchaseOrderController extends Controller
                             ->increment('ordered_quantity', $itemData['quantity']);
                     }
                 }
-                $totalAmount = max(0, $totalAmount - $discount);
-                $purchaseOrder->update(['total_amount' => $totalAmount, 'discount' => $discount]);
+                $purchaseOrder->update(['total_amount' => $totalAmount, 'discount' => $totalDiscount]);
 
                 // Rebuild misc costs
                 $purchaseOrder->miscCosts()->delete();

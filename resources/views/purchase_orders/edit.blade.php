@@ -358,7 +358,7 @@
                                             @if ($purchaseOrder->po_type === 'purchase_order')
                                                 <div class="item-section" style="width:100%;">
                                                     <div class="row">
-                                                        <div class="col-md-3">
+                                                        <div class="col-md-5">
                                                             <label>Item</label>
                                                             <select name="items[{{ $dIdx }}][item_id]"
                                                                 class="form-control item-select" required>
@@ -411,7 +411,14 @@
                                                                 value="{{ old('items.' . $dIdx . '.quantity', $detail->quantity) }}"
                                                                 required>
                                                         </div>
-                                                        <div class="col-md-2">
+                                                        <div class="col-md-2 text-right">
+                                                            <label>&nbsp;</label><br>
+                                                            <button type="button"
+                                                                class="btn btn-danger btn-sm remove-item">Remove</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mt-2">
+                                                        <div class="col-md-3">
                                                             <label>Unit Price</label>
                                                             <input type="number"
                                                                 name="items[{{ $dIdx }}][unit_price]"
@@ -419,23 +426,33 @@
                                                                 value="{{ old('items.' . $dIdx . '.unit_price', $detail->unit_price) }}"
                                                                 required>
                                                         </div>
-                                                        <div class="col-md-1">
+                                                        <div class="col-md-2">
+                                                            <label>Disc %</label>
+                                                            <input type="number"
+                                                                name="items[{{ $dIdx }}][discount_percentage]"
+                                                                class="form-control discount-pct" step="0.01" min="0"
+                                                                value="{{ old('items.' . $dIdx . '.discount_percentage', $detail->discount_percentage ?? 0) }}">
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label>Disc Rp</label>
+                                                            <input type="number"
+                                                                name="items[{{ $dIdx }}][discount]"
+                                                                class="form-control discount-amt" step="0.01" min="0"
+                                                                value="{{ old('items.' . $dIdx . '.discount', $detail->discount ?? 0) }}">
+                                                        </div>
+                                                        <div class="col-md-3">
                                                             <label>Total</label>
                                                             <input type="text" class="form-control total" readonly
                                                                 disabled
                                                                 value="{{ number_format($detail->total_price, 2, '.', '') }}">
                                                         </div>
-                                                        <div class="col-md-1">
-                                                            <label>&nbsp;</label><br>
-                                                            <button type="button"
-                                                                class="btn btn-danger btn-sm remove-item">Remove</button>
-                                                        </div>
+                                                        <div class="col-md-2"></div>
                                                     </div>
                                                 </div>
                                             @else
                                                 <div class="service-section" style="width:100%;">
                                                     <div class="row">
-                                                        <div class="col-md-4">
+                                                        <div class="col-md-9">
                                                             <label>Service Description <span
                                                                     class="text-danger">*</span></label>
                                                             <input type="text"
@@ -452,7 +469,14 @@
                                                                 value="{{ old('items.' . $dIdx . '.quantity', $detail->quantity) }}"
                                                                 required>
                                                         </div>
-                                                        <div class="col-md-2">
+                                                        <div class="col-md-2 text-right">
+                                                            <label>&nbsp;</label><br>
+                                                            <button type="button"
+                                                                class="btn btn-danger btn-sm remove-item">Remove</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mt-2">
+                                                        <div class="col-md-3">
                                                             <label>Unit Price (Rp)</label>
                                                             <input type="number"
                                                                 name="items[{{ $dIdx }}][unit_price]"
@@ -461,16 +485,26 @@
                                                                 required>
                                                         </div>
                                                         <div class="col-md-2">
+                                                            <label>Disc %</label>
+                                                            <input type="number"
+                                                                name="items[{{ $dIdx }}][discount_percentage]"
+                                                                class="form-control discount-pct" step="0.01" min="0"
+                                                                value="{{ old('items.' . $dIdx . '.discount_percentage', $detail->discount_percentage ?? 0) }}">
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label>Disc Rp</label>
+                                                            <input type="number"
+                                                                name="items[{{ $dIdx }}][discount]"
+                                                                class="form-control discount-amt" step="0.01" min="0"
+                                                                value="{{ old('items.' . $dIdx . '.discount', $detail->discount ?? 0) }}">
+                                                        </div>
+                                                        <div class="col-md-3">
                                                             <label>Total</label>
                                                             <input type="text" class="form-control total" readonly
                                                                 disabled
                                                                 value="{{ number_format($detail->total_price, 2, '.', '') }}">
                                                         </div>
-                                                        <div class="col-md-1">
-                                                            <label>&nbsp;</label><br>
-                                                            <button type="button"
-                                                                class="btn btn-danger btn-sm remove-item">Remove</button>
-                                                        </div>
+                                                        <div class="col-md-2"></div>
                                                     </div>
                                                 </div>
                                             @endif
@@ -486,12 +520,7 @@
 
                             <div class="row mt-4">
                                 <div class="col-md-4 offset-md-8">
-                                    <div class="form-group">
-                                        <label for="discount">Diskon (Nominal) <small class="text-muted">bukan persentase</small></label>
-                                        <input type="number" name="discount" id="discount" class="form-control"
-                                            step="0.01" min="0" placeholder="Rp"
-                                            value="{{ old('discount', $purchaseOrder->discount ?? 0) }}">
-                                    </div>
+
                                     <table class="table table-sm">
                                         <tr>
                                             <th>Subtotal:</th>
@@ -573,7 +602,7 @@
                     <div class="row">
                         <div class="service-section" style="width: 100%;">
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-9">
                                     <label>Service Description <span class="text-danger">*</span></label>
                                     <input type="text" name="items[${itemIndex}][service_description]"
                                         class="form-control service-description"
@@ -584,19 +613,32 @@
                                     <input type="number" name="items[${itemIndex}][quantity]"
                                         class="form-control qty" step="0.01" min="0.01" required>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-2 text-right">
+                                    <label>&nbsp;</label><br>
+                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-3">
                                     <label>Unit Price (Rp)</label>
                                     <input type="number" name="items[${itemIndex}][unit_price]"
                                         class="form-control price" step="0.01" min="0" required>
                                 </div>
                                 <div class="col-md-2">
+                                    <label>Disc %</label>
+                                    <input type="number" name="items[${itemIndex}][discount_percentage]"
+                                        class="form-control discount-pct" step="0.01" min="0" placeholder="%">
+                                </div>
+                                <div class="col-md-2">
+                                    <label>Disc Rp</label>
+                                    <input type="number" name="items[${itemIndex}][discount]"
+                                        class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
+                                </div>
+                                <div class="col-md-3">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled>
                                 </div>
-                                <div class="col-md-1">
-                                    <label>&nbsp;</label><br>
-                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                                </div>
+                                <div class="col-md-2"></div>
                             </div>
                         </div>
                     </div>`;
@@ -609,7 +651,7 @@
                     <div class="row">
                         <div class="item-section" style="width: 100%;">
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-5">
                                     <label>Item</label>
                                     <select name="items[${itemIndex}][item_id]"
                                         class="form-control item-select" required>
@@ -636,19 +678,32 @@
                                     <input type="number" name="items[${itemIndex}][quantity]"
                                         class="form-control qty" step="0.01" min="0.01" required>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-2 text-right">
+                                    <label>&nbsp;</label><br>
+                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-3">
                                     <label>Unit Price</label>
                                     <input type="number" name="items[${itemIndex}][unit_price]"
                                         class="form-control price" step="0.01" min="0" required>
                                 </div>
-                                <div class="col-md-1">
+                                <div class="col-md-2">
+                                    <label>Disc %</label>
+                                    <input type="number" name="items[${itemIndex}][discount_percentage]"
+                                        class="form-control discount-pct" step="0.01" min="0" placeholder="%">
+                                </div>
+                                <div class="col-md-2">
+                                    <label>Disc Rp</label>
+                                    <input type="number" name="items[${itemIndex}][discount]"
+                                        class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
+                                </div>
+                                <div class="col-md-3">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled>
                                 </div>
-                                <div class="col-md-1">
-                                    <label>&nbsp;</label><br>
-                                    <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                                </div>
+                                <div class="col-md-2"></div>
                             </div>
                         </div>
                     </div>`;
@@ -668,9 +723,11 @@
                 select.removeEventListener('change', handleUomChange);
                 select.addEventListener('change', handleUomChange);
             });
-            document.querySelectorAll('.qty, .price').forEach(input => {
-                input.removeEventListener('input', handlePriceChange);
-                input.addEventListener('input', handlePriceChange);
+            document.querySelectorAll('.qty, .price, .discount-pct, .discount-amt').forEach(input => {
+                input.removeEventListener('input', handleLineChange);
+                input.addEventListener('input', handleLineChange);
+                input.removeEventListener('blur', handleDiscountBlur);
+                input.addEventListener('blur', handleDiscountBlur);
             });
             document.querySelectorAll('.remove-item').forEach(btn => {
                 btn.removeEventListener('click', handleRemoveItem);
@@ -713,8 +770,7 @@
             if (uomSelect.value) {
                 const price = getPriceForUom(uoms, uomSelect.value);
                 priceInput.value = price.toFixed(2);
-                const qty = parseFloat(row.querySelector('.qty').value) || 0;
-                totalInput.value = (qty * price).toFixed(2);
+                recalculateLine(row);
                 const selectedUom = uoms.find(u => String(u.uom_id) === String(uomSelect.value));
                 if (selectedUom && convInput) {
                     const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
@@ -738,8 +794,7 @@
             const smallestUomCode = option ? (option.dataset.smallestUom || '') : '';
             const price = getPriceForUom(uoms, this.value);
             priceInput.value = price.toFixed(2);
-            const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            totalInput.value = (qty * price).toFixed(2);
+            recalculateLine(row);
             const selectedUom = uoms.find(u => String(u.uom_id) === String(this.value));
             if (selectedUom && convInput) {
                 const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
@@ -750,19 +805,78 @@
             }
         }
 
-        function handlePriceChange() {
+        function recalculateLine(row) {
+            const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
+            const price = parseFloat(row.querySelector('.price')?.value) || 0;
+            const gross = qty * price;
+            const pctInput = row.querySelector('.discount-pct');
+            const amtInput = row.querySelector('.discount-amt');
+            const totalInput = row.querySelector('.total');
+
+            let pct = parseFloat(pctInput?.value) || 0;
+            let amt = parseFloat(amtInput?.value) || 0;
+
+            // Clamp to valid ranges
+            pct = Math.max(0, Math.min(100, pct));
+            amt = Math.max(0, Math.min(gross, amt));
+
+            if (pct > 0) {
+                amt = Math.min(gross, gross * pct / 100);
+            } else if (amt > 0) {
+                pct = gross > 0 ? (amt / gross * 100) : 0;
+            }
+
+            if (pctInput) pctInput.value = pct.toFixed(2);
+            if (amtInput) amtInput.value = amt.toFixed(2);
+            if (totalInput) {
+                totalInput.value = Math.max(0, gross - amt).toFixed(2);
+            }
+        }
+
+        function handleLineChange() {
             const row = this.closest('.item-row');
-            const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            const price = parseFloat(row.querySelector('.price').value) || 0;
-            row.querySelector('.total').value = (qty * price).toFixed(2);
+            const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
+            const price = parseFloat(row.querySelector('.price')?.value) || 0;
+            const gross = qty * price;
+            const pctInput = row.querySelector('.discount-pct');
+            const amtInput = row.querySelector('.discount-amt');
+            const totalInput = row.querySelector('.total');
+
+            if (this.classList.contains('discount-pct') && pctInput) {
+                const pct = Math.max(0, parseFloat(this.value) || 0);
+                const usedPct = Math.min(100, pct);
+                const amt = Math.min(gross, gross * usedPct / 100);
+                amtInput.value = amt.toFixed(2);
+                totalInput.value = Math.max(0, gross - amt).toFixed(2);
+            } else if (this.classList.contains('discount-amt') && amtInput) {
+                const rawAmt = Math.max(0, parseFloat(this.value) || 0);
+                const amt = Math.min(gross, rawAmt);
+                const pct = gross > 0 ? (amt / gross * 100) : 0;
+                pctInput.value = pct.toFixed(2);
+                totalInput.value = Math.max(0, gross - amt).toFixed(2);
+            } else {
+                recalculateLine(row);
+                return updateSummary();
+            }
+
+            updateSummary();
+        }
+
+        function handleDiscountBlur() {
+            recalculateLine(this.closest('.item-row'));
             updateSummary();
         }
 
         function updateSummary() {
-            const subtotal = Array.from(document.querySelectorAll('.item-row .total')).reduce((sum, input) => {
-                return sum + (parseFloat(input.value) || 0);
-            }, 0);
-            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            let subtotal = 0;
+            let discount = 0;
+            document.querySelectorAll('.item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.price')?.value) || 0;
+                const disc = parseFloat(row.querySelector('.discount-amt')?.value) || 0;
+                subtotal += qty * price;
+                discount += disc;
+            });
             const total = Math.max(0, subtotal - discount);
 
             document.getElementById('summary-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -878,24 +992,43 @@
             if (isPPJ) {
                 newItemRow.innerHTML = `
                 <input type="hidden" name="items[${idx}][purchase_request_detail_id]" value="${detail.id || ''}">
-                <div class="row"><div class="service-section" style="width:100%;"><div class="row">
-                    <div class="col-md-4">
-                        <label>Service Description <span class="text-danger">*</span></label>
-                        <input type="text" name="items[${idx}][service_description]" class="form-control service-description" value="${detail.service_description || ''}" required>
+                <div class="row">
+                    <div class="service-section" style="width:100%;">
+                        <div class="row">
+                            <div class="col-md-9">
+                                <label>Service Description <span class="text-danger">*</span></label>
+                                <input type="text" name="items[${idx}][service_description]" class="form-control service-description" value="${detail.service_description || ''}" required>
+                            </div>
+                            <div class="col-md-1">
+                                <label>Qty</label>
+                                <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
+                            </div>
+                            <div class="col-md-2 text-right">
+                                <label>&nbsp;</label><br>
+                                <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-3">
+                                <label>Unit Price (Rp)</label>
+                                <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Disc %</label>
+                                <input type="number" name="items[${idx}][discount_percentage]" class="form-control discount-pct" step="0.01" min="0" placeholder="%">
+                            </div>
+                            <div class="col-md-2">
+                                <label>Disc Rp</label>
+                                <input type="number" name="items[${idx}][discount]" class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
+                            </div>
+                            <div class="col-md-3">
+                                <label>Total</label>
+                                <input type="text" class="form-control total" readonly disabled value="0.00">
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
                     </div>
-                    <div class="col-md-1"><label>Qty</label>
-                        <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
-                    </div>
-                    <div class="col-md-2"><label>Unit Price (Rp)</label>
-                        <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
-                    </div>
-                    <div class="col-md-2"><label>Total</label>
-                        <input type="text" class="form-control total" readonly disabled value="0.00">
-                    </div>
-                    <div class="col-md-1"><label>&nbsp;</label><br>
-                        <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                    </div>
-                </div></div></div>`;
+                </div>`;
             } else {
                 const itemUoms = detail.item && detail.item.item_uoms ? detail.item.item_uoms : [];
                 const conversion = getConversionForUom(itemUoms, detail.uom_id);
@@ -911,33 +1044,55 @@
 
                 newItemRow.innerHTML = `
                 <input type="hidden" name="items[${idx}][purchase_request_detail_id]" value="${detail.id || ''}">
-                <div class="row"><div class="item-section" style="width:100%;"><div class="row">
-                    <div class="col-md-3"><label>Item</label>
-                        <select name="items[${idx}][item_id]" class="form-control item-select" required>${itemOptions}</select>
+                <div class="row">
+                    <div class="item-section" style="width:100%;">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <label>Item</label>
+                                <select name="items[${idx}][item_id]" class="form-control item-select" required>${itemOptions}</select>
+                            </div>
+                            <div class="col-md-2">
+                                <label>UOM</label>
+                                <select name="items[${idx}][uom_id]" class="form-control uom-select" required>
+                                    <option value="${detail.uom_id || ''}" selected>${detail.uom ? detail.uom.name + ' (' + detail.uom.code + ')' : ''}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Isi/Kemasan</label>
+                                <input type="number" name="items[${idx}][conversion_to_smallest]" class="form-control conv-input" step="0.000001" min="0.000001" value="${conversion}" required data-item-master-conversion="${conversion}">
+                                <small class="text-muted conv-hint">1 ${uomCode} = ? ${smallestCode}</small>
+                                <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
+                            </div>
+                            <div class="col-md-1">
+                                <label>Qty</label>
+                                <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
+                            </div>
+                            <div class="col-md-2 text-right">
+                                <label>&nbsp;</label><br>
+                                <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-3">
+                                <label>Unit Price</label>
+                                <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Disc %</label>
+                                <input type="number" name="items[${idx}][discount_percentage]" class="form-control discount-pct" step="0.01" min="0" placeholder="%">
+                            </div>
+                            <div class="col-md-2">
+                                <label>Disc Rp</label>
+                                <input type="number" name="items[${idx}][discount]" class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
+                            </div>
+                            <div class="col-md-3">
+                                <label>Total</label>
+                                <input type="text" class="form-control total" readonly disabled value="0.00">
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
                     </div>
-                    <div class="col-md-2"><label>UOM</label>
-                        <select name="items[${idx}][uom_id]" class="form-control uom-select" required>
-                            <option value="${detail.uom_id || ''}" selected>${detail.uom ? detail.uom.name + ' (' + detail.uom.code + ')' : ''}</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2"><label>Isi/Kemasan</label>
-                        <input type="number" name="items[${idx}][conversion_to_smallest]" class="form-control conv-input" step="0.000001" min="0.000001" value="${conversion}" required data-item-master-conversion="${conversion}">
-                        <small class="text-muted conv-hint">1 ${uomCode} = ? ${smallestCode}</small>
-                        <small class="conv-warning" style="display:none;color:#e65c00;font-weight:600;"></small>
-                    </div>
-                    <div class="col-md-1"><label>Qty</label>
-                        <input type="number" name="items[${idx}][quantity]" class="form-control qty" step="0.01" min="0.01" value="${detail.quantity || 0}" required>
-                    </div>
-                    <div class="col-md-2"><label>Unit Price</label>
-                        <input type="number" name="items[${idx}][unit_price]" class="form-control price" step="0.01" min="0" value="0" required>
-                    </div>
-                    <div class="col-md-1"><label>Total</label>
-                        <input type="text" class="form-control total" readonly disabled value="0.00">
-                    </div>
-                    <div class="col-md-1"><label>&nbsp;</label><br>
-                        <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
-                    </div>
-                </div></div></div>`;
+                </div>`;
             }
             return newItemRow;
         }
@@ -1117,8 +1272,6 @@
 
         if (paymentMethodSelect) paymentMethodSelect.addEventListener('change', updatePaymentFields);
         if (pembayaranSelect) pembayaranSelect.addEventListener('change', updateBankAccountRow);
-        const discountInput = document.getElementById('discount');
-        if (discountInput) discountInput.addEventListener('input', updateSummary);
         updatePaymentFields();
         updateSummary();
 
