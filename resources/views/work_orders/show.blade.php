@@ -36,13 +36,9 @@
                                         <i class="fas fa-play"></i> Start Work
                                     </button>
                                 </form>
-                                <form action="{{ route('work_orders.cancel', $workOrder) }}" method="POST" class="d-inline"
-                                    onsubmit="return confirm('Cancel this Work Order? This cannot be undone.')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-times"></i> Cancel
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#cancelRequestModal">
+                                    <i class="fas fa-times"></i> Request Cancellation
+                                </button>
                             @endif
                         @elseif($workOrder->status === 'in_progress')
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
@@ -160,6 +156,17 @@
                                     <i class="fas fa-dolly-flatbed"></i> Bon Out #{{ $bo->bon_out_number }}
                                 </a>
                             @endforeach
+                        @elseif($workOrder->status === 'pending_cancellation')
+                            @php $sigit = \App\Models\User::where('name', 'like', '%Sigit%')->first(); @endphp
+                            @if ($sigit && auth()->user()->id === $sigit->id)
+                                <form action="{{ route('work_orders.approve_cancel', $workOrder) }}" method="POST" class="d-inline"
+                                    onsubmit="return confirm('Approve cancellation of this Work Order?')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Approve Cancellation
+                                    </button>
+                                </form>
+                            @endif
                         @endif
                         @include('partials.wo_status_badge', ['status' => $workOrder->status])
                     </div>
@@ -297,6 +304,12 @@
                                     <th>Status:</th>
                                     <td>@include('partials.wo_status_badge', ['status' => $workOrder->status])</td>
                                 </tr>
+                                @if ($workOrder->cancellation_reason)
+                                    <tr>
+                                        <th>Cancellation Reason:</th>
+                                        <td>{{ $workOrder->cancellation_reason }}</td>
+                                    </tr>
+                                @endif
                                 @if ($workOrder->started_at)
                                     <tr>
                                         <th>Start Work:</th>
@@ -522,5 +535,32 @@
             </div>
         </div>
     @endif
+
+    {{-- Cancellation Reason Modal --}}
+    <div class="modal fade" id="cancelRequestModal" tabindex="-1" role="dialog" aria-labelledby="cancelRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{{ route('work_orders.cancel', $workOrder) }}" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cancelRequestModalLabel">Request Work Order Cancellation</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="cancellation_reason">Reason for Cancellation <span class="text-danger">*</span></label>
+                            <textarea name="cancellation_reason" id="cancellation_reason" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-danger">Submit Cancellation Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
 @endsection

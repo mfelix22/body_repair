@@ -13,6 +13,7 @@ use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\Labor;
 use App\Models\Insurance;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -443,7 +444,7 @@ class WorkOrderController extends Controller
             ->with('success', 'Work Order completed successfully. Finance can now create the Invoice.');
     }
 
-    public function cancel(WorkOrder $workOrder)
+    public function cancel(Request $request, WorkOrder $workOrder)
     {
         if (!PermissionHelper::canUpdate('work_orders')) {
             return PermissionHelper::denyAccess('work_orders', 'update');
@@ -451,13 +452,41 @@ class WorkOrderController extends Controller
 
         if ($workOrder->status !== 'on_progress') {
             return redirect()->route('work_orders.show', $workOrder)
-                ->with('error', 'Only pending Work Orders can be cancelled.');
+                ->with('error', 'Only pending Work Orders can request cancellation.');
+        }
+
+        $validated = $request->validate([
+            'cancellation_reason' => 'required|string|max:1000',
+        ]);
+
+        $workOrder->update([
+            'status'              => 'pending_cancellation',
+            'cancellation_reason' => $validated['cancellation_reason'],
+        ]);
+
+        return redirect()->route('work_orders.show', $workOrder)
+            ->with('success', 'Cancellation request submitted. Awaiting Sigit approval.');
+    }
+
+    public function approveCancel(WorkOrder $workOrder)
+    {
+        if ($workOrder->status !== 'pending_cancellation') {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'This Work Order is not pending cancellation.');
+        }
+
+        $user  = Auth::user();
+        $sigit = User::where('name', 'like', '%Sigit%')->first();
+
+        if (!$sigit || $user->id !== $sigit->id) {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'Only Sigit can approve this cancellation.');
         }
 
         $workOrder->update(['status' => 'cancelled']);
 
-        return redirect()->route('work_orders.index')
-            ->with('success', 'Work Order cancelled successfully.');
+        return redirect()->route('work_orders.show', $workOrder)
+            ->with('success', 'Work Order cancellation approved.');
     }
 
     /**

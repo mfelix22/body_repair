@@ -32,6 +32,7 @@ class WorkOrder extends Model
         'material_total',
         'grand_total',
         'notes',
+        'cancellation_reason',
         'sa_sales',
         'created_by',
         'started_at',
