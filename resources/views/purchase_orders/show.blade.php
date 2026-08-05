@@ -12,6 +12,7 @@
                     @php
                         $statusLabel = match ($purchaseOrder->status) {
                             'on_progress' => 'On Progress',
+                            'pending_director_approval' => 'Pending Director Approval',
                             'closed_shortage' => 'Closed with Shortage',
                             'completed' => 'Completed',
                             default => ucfirst(str_replace('_', ' ', $purchaseOrder->status)),
@@ -21,6 +22,7 @@
                             'completed' => 'success',
                             'approved' => 'info',
                             'partial' => 'warning',
+                            'pending_director_approval' => 'warning',
                             'closed_shortage' => 'dark',
                             'cancelled' => 'danger',
                             default => 'secondary',
@@ -62,7 +64,7 @@
                                 <i class="fas fa-edit"></i> Edit PO
                             </a>
                         @endif
-                        @if ($purchaseOrder->status === 'on_progress')
+                        @if (in_array($purchaseOrder->status, ['on_progress', 'pending_director_approval']))
                             @php
                                 $amountThreshold = 5000000;
 
@@ -70,16 +72,21 @@
                                     && $purchaseOrder->details->isNotEmpty()
                                     && $purchaseOrder->details->every(fn ($detail) => $detail->item && $detail->item->item_type === 'SP');
 
+                                // Non-Sparepart POs above the threshold need Manager (Sigit) then Director (Direksi).
+                                $requiresDualApproval = !$isAllSparepart && $purchaseOrder->total_amount > $amountThreshold;
+
                                 $isSigit = stripos(auth()->user()->name, 'Sigit') !== false;
                                 $canApprove = false;
 
                                 if ($isAllSparepart) {
                                     $canApprove = $isSigit;
-                                } elseif ($purchaseOrder->total_amount > $amountThreshold) {
-                                    // Amount > 5,000,000: Only Director can approve
-                                    $canApprove = auth()
-                                        ->user()
-                                        ->hasAnyRole(['director', 'super_admin']);
+                                } elseif ($requiresDualApproval) {
+                                    if ($purchaseOrder->status === 'on_progress') {
+                                        $canApprove = $isSigit;
+                                    } else {
+                                        // pending_director_approval
+                                        $canApprove = auth()->user()->hasAnyRole(['director', 'super_admin']);
+                                    }
                                 } else {
                                     // Amount <= 5,000,000: Only Manager (not Director) can approve
                                     $canApprove = auth()
@@ -93,15 +100,18 @@
                                     class="d-inline" onsubmit="return confirm('Are you sure you want to approve this PO?')">
                                     @csrf
                                     <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check"></i> Approve
+                                        <i class="fas fa-check"></i>
+                                        {{ $requiresDualApproval && $purchaseOrder->status === 'pending_director_approval' ? 'Director Approve' : 'Approve' }}
                                     </button>
                                 </form>
                             @else
                                 <span class="badge badge-warning">
                                     @if ($isAllSparepart)
                                         Sigit approval required
-                                    @elseif ($purchaseOrder->total_amount > 5000000)
-                                        Director approval required (>Rp 5,000,000)
+                                    @elseif ($requiresDualApproval && $purchaseOrder->status === 'on_progress')
+                                        Manager (Sigit) approval required (>Rp 5,000,000)
+                                    @elseif ($requiresDualApproval)
+                                        Director approval required (>Rp 5,000,000) — Manager already approved
                                     @else
                                         Manager approval required (≤Rp 5,000,000) — Director cannot approve
                                     @endif
@@ -140,7 +150,7 @@
                         @endif
                         @php
                             $canRevoke =
-                                $purchaseOrder->status === 'approved' &&
+                                in_array($purchaseOrder->status, ['approved', 'pending_director_approval']) &&
                                 !$purchaseOrder->receivables()->exists() &&
                                 !$purchaseOrder->purchaseInvoices()->exists() &&
                                 auth()
@@ -476,9 +486,33 @@
                             </td>
                         </tr>
 
+                        @if ($purchaseOrder->manager_approved_by || $purchaseOrder->status === 'pending_director_approval')
+                            <!-- Manager Approved By (step 1 of dual approval) -->
+                            <tr>
+                                <td><strong>Manager Approved By:</strong></td>
+                                <td>
+                                    @if ($purchaseOrder->managerApprover)
+                                        {{ $purchaseOrder->managerApprover->name }}
+                                        <br><small
+                                            class="text-muted">{{ $purchaseOrder->manager_approved_at->format('M d, Y H:i') }}</small>
+                                    @else
+                                        <span class="text-muted">Pending</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($purchaseOrder->managerApprover && $purchaseOrder->managerApprover->signature_path)
+                                        <img src="{{ route('users.signature', $purchaseOrder->managerApprover) }}" alt="Signature"
+                                            style="max-width: 80px; max-height: 40px;">
+                                    @else
+                                        <span class="text-muted text-sm">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endif
+
                         <!-- Approved By -->
                         <tr>
-                            <td><strong>Approved By:</strong></td>
+                            <td><strong>{{ $purchaseOrder->manager_approved_by ? 'Director Approved By' : 'Approved By' }}:</strong></td>
                             <td>
                                 @if ($purchaseOrder->approver)
                                     {{ $purchaseOrder->approver->name }}

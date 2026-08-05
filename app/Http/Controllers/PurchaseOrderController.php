@@ -25,7 +25,9 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use App\Helpers\PermissionHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
 class PurchaseOrderController extends Controller
@@ -50,7 +52,7 @@ class PurchaseOrderController extends Controller
     public function create(Request $request)
     {
         // Check if user has purchasing role
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_requests.index')
                 ->with('error', 'Only purchasing staff can create Purchase Orders.');
@@ -81,7 +83,7 @@ class PurchaseOrderController extends Controller
     public function store(Request $request)
     {
         // Check if user has purchasing role
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.index')
                 ->with('error', 'Only purchasing staff can create Purchase Orders.');
@@ -240,7 +242,7 @@ class PurchaseOrderController extends Controller
                 'jatuh_tempo'            => $validated['jatuh_tempo'] ?? null,
                 'payment_terms'          => $validated['payment_terms'] ?? null,
                 'status'                 => 'on_progress',
-                'created_by'             => auth()->id(),
+                'created_by'             => Auth::id(),
             ]);
 
             $totalAmount = 0;
@@ -299,17 +301,24 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            $approverRoles = $totalAmount > 5000000
-                ? ['director', 'super_admin']
+            $po->load('details.item');
+            $isAllSparepart = $po->po_type === 'purchase_order'
+                && $po->details->isNotEmpty()
+                && $po->details->every(fn($detail) => $detail->item && $detail->item->item_type === 'SP');
+
+            // All-Sparepart POs and dual-approval POs (>Rp 5,000,000, non-Sparepart) both
+            // start with Manager (Sigit) as the first approver.
+            $approverRoles = ($isAllSparepart || $totalAmount > 5000000)
+                ? ['manager', 'super_admin']
                 : ['manager', 'director', 'super_admin'];
             $poLabel = $po->po_type === 'service_order' ? 'SO' : 'PO';
             NotificationService::sendToRole(
                 $approverRoles,
                 'po_created',
                 "New {$poLabel} Needs Approval",
-                "{$poLabel} {$po->po_number} has been created by " . auth()->user()->name . " and needs your approval.",
+                "{$poLabel} {$po->po_number} has been created by " . Auth::user()->name . " and needs your approval.",
                 route('purchase_orders.show', $po),
-                auth()->id()
+                Auth::id()
             );
 
             return redirect()->route('purchase_orders.index')->with('success', 'Purchase Order created successfully!');
@@ -323,6 +332,7 @@ class PurchaseOrderController extends Controller
             'supplier',
             'creator',
             'approver',
+            'managerApprover',
             'revoker',
             'closer',
             'details.item',
@@ -340,7 +350,7 @@ class PurchaseOrderController extends Controller
 
     public function edit(PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only purchasing staff can edit Purchase Orders.');
@@ -367,7 +377,7 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only purchasing staff can edit Purchase Orders.');
@@ -570,7 +580,7 @@ class PurchaseOrderController extends Controller
 
     public function approve(PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'User not authenticated.');
@@ -586,65 +596,97 @@ class PurchaseOrderController extends Controller
 
         // Determine approval authority based on PO amount
         $amountThreshold = 5000000; // 5,000,000 Rupiah
-        $canApprove = false;
+        // Non-Sparepart POs above the threshold need a two-step signature:
+        // Manager (Sigit) first, then Director (Direksi) second.
+        $requiresDualApproval = !$isAllSparepart && $purchaseOrder->total_amount > $amountThreshold;
 
-        if ($isAllSparepart) {
-            // All-Sparepart POs: must be approved by Sigit
-            $canApprove = $isSigit;
-        } elseif ($purchaseOrder->total_amount > $amountThreshold) {
-            // Amount > 5,000,000: Only Director can approve
-            if ($user->hasAnyRole(['director', 'super_admin'])) {
-                $canApprove = true;
-            }
-        } else {
-            // Amount <= 5,000,000: Only Manager (not Director) can approve
-            if ($user->hasAnyRole(['manager', 'super_admin'])) {
-                $canApprove = true;
-            }
-        }
-
-        if (!$canApprove) {
-            if ($isAllSparepart) {
-                return redirect()->route('purchase_orders.show', $purchaseOrder)
-                    ->with('error', 'This PO contains only Sparepart items and must be approved by Sigit.');
-            }
-            $requiredRole = $purchaseOrder->total_amount > $amountThreshold ? 'Director' : 'Manager';
-            return redirect()->route('purchase_orders.show', $purchaseOrder)
-                ->with('error', "Only $requiredRole can approve POs with this amount.");
-        }
-
-        // Prevent self-approval
-        if ($purchaseOrder->created_by == auth()->id()) {
+        // Prevent self-approval at any step
+        if ($purchaseOrder->created_by == $user->id) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'You cannot approve your own Purchase Order.');
         }
 
-        if ($purchaseOrder->status !== 'on_progress') {
-            return redirect()->route('purchase_orders.show', $purchaseOrder)
-                ->with('error', 'Only on progress POs can be approved.');
+        if ($isAllSparepart) {
+            // All-Sparepart POs: single-step approval, always by Sigit.
+            if (!$isSigit) {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'This PO contains only Sparepart items and must be approved by Sigit.');
+            }
+            if ($purchaseOrder->status !== 'on_progress') {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'Only on progress POs can be approved.');
+            }
+        } elseif ($requiresDualApproval) {
+            if ($purchaseOrder->status === 'on_progress') {
+                // Step 1: Manager (Sigit) signs first.
+                if (!$isSigit) {
+                    return redirect()->route('purchase_orders.show', $purchaseOrder)
+                        ->with('error', 'This PO exceeds Rp 5,000,000 and needs Manager (Sigit) approval first.');
+                }
+            } elseif ($purchaseOrder->status === 'pending_director_approval') {
+                // Step 2: Director (Direksi) signs after Manager.
+                if (!$user->hasAnyRole(['director', 'super_admin'])) {
+                    return redirect()->route('purchase_orders.show', $purchaseOrder)
+                        ->with('error', 'Only Director can give final approval for POs above Rp 5,000,000.');
+                }
+            } else {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'Only on progress POs can be approved.');
+            }
+        } else {
+            // Non-Sparepart, Rp 5,000,000 or less: single-step Manager approval (unchanged).
+            if ($purchaseOrder->status !== 'on_progress') {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'Only on progress POs can be approved.');
+            }
+            if (!$user->hasAnyRole(['manager', 'super_admin'])) {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'Only Manager can approve POs with this amount.');
+            }
         }
 
         // Check if user has signature
-        $user = auth()->user();
         if (!$user->signature_path) {
             return redirect()->route('users.profile')
                 ->with('error', 'Please upload your signature before approving a PO. Go to your profile.');
         }
 
+        $poLabel = $purchaseOrder->po_type === 'service_order' ? 'SO' : 'PO';
+
+        // Step 1 of a dual-approval PO: record Manager sign-off and hand off to Director.
+        if ($requiresDualApproval && $purchaseOrder->status === 'on_progress') {
+            $purchaseOrder->update([
+                'status' => 'pending_director_approval',
+                'manager_approved_by' => $user->id,
+                'manager_approved_at' => now(),
+            ]);
+
+            NotificationService::sendToRole(
+                ['director', 'super_admin'],
+                'po_created',
+                "{$poLabel} Needs Director Approval",
+                "{$poLabel} {$purchaseOrder->po_number} has been approved by Manager ({$user->name}) and now needs Director approval.",
+                route('purchase_orders.show', $purchaseOrder),
+                $user->id
+            );
+
+            return redirect()->route('purchase_orders.show', $purchaseOrder)
+                ->with('success', 'Manager approval recorded. Waiting for Director approval.');
+        }
+
+        // Final approval: either single-step approval, or step 2 (Director) of a dual-approval PO.
         $purchaseOrder->update([
             'status' => 'approved',
-            'approved_by' => auth()->id(),
+            'approved_by' => $user->id,
             'approved_at' => now(),
         ]);
-
-        $poLabel = $purchaseOrder->po_type === 'service_order' ? 'SO' : 'PO';
 
         // Notify the PO creator that their PO has been approved
         NotificationService::send(
             $purchaseOrder->created_by,
             'po_approved',
             "{$poLabel} Approved",
-            "{$poLabel} {$purchaseOrder->po_number} has been approved by " . auth()->user()->name . ".",
+            "{$poLabel} {$purchaseOrder->po_number} has been approved by {$user->name}.",
             route('purchase_orders.show', $purchaseOrder)
         );
 
@@ -655,7 +697,7 @@ class PurchaseOrderController extends Controller
             "{$poLabel} Ready for Receiving",
             "{$poLabel} {$purchaseOrder->po_number} has been approved. Please prepare to receive goods.",
             route('purchase_orders.show', $purchaseOrder),
-            auth()->id()
+            $user->id
         );
 
         return redirect()->route('purchase_orders.show', $purchaseOrder)
@@ -664,11 +706,11 @@ class PurchaseOrderController extends Controller
 
     public function revokeApproval(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if ($purchaseOrder->status !== 'approved') {
+        if (!in_array($purchaseOrder->status, ['approved', 'pending_director_approval'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
-                ->with('error', 'Only approved POs can have their approval revoked.');
+                ->with('error', 'Only approved or pending-director-approval POs can have their approval revoked.');
         }
 
         // Only Purchasing or Admin can send back for revision
@@ -695,9 +737,11 @@ class PurchaseOrderController extends Controller
             'revoked_by'         => $user->id,
             'revoked_at'         => now(),
             'revocation_reason'  => $request->revocation_reason,
-            // Clear approval fields so it must be re-approved
+            // Clear approval fields so it must be re-approved from the start
             'approved_by'        => null,
             'approved_at'        => null,
+            'manager_approved_by' => null,
+            'manager_approved_at' => null,
         ]);
 
         $poLabel = $purchaseOrder->po_type === 'service_order' ? 'SO' : 'PO';
@@ -729,7 +773,7 @@ class PurchaseOrderController extends Controller
 
     public function cancel(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'User not authenticated.');
@@ -775,12 +819,12 @@ class PurchaseOrderController extends Controller
         $poLabel = $purchaseOrder->po_type === 'service_order' ? 'SO' : 'PO';
 
         // Notify the PO creator if they are not the one cancelling
-        if ($purchaseOrder->created_by !== auth()->id()) {
+        if ($purchaseOrder->created_by !== Auth::id()) {
             NotificationService::send(
                 $purchaseOrder->created_by,
                 'po_cancelled',
                 "{$poLabel} Cancelled",
-                "{$poLabel} {$purchaseOrder->po_number} has been cancelled by " . auth()->user()->name . ". Reason: {$request->cancellation_reason}",
+                "{$poLabel} {$purchaseOrder->po_number} has been cancelled by " . Auth::user()->name . ". Reason: {$request->cancellation_reason}",
                 route('purchase_orders.show', $purchaseOrder)
             );
         }
@@ -790,9 +834,9 @@ class PurchaseOrderController extends Controller
             ['purchasing', 'manager', 'director'],
             'po_cancelled',
             "{$poLabel} Cancelled",
-            "{$poLabel} {$purchaseOrder->po_number} has been cancelled by " . auth()->user()->name . ".",
+            "{$poLabel} {$purchaseOrder->po_number} has been cancelled by " . Auth::user()->name . ".",
             route('purchase_orders.show', $purchaseOrder),
-            auth()->id()
+            Auth::id()
         );
 
         return redirect()->route('purchase_orders.show', $purchaseOrder)
@@ -831,7 +875,7 @@ class PurchaseOrderController extends Controller
     public function receive(Request $request, PurchaseOrder $purchaseOrder)
     {
         // Check if user has warehouse role
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['warehouse', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only warehouse staff can receive Purchase Orders.');
@@ -891,7 +935,7 @@ class PurchaseOrderController extends Controller
                     'reference_type' => 'PO',
                     'reference_id' => $purchaseOrder->id,
                     'notes' => "Received from PO {$purchaseOrder->po_number}",
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
             }
         }
@@ -908,7 +952,7 @@ class PurchaseOrderController extends Controller
                 $purchaseOrder->created_by,
                 'po_completed',
                 "{$poLabel} Fully Received",
-                "{$poLabel} {$purchaseOrder->po_number} has been fully received by " . auth()->user()->name . ".",
+                "{$poLabel} {$purchaseOrder->po_number} has been fully received by " . Auth::user()->name . ".",
                 route('purchase_orders.show', $purchaseOrder)
             );
             NotificationService::sendToRole(
@@ -917,7 +961,7 @@ class PurchaseOrderController extends Controller
                 "{$poLabel} Fully Received",
                 "{$poLabel} {$purchaseOrder->po_number} has been fully received into stock.",
                 route('purchase_orders.show', $purchaseOrder),
-                auth()->id()
+                Auth::id()
             );
         } else {
             // Partially received — notify purchasing so they can follow up
@@ -936,7 +980,7 @@ class PurchaseOrderController extends Controller
 
     public function closeRemaining(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only purchasing staff can close remaining PO quantities.');
@@ -986,7 +1030,7 @@ class PurchaseOrderController extends Controller
                 $detail->update([
                     'closed_shortage_quantity' => (float) $detail->closed_shortage_quantity + $closeQuantity,
                     'shortage_close_reason' => trim((string) $line['reason']),
-                    'shortage_closed_by' => auth()->id(),
+                    'shortage_closed_by' => Auth::id(),
                     'shortage_closed_at' => now(),
                 ]);
 
@@ -1023,7 +1067,7 @@ class PurchaseOrderController extends Controller
     public function recordInvoice(Request $request, PurchaseOrder $purchaseOrder)
     {
         // Check if user has purchasing role
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only purchasing staff can record invoices.');
@@ -1105,7 +1149,7 @@ class PurchaseOrderController extends Controller
                 'total_amount' => $totalAmount,
                 'status' => 'on_progress',
                 'notes' => $validated['invoice_notes'] ?? null,
-                'recorded_by' => auth()->id(),
+                'recorded_by' => Auth::id(),
                 'recorded_at' => now(),
             ]);
 
@@ -1138,7 +1182,7 @@ class PurchaseOrderController extends Controller
 
     public function complete(PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'Only purchasing staff can complete POs.');
@@ -1163,7 +1207,7 @@ class PurchaseOrderController extends Controller
 
     public function closeSO(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin', 'manager', 'director'])) {
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', 'You do not have permission to close this Service Order.');
@@ -1191,7 +1235,7 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->update([
             'status'     => 'completed',
-            'closed_by'  => auth()->id(),
+            'closed_by'  => Auth::id(),
             'closed_at'  => now(),
             'nomor_nota' => $validated['nomor_nota'],
         ]);
@@ -1202,7 +1246,7 @@ class PurchaseOrderController extends Controller
             $purchaseOrder->created_by,
             'so_closed',
             'Service Order Closed',
-            "SO {$purchaseOrder->po_number} has been closed by " . auth()->user()->name . ".",
+            "SO {$purchaseOrder->po_number} has been closed by " . Auth::user()->name . ".",
             route('purchase_orders.show', $purchaseOrder)
         );
 
@@ -1244,10 +1288,10 @@ class PurchaseOrderController extends Controller
 
     public function preview(Request $request)
     {
-        \Log::info('Preview method called', ['method' => $request->method(), 'all' => $request->all()]);
+        Log::info('Preview method called', ['method' => $request->method(), 'all' => $request->all()]);
 
         // Check if user has purchasing role
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user || !$user->hasAnyRole(['purchasing', 'admin', 'super_admin'])) {
             return back()->with('error', 'Only purchasing staff can preview POs.');
         }
@@ -1392,7 +1436,7 @@ class PurchaseOrderController extends Controller
         // Stamp printed_at but do NOT change the workflow status
         $purchaseOrder->update([
             'printed_at' => now(),
-            'printed_by' => auth()->id(),
+            'printed_by' => Auth::id(),
         ]);
 
         $purchaseOrder->load(['purchaseRequest', 'creator', 'approver', 'supplier', 'details.item', 'details.uom', 'miscCosts']);
