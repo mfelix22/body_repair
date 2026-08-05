@@ -576,11 +576,22 @@ class PurchaseOrderController extends Controller
                 ->with('error', 'User not authenticated.');
         }
 
+        $purchaseOrder->load(['details.item']);
+
+        $isAllSparepart = $purchaseOrder->po_type === 'purchase_order'
+            && $purchaseOrder->details->isNotEmpty()
+            && $purchaseOrder->details->every(fn($detail) => $detail->item && $detail->item->item_type === 'SP');
+
+        $isSigit = stripos($user->name, 'Sigit') !== false;
+
         // Determine approval authority based on PO amount
         $amountThreshold = 5000000; // 5,000,000 Rupiah
         $canApprove = false;
 
-        if ($purchaseOrder->total_amount > $amountThreshold) {
+        if ($isAllSparepart) {
+            // All-Sparepart POs: must be approved by Sigit
+            $canApprove = $isSigit;
+        } elseif ($purchaseOrder->total_amount > $amountThreshold) {
             // Amount > 5,000,000: Only Director can approve
             if ($user->hasAnyRole(['director', 'super_admin'])) {
                 $canApprove = true;
@@ -593,6 +604,10 @@ class PurchaseOrderController extends Controller
         }
 
         if (!$canApprove) {
+            if ($isAllSparepart) {
+                return redirect()->route('purchase_orders.show', $purchaseOrder)
+                    ->with('error', 'This PO contains only Sparepart items and must be approved by Sigit.');
+            }
             $requiredRole = $purchaseOrder->total_amount > $amountThreshold ? 'Director' : 'Manager';
             return redirect()->route('purchase_orders.show', $purchaseOrder)
                 ->with('error', "Only $requiredRole can approve POs with this amount.");
@@ -858,12 +873,12 @@ class PurchaseOrderController extends Controller
                     ->where('location', 'default')
                     ->first();
 
-                $oldQuantity = $stock->quantity;
-                $oldAvgCost = (float) $stock->avg_cost;
-                $stock->addQuantity($quantityInSmallest);
-
                 $taxMultiplier = ($purchaseOrder->include_ppn && $purchaseOrder->po_type === 'purchase_order') ? 1.11 : 1.0;
-                $receivedUnitCost = ($pod->unit_price * $taxMultiplier) / (float) $itemUom->conversion_to_smallest;
+                $netUnitPrice = (float) $pod->quantity > 0
+                    ? (float) $pod->total_price / (float) $pod->quantity
+                    : (float) $pod->unit_price;
+                $receivedUnitCost = ($netUnitPrice * $taxMultiplier) / (float) $itemUom->conversion_to_smallest;
+                $stock->addQuantity($quantityInSmallest, $receivedUnitCost);
 
                 // Create transaction record
                 StockTransaction::create([

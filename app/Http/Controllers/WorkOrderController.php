@@ -81,12 +81,13 @@ class WorkOrderController extends Controller
             'notes'                => 'nullable|string',
             'sa_sales'             => 'nullable|string|max:100',
             'items'                => 'nullable|array',
-            'items.*.item_id'      => 'required|exists:items,id',
+            'items.*.item_id'      => 'nullable|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'       => 'nullable|string|max:255',
             'labors'               => 'nullable|array',
             'labors.*.labor_id'    => 'nullable|exists:labors,id',
             'labors.*.qty'         => 'nullable|numeric|min:0.01',
+            'labors.*.rate'        => 'nullable|numeric|min:0',
             'labors.*.remarks'     => 'nullable|string',
             'labors.*.is_three_coat'     => 'nullable|boolean',
             'labors.*.is_special_repair' => 'nullable|boolean',
@@ -153,6 +154,9 @@ class WorkOrderController extends Controller
 
         if (!empty($validated['items'])) {
             foreach ($validated['items'] as $itemData) {
+                if (empty($itemData['item_id'])) {
+                    continue;
+                }
                 WorkOrderItem::create([
                     'work_order_id'   => $wo->id,
                     'item_id'         => $itemData['item_id'],
@@ -173,8 +177,12 @@ class WorkOrderController extends Controller
                 $qty = (float) ($laborData['qty'] ?? 1);
                 $isThreeCoat = (bool) ($laborData['is_three_coat'] ?? false);
                 $isSpecialRepair = (bool) ($laborData['is_special_repair'] ?? false);
-                $rate = self::getLaborRateForTier($labor, $priceTier);
-                $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
+                if (isset($laborData['rate']) && $laborData['rate'] !== '') {
+                    $rate = (float) $laborData['rate'];
+                } else {
+                    $rate = self::getLaborRateForTier($labor, $priceTier);
+                    $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
+                }
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $wo->id,
@@ -259,12 +267,13 @@ class WorkOrderController extends Controller
             'sa_sales'             => 'nullable|string|max:100',
             'reference_wo_id'      => 'nullable|exists:work_orders,id',
             'items'             => 'nullable|array',
-            'items.*.item_id'   => 'required|exists:items,id',
+            'items.*.item_id'   => 'nullable|exists:items,id',
             'items.*.demand_quantity' => 'required|numeric|min:0.01',
             'items.*.remark'    => 'nullable|string|max:255',
             'labors'                  => 'nullable|array',
             'labors.*.labor_id'       => 'nullable|exists:labors,id',
             'labors.*.qty'            => 'nullable|numeric|min:0.01',
+            'labors.*.rate'           => 'nullable|numeric|min:0',
             'labors.*.remarks'        => 'nullable|string',
             'labors.*.is_three_coat'     => 'nullable|boolean',
             'labors.*.is_special_repair' => 'nullable|boolean',
@@ -323,6 +332,9 @@ class WorkOrderController extends Controller
         // Add new items
         if (!empty($validated['items'])) {
             foreach ($validated['items'] as $itemData) {
+                if (empty($itemData['item_id'])) {
+                    continue;
+                }
                 WorkOrderItem::create([
                     'work_order_id'   => $workOrder->id,
                     'item_id'         => $itemData['item_id'],
@@ -344,8 +356,12 @@ class WorkOrderController extends Controller
                 $qty = (float) ($laborData['qty'] ?? 1);
                 $isThreeCoat = (bool) ($laborData['is_three_coat'] ?? false);
                 $isSpecialRepair = (bool) ($laborData['is_special_repair'] ?? false);
-                $rate = self::getLaborRateForTier($labor, $priceTier);
-                $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
+                if (isset($laborData['rate']) && $laborData['rate'] !== '') {
+                    $rate = (float) $laborData['rate'];
+                } else {
+                    $rate = self::getLaborRateForTier($labor, $priceTier);
+                    $rate = self::applyPanelSurcharges($rate, $isThreeCoat, $isSpecialRepair);
+                }
                 $totalPrice = $qty * $rate;
                 WorkOrderLabor::create([
                     'work_order_id' => $workOrder->id,
@@ -471,7 +487,7 @@ class WorkOrderController extends Controller
 
         $labor = Labor::findOrFail($validated['labor_id']);
         $qty         = (float) $validated['qty'];
-        $rate        = self::getLaborRateForTier($labor, $workOrder->vehicle_price_tier);
+        $rate        = (float) $validated['rate'];
         $totalPrice  = $qty * $rate;
 
         WorkOrderLabor::create([

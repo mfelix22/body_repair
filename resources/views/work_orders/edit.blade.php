@@ -243,7 +243,7 @@
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="mb-1 small"><strong>Rate</strong></label>
-                                                        <input type="number" class="form-control form-control-sm labor-rate" readonly value="{{ $labor->rate ? number_format($labor->rate, 0, '', '') : '' }}">
+                                                        <input type="number" name="labors[{{ $index }}][rate]" class="form-control form-control-sm labor-rate" step="0.01" min="0" value="{{ $labor->rate ? number_format($labor->rate, 0, '', '') : '' }}" data-manual="1">
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="mb-1 small"><strong>Total</strong></label>
@@ -275,15 +275,12 @@
                                     <i class="fas fa-plus"></i> Tambah Panel
                                 </button>
 
-                                <div class="form-group">
+                                <div class="form-group" style="display: none;">
                                     <label for="vehicle_price_tier"><i class="fas fa-car-crash mr-1"></i> Kisaran Harga Kendaraan <span class="text-danger">*</span></label>
                                     <select name="vehicle_price_tier" id="vehicle_price_tier"
                                         class="form-control @error('vehicle_price_tier') is-invalid @enderror">
                                         <option value="">-- Pilih Kisaran Harga --</option>
-                                        <option value="0_300"   {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '0_300'   ? 'selected' : '' }}>0 – 300 juta</option>
-                                        <option value="300_500" {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '300_500' ? 'selected' : '' }}>300 – 500 juta</option>
-                                        <option value="500_800" {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '500_800' ? 'selected' : '' }}>500 – 800 juta</option>
-                                        <option value="800_2000" {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '800_2000' ? 'selected' : '' }}>800 juta – 2 miliar</option>
+
                                     </select>
                                     @error('vehicle_price_tier')
                                         <span class="invalid-feedback">{{ $message }}</span>
@@ -416,12 +413,17 @@
             }
 
             const opt = select.options[select.selectedIndex];
-            let price = getPriceFromOption(opt, tierKey);
-            if (specialRepairInput && specialRepairInput.checked) price *= SPECIAL_REPAIR_MULTIPLIER;
-            if (threeCoatInput && threeCoatInput.checked) price += THREE_COAT_SURCHARGE;
+            let price;
+            if (rateInput && rateInput.dataset.manual) {
+                price = parseFloat(rateInput.value) || 0;
+            } else {
+                price = getPriceFromOption(opt, tierKey);
+                if (specialRepairInput && specialRepairInput.checked) price *= SPECIAL_REPAIR_MULTIPLIER;
+                if (threeCoatInput && threeCoatInput.checked) price += THREE_COAT_SURCHARGE;
+                if (rateInput) rateInput.value = price;
+            }
             const qty = parseFloat(qtyInput.value) || 0;
             const rowTotal = price * qty;
-            if (rateInput) rateInput.value = price;
             if (totalInput) totalInput.value = rowTotal.toLocaleString('id-ID');
             return rowTotal;
         }
@@ -559,7 +561,7 @@
                         </div>
                         <div class="col-4">
                             <label class="mb-1 small"><strong>Rate</strong></label>
-                            <input type="number" class="form-control form-control-sm labor-rate" readonly>
+                            <input type="number" name="labors[${laborIndex}][rate]" class="form-control form-control-sm labor-rate" step="0.01" min="0">
                         </div>
                         <div class="col-4">
                             <label class="mb-1 small"><strong>Total</strong></label>
@@ -596,14 +598,24 @@
                 if (select.dataset.hasListener) return;
                 select.dataset.hasListener = '1';
                 select.onchange = function() {
+                    const row = this.closest('.labor-row');
+                    const rateInput = row ? row.querySelector('.labor-rate') : null;
+                    if (rateInput) {
+                        rateInput.value = '';
+                        delete rateInput.dataset.manual;
+                    }
                     updatePriceDisplay();
                 };
             });
         }
 
-        // Event delegation for qty — covers both static and dynamically added rows
+        // Event delegation for qty and manual rate — covers both static and dynamically added rows
         document.addEventListener('input', function(e) {
             if (e.target.classList.contains('labor-qty')) {
+                updatePriceDisplay();
+            }
+            if (e.target.classList.contains('labor-rate')) {
+                e.target.dataset.manual = '1';
                 updatePriceDisplay();
             }
             if (e.target.classList.contains('item-qty')) {

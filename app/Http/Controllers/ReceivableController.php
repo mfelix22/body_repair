@@ -598,7 +598,13 @@ class ReceivableController extends Controller
                 // Calculate average cost
                 if ($hasPO) {
                     // From PO: always use the PO detail price so warehouse cannot adjust the unit cost.
-                    $unitPrice = $poDetail ? (float) $poDetail->unit_price : 0;
+                    if ($poDetail && (float) $poDetail->quantity > 0) {
+                        $unitPrice = (float) $poDetail->total_price / (float) $poDetail->quantity;
+                    } elseif ($poDetail) {
+                        $unitPrice = (float) $poDetail->unit_price;
+                    } else {
+                        $unitPrice = 0;
+                    }
 
                     if ($unitPrice > 0 && $quantityInSmallestUom > 0) {
                         $taxMultiplier = ($po->include_ppn && $po->po_type === 'purchase_order') ? 1.11 : 1.0;

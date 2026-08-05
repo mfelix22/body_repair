@@ -65,9 +65,17 @@
                         @if ($purchaseOrder->status === 'on_progress')
                             @php
                                 $amountThreshold = 5000000;
+
+                                $isAllSparepart = $purchaseOrder->po_type === 'purchase_order'
+                                    && $purchaseOrder->details->isNotEmpty()
+                                    && $purchaseOrder->details->every(fn ($detail) => $detail->item && $detail->item->item_type === 'SP');
+
+                                $isSigit = stripos(auth()->user()->name, 'Sigit') !== false;
                                 $canApprove = false;
 
-                                if ($purchaseOrder->total_amount > $amountThreshold) {
+                                if ($isAllSparepart) {
+                                    $canApprove = $isSigit;
+                                } elseif ($purchaseOrder->total_amount > $amountThreshold) {
                                     // Amount > 5,000,000: Only Director can approve
                                     $canApprove = auth()
                                         ->user()
@@ -90,7 +98,9 @@
                                 </form>
                             @else
                                 <span class="badge badge-warning">
-                                    @if ($purchaseOrder->total_amount > 5000000)
+                                    @if ($isAllSparepart)
+                                        Sigit approval required
+                                    @elseif ($purchaseOrder->total_amount > 5000000)
                                         Director approval required (>Rp 5,000,000)
                                     @else
                                         Manager approval required (≤Rp 5,000,000) — Director cannot approve
