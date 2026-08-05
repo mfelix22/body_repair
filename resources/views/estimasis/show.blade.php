@@ -64,12 +64,12 @@
                         @if ($estimasi->approvals_required === 1)
                             <p class="text-muted small mb-2">
                                 <span class="badge badge-warning">&le; 20%</span>
-                                Manager approval only.
+                                Sigit approval only.
                             </p>
                         @elseif ($estimasi->approvals_required === 2)
                             <p class="text-muted small mb-2">
                                 <span class="badge badge-danger">&gt; 20%</span>
-                                Manager and Director must approve in sequence.
+                                Sigit and Director must approve in sequence.
                             </p>
                         @endif
 

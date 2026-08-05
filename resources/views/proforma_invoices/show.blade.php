@@ -135,12 +135,12 @@
                                         <p class="text-muted small mb-1">
                                             <span class="badge badge-warning">
                                                 < 20%</span>
-                                                    Any one of the 3 approvers approving is sufficient.
+                                                    Sigit approval only.
                                         </p>
                                     @elseif ($line->approvals_required === 2)
                                         <p class="text-muted small mb-1">
                                             <span class="badge badge-danger">≥ 20%</span>
-                                            Both Mgr/Acc and Director must approve in sequence.
+                                            Sigit and Director must approve in sequence.
                                         </p>
                                     @endif
 

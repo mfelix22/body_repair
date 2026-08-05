@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\DB;
 
 class EstimasiController extends Controller
 {
-    /** Returns the single Manager and single Director users used for auto-assignment. */
+    /** Returns the Sigit user and a Director user used for auto-assignment. */
     private function getApprovers(): array
     {
-        $manager  = User::whereRaw("FIND_IN_SET('manager', REPLACE(role,'|',','))")->orderBy('name')->first();
+        $sigit    = User::where('name', 'like', '%Sigit%')->first();
         $director = User::whereRaw("FIND_IN_SET('director', REPLACE(role,'|',','))")->orderBy('name')->first();
-        return compact('manager', 'director');
+        return compact('sigit', 'director');
     }
 
     private function validateApproversExist(float $pct): array
@@ -27,8 +27,8 @@ class EstimasiController extends Controller
             return $errors;
         }
         $approvers = $this->getApprovers();
-        if (!$approvers['manager']) {
-            $errors['discount_percentage'] = 'No Manager user found. Please configure a user with the Manager role.';
+        if (!$approvers['sigit']) {
+            $errors['discount_percentage'] = 'No Sigit user found. Please configure a user with Sigit in their name.';
         }
         if ($pct > 20 && !$approvers['director']) {
             $errors['discount_percentage'] = ($errors['discount_percentage'] ?? '') . ' No Director user found. Please configure a user with the Director role.';
@@ -163,7 +163,7 @@ class EstimasiController extends Controller
                     'total'               => $total,
                     'status'              => 'pending_approval',
                     'approvals_required'  => $blendedPct <= 20 ? 1 : 2,
-                    'approver1_id'        => $approvers['manager']->id,
+                    'approver1_id'        => $approvers['sigit']->id,
                     'approver2_id'        => $blendedPct > 20 ? $approvers['director']->id : null,
                 ]);
             });

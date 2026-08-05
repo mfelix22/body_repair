@@ -18,12 +18,12 @@ class ProformaInvoiceController extends Controller
     // Helpers
     // -------------------------------------------------------------------------
 
-    /** Returns the single Manager and single Director users used for auto-assignment. */
+    /** Returns the Sigit user and a Director user used for auto-assignment. */
     private function getApprovers(): array
     {
-        $manager  = User::whereRaw("FIND_IN_SET('manager', REPLACE(role,'|',','))")->orderBy('name')->first();
+        $sigit    = User::where('name', 'like', '%Sigit%')->first();
         $director = User::whereRaw("FIND_IN_SET('director', REPLACE(role,'|',','))")->orderBy('name')->first();
-        return compact('manager', 'director');
+        return compact('sigit', 'director');
     }
 
     /**
@@ -81,15 +81,15 @@ class ProformaInvoiceController extends Controller
      * Shared per-line approver role validation.
      * Returns an errors array (field => message) or empty array if valid.
      */
-    /** Validates that the system has a manager and director configured. */
-    private function validateApproversExist(): array
+    /** Validates that the system has Sigit and, when needed, a Director configured. */
+    private function validateApproversExist(bool $needsDirector = true): array
     {
         $errors = [];
         $approvers = $this->getApprovers();
-        if (!$approvers['manager']) {
-            $errors['approver'] = 'No Manager user found. Please configure a user with the Manager role.';
+        if (!$approvers['sigit']) {
+            $errors['approver'] = 'No Sigit user found. Please configure a user with Sigit in their name.';
         }
-        if (!$approvers['director']) {
+        if ($needsDirector && !$approvers['director']) {
             $errors['approver'] = ($errors['approver'] ?? '') . ' No Director user found. Please configure a user with the Director role.';
         }
         return $errors;
@@ -164,7 +164,7 @@ class ProformaInvoiceController extends Controller
             'workOrders'          => $workOrders,
             'woDetails'           => $woDetails,
             'selectedWorkOrderId' => $selectedWorkOrderId,
-            'approverManager'     => $approvers['manager'],
+            'approverManager'     => $approvers['sigit'],
             'approverDirector'    => $approvers['director'],
         ]);
     }
@@ -200,7 +200,8 @@ class ProformaInvoiceController extends Controller
         }
 
         if ($hasLines) {
-            $approverErrors = $this->validateApproversExist();
+            $needsDirector = collect($validated['lines'])->some(fn($line) => (float) $line['discount_percentage'] > 20);
+            $approverErrors = $this->validateApproversExist($needsDirector);
             if (!empty($approverErrors)) {
                 return back()->withInput()->withErrors($approverErrors);
             }
@@ -287,7 +288,7 @@ class ProformaInvoiceController extends Controller
                         'final_price'         => $origPrice - $discountAmt,
                         'status'              => 'pending_approval',
                         'approvals_required'  => $pct <= 20 ? 1 : 2,
-                        'approver1_id'        => $approvers['manager']->id,
+                        'approver1_id'        => $approvers['sigit']->id,
                         'approver2_id'        => $pct > 20 ? $approvers['director']->id : null,
                         'approver3_id'        => null,
                     ]);
@@ -344,7 +345,7 @@ class ProformaInvoiceController extends Controller
         return view('proforma_invoices.edit', [
             'proformaInvoice'  => $proformaInvoice,
             'woDetails'        => $woDetails,
-            'approverManager'  => $approvers['manager'],
+            'approverManager'  => $approvers['sigit'],
             'approverDirector' => $approvers['director'],
         ]);
     }
@@ -389,7 +390,8 @@ class ProformaInvoiceController extends Controller
         }
 
         if ($hasLines) {
-            $approverErrors = $this->validateApproversExist();
+            $needsDirector = collect($validated['lines'])->some(fn($line) => (float) $line['discount_percentage'] > 20);
+            $approverErrors = $this->validateApproversExist($needsDirector);
             if (!empty($approverErrors)) {
                 return back()->withInput()->withErrors($approverErrors);
             }
@@ -448,7 +450,7 @@ class ProformaInvoiceController extends Controller
                     'final_price'         => $origPrice - $discountAmt,
                     'status'              => 'pending_approval',
                     'approvals_required'  => $pct <= 20 ? 1 : 2,
-                    'approver1_id'        => $approvers['manager']->id,
+                    'approver1_id'        => $approvers['sigit']->id,
                     'approver2_id'        => $pct > 20 ? $approvers['director']->id : null,
                     'approver3_id'        => null,
                 ]);

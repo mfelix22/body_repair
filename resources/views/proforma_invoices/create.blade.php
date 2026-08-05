@@ -159,7 +159,7 @@
 
 @section('scripts')
     @php
-        $managerName = $approverManager ? e($approverManager->name) : '(No Manager configured)';
+        $managerName = $approverManager ? e($approverManager->name) : '(No Sigit configured)';
         $directorName = $approverDirector ? e($approverDirector->name) : '(No Director configured)';
     @endphp
     <script>
@@ -314,13 +314,13 @@
       {{-- <= 20%: Manager approves --}}
       <div id="lt20-${idx}">
         <div class="alert alert-warning py-1 mb-2" style="font-size:.85em;">
-          <i class="fas fa-user-check"></i> 20% or below &mdash; approved by <strong>${MANAGER_NAME}</strong> (Manager).
+          <i class="fas fa-user-check"></i> 20% or below &mdash; approved by <strong>${MANAGER_NAME}</strong> (Sigit).
         </div>
       </div>
       {{-- > 20%: Manager then Director, sequential --}}
       <div id="gte20-${idx}" style="display:none;">
         <div class="alert alert-danger py-1 mb-2" style="font-size:.85em;">
-          <i class="fas fa-user-check"></i> Above 20% &mdash; <strong>${MANAGER_NAME}</strong> (Manager) approves first, then <strong>${DIRECTOR_NAME}</strong> (Director).
+          <i class="fas fa-user-check"></i> Above 20% &mdash; <strong>${MANAGER_NAME}</strong> (Sigit) approves first, then <strong>${DIRECTOR_NAME}</strong> (Director).
         </div>
       </div>
     </div>

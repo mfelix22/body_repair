@@ -172,8 +172,8 @@
                                                         <div class="alert alert-warning py-1 mb-2" style="font-size:.85em;">
                                                             <i class="fas fa-user-check"></i> 20% or below &mdash; approved
                                                             by
-                                                            <strong>{{ $approverManager?->name ?? '(No Manager configured)' }}</strong>
-                                                            (Manager)
+                                                            <strong>{{ $approverManager?->name ?? '(No Sigit configured)' }}</strong>
+                                                            (Sigit)
                                                             .
                                                         </div>
                                                     </div>
@@ -182,8 +182,8 @@
                                                         style="{{ $oldPct > 20 ? '' : 'display:none;' }}">
                                                         <div class="alert alert-danger py-1 mb-2" style="font-size:.85em;">
                                                             <i class="fas fa-user-check"></i> Above 20% &mdash;
-                                                            <strong>{{ $approverManager?->name ?? '(No Manager configured)' }}</strong>
-                                                            (Manager) approves first,
+                                                            <strong>{{ $approverManager?->name ?? '(No Sigit configured)' }}</strong>
+                                                            (Sigit) approves first,
                                                             then
                                                             <strong>{{ $approverDirector?->name ?? '(No Director configured)' }}</strong>
                                                             (Director).
