@@ -616,21 +616,22 @@
                     </table>
 
                     @php
-                        $subTotal = $purchaseOrder->total_amount ?? 0;
+                        $discountedSubTotal = $purchaseOrder->total_amount ?? 0;
+                        $subTotal = $discountedSubTotal + ($purchaseOrder->discount ?? 0);
                         $miscCost = $purchaseOrder->miscCosts->sum('amount');
                         $ppn =
                             $purchaseOrder->include_ppn && $purchaseOrder->po_type === 'purchase_order'
-                                ? ($subTotal + $miscCost) * 0.11
+                                ? ($discountedSubTotal + $miscCost) * 0.11
                                 : 0;
                         $pph = 0;
                         if ($purchaseOrder->po_type === 'service_order') {
                             if ($purchaseOrder->pph_type === 'pph_21') {
-                                $pph = $subTotal * 0.025;
+                                $pph = $discountedSubTotal * 0.025;
                             } elseif ($purchaseOrder->pph_type === 'pph_23') {
-                                $pph = $subTotal * 0.02;
+                                $pph = $discountedSubTotal * 0.02;
                             }
                         }
-                        $grandTotal = $subTotal + $miscCost + $ppn - $pph;
+                        $grandTotal = $discountedSubTotal + $miscCost + $ppn - $pph;
                     @endphp
 
                     @php
@@ -657,6 +658,14 @@
                                                 {{ number_format($subTotal, 0, ',', '.') }}</strong>
                                         </td>
                                     </tr>
+                                    @if ($purchaseOrder->discount > 0)
+                                        <tr>
+                                            <th>Diskon:</th>
+                                            <td class="text-right" style="color: #c00;"><strong>- Rp
+                                                    {{ number_format($purchaseOrder->discount, 0, ',', '.') }}</strong>
+                                            </td>
+                                        </tr>
+                                    @endif
                                     @if ($miscCost > 0)
                                         <tr>
                                             <th>Lain-lain (Total):</th>

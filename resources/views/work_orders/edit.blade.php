@@ -457,7 +457,7 @@
 
         // Build item options HTML
         @php
-            $itemsFormatted = $items->map(function ($item) {
+            $itemsFormatted = $items->where('item_type', 'SP')->map(function ($item) {
                 $defaultStock = $item->stocks->where('location', 'default')->first();
                 $stock = (float) $item->stocks->sum('quantity');
                 $stockFormatted = $stock == floor($stock) ? number_format($stock, 0, '', '') : rtrim(rtrim(number_format($stock, 2, '.', ''), '0'), '.');

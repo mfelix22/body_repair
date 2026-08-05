@@ -321,22 +321,15 @@
 
                     <hr>
                     @php
-                        $canAddLabor =
-                            $workOrder->status !== 'invoiced' &&
-                            !$workOrder->proformaInvoice &&
-                            \App\Helpers\PermissionHelper::canUpdate('work_orders');
-                    @endphp
-                    @php
-                        $basePanels   = $workOrder->panelLabors->where('is_extra', false);
-                        $baseLabors   = $workOrder->generalLabors->where('is_extra', false);
-                        $extraLabors  = $workOrder->generalLabors->where('is_extra', true);
+                        $basePanels = $workOrder->panelLabors->where('is_extra', false);
+                        $baseLabors = $workOrder->generalLabors->where('is_extra', false);
                     @endphp
 
-                    {{-- Base Panels --}}
+                    {{-- Base Panels + Base Labors --}}
                     <div class="d-flex align-items-center mb-2">
                         <h6 class="mb-0">Panel yang Dikerjakan</h6>
                     </div>
-                    @if ($basePanels->isNotEmpty())
+                    @if ($basePanels->isNotEmpty() || $baseLabors->isNotEmpty())
                         <table class="table table-striped table-bordered">
                             <thead class="thead-light">
                                 <tr>
@@ -350,9 +343,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($basePanels as $wol)
+                                @foreach ($basePanels->concat($baseLabors) as $wol)
                                     <tr>
-                                        <td>{{ $wol->panel?->panel_code ?? '—' }}</td>
+                                        <td>{{ $wol->panel?->panel_code ?? $wol->labor?->labor_code ?? '—' }}</td>
                                         <td>{{ $wol->description }}</td>
                                         <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
                                         <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
@@ -374,108 +367,39 @@
                         <p class="text-muted">Belum ada panel.</p>
                     @endif
 
-                    {{-- Base Labors --}}
+                    {{-- Sparepart yang Digunakan --}}
                     <div class="d-flex align-items-center mb-2 mt-3">
-                        <h6 class="mb-0">Panel yang Dikerjakan</h6>
+                        <h6 class="mb-0">Sparepart yang Digunakan</h6>
                     </div>
-                    @if ($baseLabors->isNotEmpty())
+                    @if ($workOrder->items->isNotEmpty())
                         <table class="table table-striped table-bordered">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Code</th>
-                                    <th>Panel</th>
+                                    <th>Sparepart</th>
                                     <th class="text-center">Qty</th>
-                                    <th class="text-right">Rate (Rp)</th>
+                                    <th>UOM</th>
+                                    <th class="text-right">Harga Satuan (Rp)</th>
                                     <th class="text-right">Total (Rp)</th>
-                                    <th>Flags</th>
-                                    <th>Remarks</th>
+                                    <th>Remark</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($baseLabors as $wol)
+                                @foreach ($workOrder->items as $woItem)
                                     <tr>
-                                        <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
-                                        <td>{{ $wol->description }}</td>
-                                        <td class="text-center">{{ number_format($wol->qty, 0) }}</td>
-                                        <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">—</span>' }}</td>
-                                        <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
-                                        <td>
-                                            @if ($wol->is_three_coat)
-                                                <span class="badge badge-info">Three Coat/Candy</span>
-                                            @endif
-                                            @if ($wol->is_special_repair)
-                                                <span class="badge badge-warning">Special Repair</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $wol->remarks ?? '-' }}</td>
+                                        <td>{{ $woItem->item?->code ?? '—' }}</td>
+                                        <td>{{ $woItem->item?->name ?? '—' }}</td>
+                                        <td class="text-center">{{ number_format($woItem->actual_quantity ?? $woItem->demand_quantity, 2) }}</td>
+                                        <td>{{ $woItem->uom?->code ?? optional($woItem->item?->smallestUom)->name ?? '-' }}</td>
+                                        <td class="text-right">{{ $woItem->unit_price ? number_format($woItem->unit_price, 0, ',', '.') : '—' }}</td>
+                                        <td class="text-right"><strong>{{ $woItem->total_price ? number_format($woItem->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>{{ $woItem->remark ?? '-' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     @else
-                        <p class="text-muted">Belum ada panel.</p>
-                    @endif
-
-                    {{-- Extra Panels --}}
-                    <div class="d-flex align-items-center mb-2 mt-3">
-                        <h6 class="mb-0 mr-3">Extra Panel</h6>
-                        @if ($canAddLabor)
-                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
-                                data-target="#addLaborModal">
-                                <i class="fas fa-plus"></i> Add Extra Panel
-                            </button>
-                        @endif
-                    </div>
-                    @if ($extraLabors->isNotEmpty())
-                        <table class="table table-striped table-bordered">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Description</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-right">Rate (Rp)</th>
-                                    <th class="text-right">Total (Rp)</th>
-                                    <th>Remarks</th>
-                                    @if ($canAddLabor)
-                                        <th style="width:50px"></th>
-                                    @endif
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($extraLabors as $wol)
-                                    <tr class="table-warning">
-                                        <td>{{ $wol->labor?->labor_code ?? '—' }}</td>
-                                        <td>{{ $wol->description }}</td>
-                                        <td class="text-center">{{ number_format($wol->qty, 2) }}</td>
-                                        <td class="text-right">{{ $wol->rate ? number_format($wol->rate, 0, ',', '.') : '<span class="text-muted">Fixed</span>' }}</td>
-                                        <td class="text-right"><strong>{{ $wol->total_price ? number_format($wol->total_price, 0, ',', '.') : '—' }}</strong></td>
-                                        <td>{{ $wol->remarks ?? '-' }}</td>
-                                        @if ($canAddLabor)
-                                            <td>
-                                                <form action="{{ route('work_orders.remove_labor', [$workOrder, $wol]) }}"
-                                                    method="POST" class="d-inline"
-                                                    onsubmit="return confirm('Remove this extra panel?')">
-                                                    @csrf @method('DELETE')
-                                                    <button class="btn btn-danger btn-xs"><i class="fas fa-times"></i></button>
-                                                </form>
-                                            </td>
-                                        @endif
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            @php $totalExtraLabor = $extraLabors->sum('total_price'); @endphp
-                            @if ($totalExtraLabor > 0)
-                                <tfoot>
-                                    <tr class="table-success">
-                                        <td colspan="{{ $canAddLabor ? 4 : 3 }}" class="text-right font-weight-bold">Extra Panel Total:</td>
-                                        <td class="text-right font-weight-bold">{{ number_format($totalExtraLabor, 0, ',', '.') }}</td>
-                                        <td colspan="2"></td>
-                                    </tr>
-                                </tfoot>
-                            @endif
-                        </table>
-                    @else
-                        <p class="text-muted">Tidak ada extra panel.</p>
+                        <p class="text-muted">Belum ada sparepart yang digunakan.</p>
                     @endif
                 </div>
             </div>
@@ -599,139 +523,4 @@
         </div>
     @endif
 
-    {{-- ===== ADD PANEL MODAL ===== --}}
-    @if ($canAddLabor)
-        <div class="modal fade" id="addLaborModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <form action="{{ route('work_orders.add_labor', $workOrder) }}" method="POST">
-                        @csrf
-                        <div class="modal-header">
-                            <h5 class="modal-title"><i class="fas fa-hard-hat"></i> Add Extra Panel to
-                                {{ $workOrder->wo_number }}</h5>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            @if (session('error'))
-                                <div class="alert alert-danger">{{ session('error') }}</div>
-                            @endif
-
-                            <div class="form-group">
-                                <label>Panel <span class="text-danger">*</span></label>
-                                <select name="labor_id" id="laborSelect" class="form-control select2" required>
-                                    <option value="">— Pilih Panel —</option>
-                                    @foreach ($masterLabors as $ml)
-                                        <option value="{{ $ml->id }}"
-                                            data-price="{{ (float) $ml->price }}"
-                                            data-p0300="{{ (float) $ml->price_0_300 }}"
-                                            data-p300500="{{ (float) $ml->price_300_500 }}"
-                                            data-p500800="{{ (float) $ml->price_500_800 }}"
-                                            data-p8002000="{{ (float) $ml->price_800_2000 }}">
-                                            {{ $ml->labor_code }} — {{ $ml->description }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Qty <span class="text-danger">*</span></label>
-                                        <input type="number" name="qty" id="laborQty" class="form-control"
-                                            value="1" min="0.01" step="0.01" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label>Unit Price (Rp) <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend"><span class="input-group-text">Rp</span>
-                                            </div>
-                                            <input type="number" name="rate" id="laborRate" class="form-control"
-                                                value="" min="0" step="1" readonly required>
-                                        </div>
-                                        <small class="text-muted">Auto-filled based on Kisaran Harga Kendaraan.</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Total</label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                                    <input type="text" id="laborTotal" class="form-control" readonly value="0">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Remarks</label>
-                                <input type="text" name="remarks" class="form-control" placeholder="Optional notes">
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Add Extra Labor</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        @push('scripts')
-            <script>
-                $(function() {
-                    const $sel = $('#laborSelect');
-                    const $qty = $('#laborQty');
-                    const $rate = $('#laborRate');
-                    const $tot = $('#laborTotal');
-
-                    const tierMap = {
-                        '0_300': 'p0300',
-                        '300_500': 'p300500',
-                        '500_800': 'p500800',
-                        '800_2000': 'p8002000'
-                    };
-                    const priceTier = @json($workOrder->vehicle_price_tier);
-                    const tierKey = tierMap[priceTier] || null;
-
-                    $sel.select2({
-                        theme: 'bootstrap4',
-                        dropdownParent: $('#addLaborModal'),
-                        width: '100%'
-                    });
-
-                    function recalc() {
-                        const q = parseFloat($qty.val()) || 0;
-                        const r = parseFloat($rate.val()) || 0;
-                        $tot.val(Math.round(q * r).toLocaleString('id-ID'));
-                    }
-
-                    function fillPrice() {
-                        const opt = $sel.find(':selected')[0];
-                        if (opt && opt.value) {
-                            let price = 0;
-                            if (tierKey && opt.dataset[tierKey] && parseFloat(opt.dataset[tierKey]) > 0) {
-                                price = parseFloat(opt.dataset[tierKey]);
-                            } else {
-                                price = parseFloat(opt.dataset.price) || 0;
-                            }
-                            $rate.val(price);
-                            recalc();
-                        } else {
-                            $rate.val('');
-                            $tot.val('0');
-                        }
-                    }
-
-                    $sel.on('change', fillPrice);
-                    $qty.add($rate).on('input', recalc);
-
-                    {{-- Re-open modal if there was a validation error --}}
-                    @if (session('error'))
-                        $('#addLaborModal').modal('show');
-                    @endif
-                });
-            </script>
-        @endpush
-    @endif
 @endsection
