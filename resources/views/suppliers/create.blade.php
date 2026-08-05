@@ -53,10 +53,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="phone">Phone</label>
+                                    <label for="phone">Phone <span class="text-danger">*</span></label>
                                     <input type="text" name="phone" id="phone"
                                         class="form-control @error('phone') is-invalid @enderror"
-                                        value="{{ old('phone') }}">
+                                        value="{{ old('phone') }}" required>
                                     @error('phone')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
@@ -65,8 +65,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="address">Address</label>
-                            <textarea name="address" id="address" rows="3" class="form-control @error('address') is-invalid @enderror">{{ old('address') }}</textarea>
+                            <label for="address">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" id="address" rows="3" class="form-control @error('address') is-invalid @enderror" required>{{ old('address') }}</textarea>
                             @error('address')
                                 <span class="invalid-feedback">{{ $message }}</span>
                             @enderror
