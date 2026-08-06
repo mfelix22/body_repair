@@ -345,28 +345,20 @@
                                             </div>
                                         </div>
                                         <div class="row mt-2">
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <label>Unit Price</label>
                                                 <input type="number" name="items[0][unit_price]"
                                                     class="form-control price" step="0.01" min="0" required>
                                             </div>
-                                            <div class="col-md-2">
-                                                <label>Disc %</label>
-                                                <input type="number" name="items[0][discount_percentage]"
-                                                    class="form-control discount-pct" step="0.01" min="0"
-                                                    placeholder="%">
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label>Disc Rp</label>
-                                                <input type="number" name="items[0][discount]"
-                                                    class="form-control discount-amt" step="0.01" min="0"
-                                                    placeholder="Rp">
-                                            </div>
-                                            <div class="col-md-3">
+                                            <input type="hidden" name="items[0][discount_percentage]"
+                                                class="discount-pct" value="0">
+                                            <input type="hidden" name="items[0][discount]" class="discount-amt"
+                                                value="0">
+                                            <div class="col-md-4">
                                                 <label>Total</label>
                                                 <input type="text" class="form-control total" readonly disabled>
                                             </div>
-                                            <div class="col-md-2"></div>
+                                            <div class="col-md-4"></div>
                                         </div>
                                     </div>
 
@@ -392,28 +384,20 @@
                                             </div>
                                         </div>
                                         <div class="row mt-2">
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <label>Unit Price (Rp)</label>
                                                 <input type="number" name="items[0][unit_price]"
                                                     class="form-control price" step="0.01" min="0" required>
                                             </div>
-                                            <div class="col-md-2">
-                                                <label>Disc %</label>
-                                                <input type="number" name="items[0][discount_percentage]"
-                                                    class="form-control discount-pct" step="0.01" min="0"
-                                                    placeholder="%">
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label>Disc Rp</label>
-                                                <input type="number" name="items[0][discount]"
-                                                    class="form-control discount-amt" step="0.01" min="0"
-                                                    placeholder="Rp">
-                                            </div>
-                                            <div class="col-md-3">
+                                            <input type="hidden" name="items[0][discount_percentage]"
+                                                class="discount-pct" value="0">
+                                            <input type="hidden" name="items[0][discount]" class="discount-amt"
+                                                value="0">
+                                            <div class="col-md-4">
                                                 <label>Total</label>
                                                 <input type="text" class="form-control total" readonly disabled>
                                             </div>
-                                            <div class="col-md-2"></div>
+                                            <div class="col-md-4"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -423,6 +407,12 @@
 
                         <div class="row mt-4">
                             <div class="col-md-4 offset-md-8">
+
+                                <div class="form-group">
+                                    <label for="global_discount_percentage">Diskon (%) <small class="text-muted">berlaku untuk semua item</small></label>
+                                    <input type="number" name="global_discount_percentage" id="global_discount_percentage" class="form-control"
+                                        step="0.01" min="0" max="100" placeholder="%" value="{{ old('global_discount_percentage', 0) }}">
+                                </div>
 
                                 <table class="table table-sm">
                                     <tr>
@@ -531,26 +521,18 @@
                                 </div>
                             </div>
                             <div class="row mt-2">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label>Unit Price (Rp)</label>
                                     <input type="number" name="items[${itemIndex}][unit_price]" class="form-control price"
                                         step="0.01" min="0" required>
                                 </div>
-                                <div class="col-md-2">
-                                    <label>Disc %</label>
-                                    <input type="number" name="items[${itemIndex}][discount_percentage]"
-                                        class="form-control discount-pct" step="0.01" min="0" placeholder="%">
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Disc Rp</label>
-                                    <input type="number" name="items[${itemIndex}][discount]"
-                                        class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
-                                </div>
-                                <div class="col-md-3">
+                                <input type="hidden" name="items[${itemIndex}][discount_percentage]" class="discount-pct" value="0">
+                                <input type="hidden" name="items[${itemIndex}][discount]" class="discount-amt" value="0">
+                                <div class="col-md-4">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled>
                                 </div>
-                                <div class="col-md-2"></div>
+                                <div class="col-md-4"></div>
                             </div>
                         </div>
                     </div>
@@ -596,26 +578,18 @@
                                 </div>
                             </div>
                             <div class="row mt-2">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label>Unit Price</label>
                                     <input type="number" name="items[${itemIndex}][unit_price]" class="form-control price"
                                         step="0.01" min="0" required>
                                 </div>
-                                <div class="col-md-2">
-                                    <label>Disc %</label>
-                                    <input type="number" name="items[${itemIndex}][discount_percentage]"
-                                        class="form-control discount-pct" step="0.01" min="0" placeholder="%">
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Disc Rp</label>
-                                    <input type="number" name="items[${itemIndex}][discount]"
-                                        class="form-control discount-amt" step="0.01" min="0" placeholder="Rp">
-                                </div>
-                                <div class="col-md-3">
+                                <input type="hidden" name="items[${itemIndex}][discount_percentage]" class="discount-pct" value="0">
+                                <input type="hidden" name="items[${itemIndex}][discount]" class="discount-amt" value="0">
+                                <div class="col-md-4">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled>
                                 </div>
-                                <div class="col-md-2"></div>
+                                <div class="col-md-4"></div>
                             </div>
                         </div>
                     </div>
@@ -625,6 +599,7 @@
             container.appendChild(newItemRow);
             itemIndex++;
             attachItemEventListeners();
+            applyGlobalDiscount();
         });
 
         function attachItemEventListeners() {
@@ -638,11 +613,9 @@
                 select.addEventListener('change', handleUomChange);
             });
 
-            document.querySelectorAll('.qty, .price, .discount-pct, .discount-amt').forEach(input => {
+            document.querySelectorAll('.qty, .price').forEach(input => {
                 input.removeEventListener('input', handleLineChange);
                 input.addEventListener('input', handleLineChange);
-                input.removeEventListener('blur', handleDiscountBlur);
-                input.addEventListener('blur', handleDiscountBlur);
             });
 
             document.querySelectorAll('.remove-item').forEach(btn => {
@@ -687,7 +660,7 @@
                 const price = getPriceForUom(uoms, uomSelect.value);
                 priceInput.value = price.toFixed(2);
                 const qty = parseFloat(row.querySelector('.qty').value) || 0;
-                recalculateLine(row);
+                applyGlobalDiscount();
                 const selectedUom = uoms.find(u => String(u.uom_id) === String(uomSelect.value));
                 if (selectedUom && convInput) {
                     const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
@@ -714,7 +687,7 @@
             priceInput.value = price.toFixed(2);
 
             const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            recalculateLine(row);
+            applyGlobalDiscount();
             const selectedUom = uoms.find(u => String(u.uom_id) === String(this.value));
             if (selectedUom && convInput) {
                 const masterConv = parseFloat(selectedUom.conversion_to_smallest || 1);
@@ -725,66 +698,33 @@
             }
         }
 
-        function recalculateLine(row) {
-            const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
-            const price = parseFloat(row.querySelector('.price')?.value) || 0;
-            const gross = qty * price;
-            const pctInput = row.querySelector('.discount-pct');
-            const amtInput = row.querySelector('.discount-amt');
-            const totalInput = row.querySelector('.total');
-
-            let pct = parseFloat(pctInput?.value) || 0;
-            let amt = parseFloat(amtInput?.value) || 0;
-
-            // Clamp to valid ranges
+        // Recalculates every item row's discount and total using the single global
+        // percentage discount, then refreshes the summary totals.
+        function applyGlobalDiscount() {
+            const pctFieldEl = document.getElementById('global_discount_percentage');
+            let pct = parseFloat(pctFieldEl?.value) || 0;
             pct = Math.max(0, Math.min(100, pct));
-            amt = Math.max(0, Math.min(gross, amt));
 
-            if (pct > 0) {
-                amt = Math.min(gross, gross * pct / 100);
-            } else if (amt > 0) {
-                pct = gross > 0 ? (amt / gross * 100) : 0;
-            }
+            document.querySelectorAll('.item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.price')?.value) || 0;
+                const gross = qty * price;
+                const pctInput = row.querySelector('.discount-pct');
+                const amtInput = row.querySelector('.discount-amt');
+                const totalInput = row.querySelector('.total');
 
-            if (pctInput) pctInput.value = pct.toFixed(2);
-            if (amtInput) amtInput.value = amt.toFixed(2);
-            if (totalInput) {
-                totalInput.value = Math.max(0, gross - amt).toFixed(2);
-            }
+                const disc = Math.round(gross * pct) / 100;
+
+                if (pctInput) pctInput.value = pct.toFixed(2);
+                if (amtInput) amtInput.value = disc.toFixed(2);
+                if (totalInput) totalInput.value = (gross - disc).toFixed(2);
+            });
+
+            updateSummary();
         }
 
         function handleLineChange(e) {
-            const row = this.closest('.item-row');
-            const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
-            const price = parseFloat(row.querySelector('.price')?.value) || 0;
-            const gross = qty * price;
-            const pctInput = row.querySelector('.discount-pct');
-            const amtInput = row.querySelector('.discount-amt');
-            const totalInput = row.querySelector('.total');
-
-            if (this.classList.contains('discount-pct') && pctInput) {
-                const pct = Math.max(0, parseFloat(this.value) || 0);
-                const usedPct = Math.min(100, pct);
-                const amt = Math.min(gross, gross * usedPct / 100);
-                amtInput.value = amt.toFixed(2);
-                totalInput.value = Math.max(0, gross - amt).toFixed(2);
-            } else if (this.classList.contains('discount-amt') && amtInput) {
-                const rawAmt = Math.max(0, parseFloat(this.value) || 0);
-                const amt = Math.min(gross, rawAmt);
-                const pct = gross > 0 ? (amt / gross * 100) : 0;
-                pctInput.value = pct.toFixed(2);
-                totalInput.value = Math.max(0, gross - amt).toFixed(2);
-            } else {
-                recalculateLine(row);
-                return updateSummary();
-            }
-
-            updateSummary();
-        }
-
-        function handleDiscountBlur() {
-            recalculateLine(this.closest('.item-row'));
-            updateSummary();
+            applyGlobalDiscount();
         }
 
         function updateSummary() {
@@ -833,6 +773,12 @@
         }
 
         attachItemEventListeners();
+
+        const globalDiscountInput = document.getElementById('global_discount_percentage');
+        if (globalDiscountInput) {
+            globalDiscountInput.addEventListener('input', applyGlobalDiscount);
+        }
+        applyGlobalDiscount();
 
         // Warn on submit if any conversion overrides are active
         document.querySelector('form[action="{{ route("purchase_orders.store") }}"]')
@@ -935,27 +881,19 @@
                                 </div>
                             </div>
                             <div class="row mt-2">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label>Unit Price (Rp)</label>
                                     <input type="number" name="items[${index}][unit_price]" class="form-control price"
                                         step="0.01" min="0" value="${detail.unit_price || 0}" required>
                                 </div>
-                                <div class="col-md-2">
-                                    <label>Disc %</label>
-                                    <input type="number" name="items[${index}][discount_percentage]" class="form-control discount-pct"
-                                        step="0.01" min="0" placeholder="%">
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Disc Rp</label>
-                                    <input type="number" name="items[${index}][discount]" class="form-control discount-amt"
-                                        step="0.01" min="0" placeholder="Rp">
-                                </div>
-                                <div class="col-md-3">
+                                <input type="hidden" name="items[${index}][discount_percentage]" class="discount-pct" value="0">
+                                <input type="hidden" name="items[${index}][discount]" class="discount-amt" value="0">
+                                <div class="col-md-4">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled
                                         value="${((detail.quantity || 0) * (detail.unit_price || 0)).toFixed(2)}">
                                 </div>
-                                <div class="col-md-2"></div>
+                                <div class="col-md-4"></div>
                             </div>
                         </div>
                     </div>`;
@@ -1029,27 +967,19 @@
                                 </div>
                             </div>
                             <div class="row mt-2">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label>Unit Price</label>
                                     <input type="number" name="items[${index}][unit_price]" class="form-control price"
                                         step="0.01" min="0" value="${price.toFixed(2)}" required>
                                 </div>
-                                <div class="col-md-2">
-                                    <label>Disc %</label>
-                                    <input type="number" name="items[${index}][discount_percentage]" class="form-control discount-pct"
-                                        step="0.01" min="0" placeholder="%">
-                                </div>
-                                <div class="col-md-2">
-                                    <label>Disc Rp</label>
-                                    <input type="number" name="items[${index}][discount]" class="form-control discount-amt"
-                                        step="0.01" min="0" placeholder="Rp">
-                                </div>
-                                <div class="col-md-3">
+                                <input type="hidden" name="items[${index}][discount_percentage]" class="discount-pct" value="0">
+                                <input type="hidden" name="items[${index}][discount]" class="discount-amt" value="0">
+                                <div class="col-md-4">
                                     <label>Total</label>
                                     <input type="text" class="form-control total" readonly disabled
                                         value="${((detail.quantity || 0) * price).toFixed(2)}">
                                 </div>
-                                <div class="col-md-2"></div>
+                                <div class="col-md-4"></div>
                             </div>
                         </div>
                     </div>`;
@@ -1060,6 +990,7 @@
             });
 
             attachItemEventListeners();
+            applyGlobalDiscount();
             if (typeof initItemSelect2 === 'function') {
                 setTimeout(initItemSelect2, 50);
             }
