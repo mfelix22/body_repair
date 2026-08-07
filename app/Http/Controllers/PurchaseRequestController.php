@@ -92,7 +92,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
             $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
-            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP';
+            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP,AXT';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
 
@@ -175,12 +175,21 @@ class PurchaseRequestController extends Controller
 
                     // Generate proper sequential code matching ItemController logic
                     $lastItem = Item::where('item_type', $customType)->orderBy('id', 'desc')->first();
-                    if ($lastItem && preg_match('/' . $customType . '(\d+)/', $lastItem->code, $matches)) {
+
+                    if ($customType === 'AXT') {
+                        $pattern = '/AXT-?(\d+)/';
+                        $codePrefix = 'AXT-';
+                    } else {
+                        $pattern = '/' . $customType . '(\d+)/';
+                        $codePrefix = $customType;
+                    }
+
+                    if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
                         $nextNumber = intval($matches[1]) + 1;
                     } else {
                         $nextNumber = Item::where('item_type', $customType)->count() + 1;
                     }
-                    $itemCode = $customType . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                    $itemCode = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
                     // Create incomplete item that needs to be completed before Bon In
                     $placeholderItem = Item::create([
@@ -531,7 +540,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
             $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
-            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP';
+            $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP,AXT';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
 
@@ -610,12 +619,21 @@ class PurchaseRequestController extends Controller
 
                     // Generate proper sequential code matching ItemController logic
                     $lastItem = Item::where('item_type', $customType)->orderBy('id', 'desc')->first();
-                    if ($lastItem && preg_match('/' . $customType . '(\d+)/', $lastItem->code, $matches)) {
+
+                    if ($customType === 'AXT') {
+                        $pattern = '/AXT-?(\d+)/';
+                        $codePrefix = 'AXT-';
+                    } else {
+                        $pattern = '/' . $customType . '(\d+)/';
+                        $codePrefix = $customType;
+                    }
+
+                    if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
                         $nextNumber = intval($matches[1]) + 1;
                     } else {
                         $nextNumber = Item::where('item_type', $customType)->count() + 1;
                     }
-                    $itemCode = $customType . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                    $itemCode = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
                     // Create incomplete item that needs to be completed before Bon In
                     $placeholderItem = Item::create([

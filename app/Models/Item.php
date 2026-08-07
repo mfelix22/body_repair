@@ -47,6 +47,7 @@ class Item extends Model
             'T' => 'Tools',
             'TE' => 'Tools & Equipment',
             'SP' => 'Sparepart',
+            'AXT' => 'Cat',
         ];
     }
 

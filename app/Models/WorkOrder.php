@@ -22,6 +22,7 @@ class WorkOrder extends Model
         'vehicle_info',
         'vehicle_merk',
         'vehicle_type_year',
+        'vehicle_color',
         'vehicle_plate',
         'vehicle_km',
         'vehicle_price_tier',

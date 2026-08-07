@@ -35,6 +35,8 @@
                                             Equipment</option>
                                         <option value="SP" {{ old('item_type') == 'SP' ? 'selected' : '' }}>SP -
                                             Sparepart</option>
+                                        <option value="AXT" {{ old('item_type') == 'AXT' ? 'selected' : '' }}>AXT -
+                                            Cat</option>
                                     </select>
                                     <small class="form-text text-muted">Code will be auto-generated (e.g., C-0001)</small>
                                     @error('item_type')

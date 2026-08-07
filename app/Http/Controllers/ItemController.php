@@ -41,7 +41,7 @@ class ItemController extends Controller
             return PermissionHelper::denyAccess('items', 'create');
         }
         $validated = $request->validate([
-            'item_type' => 'required|in:A,B,C,E,T,TE,SP',
+            'item_type' => 'required|in:A,B,C,E,T,TE,SP,AXT',
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -65,13 +65,21 @@ class ItemController extends Controller
             ->orderBy('id', 'desc')
             ->first();
 
-        if ($lastItem && preg_match('/' . $prefix . '(\d+)/', $lastItem->code, $matches)) {
+        if ($prefix === 'AXT') {
+            $pattern = '/AXT-?(\d+)/';
+            $codePrefix = 'AXT-';
+        } else {
+            $pattern = '/' . $prefix . '(\d+)/';
+            $codePrefix = $prefix;
+        }
+
+        if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
             $nextNumber = intval($matches[1]) + 1;
         } else {
             $nextNumber = 1;
         }
 
-        $code = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        $code = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
         $sellingPrice = null;
         if (Auth::user()->hasAnyRole(['super_admin', 'admin', 'accounting'])) {

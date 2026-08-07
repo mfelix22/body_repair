@@ -74,6 +74,7 @@ class WorkOrderController extends Controller
             'vehicle_info'         => 'nullable|string|max:200',
             'vehicle_merk'         => 'nullable|string|max:100',
             'vehicle_type_year'    => 'nullable|string|max:100',
+            'vehicle_color'        => 'nullable|string|max:100',
             'vehicle_plate'        => 'nullable|string|max:100',
             'vehicle_km'           => 'nullable|integer|min:0',
             'vehicle_price_tier'   => 'nullable|in:0_300,300_500,500_800,800_2000',
@@ -119,6 +120,7 @@ class WorkOrderController extends Controller
                     'plate_number' => $plate,
                     'brand'        => $validated['vehicle_merk'] ?? null,
                     'model'        => $validated['vehicle_type_year'] ?? null,
+                    'color'        => $validated['vehicle_color'] ?? null,
                     'chasis_no'    => $validated['chasis_no'] ?? null,
                     'is_active'    => true,
                 ]);
@@ -138,6 +140,7 @@ class WorkOrderController extends Controller
             'vehicle_info'      => $validated['vehicle_info'] ?? null,
             'vehicle_merk'      => $validated['vehicle_merk'] ?? null,
             'vehicle_type_year' => $validated['vehicle_type_year'] ?? null,
+            'vehicle_color'     => $validated['vehicle_color'] ?? null,
             'vehicle_plate'     => $validated['vehicle_plate'] ?? null,
             'vehicle_km'          => $validated['vehicle_km'] ?? null,
             'vehicle_price_tier'  => $priceTier,

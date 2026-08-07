@@ -177,6 +177,12 @@
                                             value="{{ old('vehicle_type_year') }}">
                                     </div>
                                     <div class="form-group">
+                                        <label for="vehicle_color">Color</label>
+                                        <input type="text" name="vehicle_color" id="vehicle_color"
+                                            class="form-control" placeholder="e.g., Pearl White"
+                                            value="{{ old('vehicle_color') }}">
+                                    </div>
+                                    <div class="form-group">
                                         <label for="vehicle_km">Mileage KM</label>
                                         <div class="input-group">
                                             <input type="number" name="vehicle_km" id="vehicle_km" class="form-control"
@@ -653,12 +659,13 @@
 
                 if (vehicles.length > 0) {
                     vehicles.forEach(v => {
-                        const label = [v.plate_number, v.brand, v.model, v.year].filter(Boolean).join(' – ');
+                        const label = [v.plate_number, v.brand, v.model, v.year, v.color].filter(Boolean).join(' – ');
                         $vehicleSelect.append(`<option value="${v.id}"
                             data-plate="${v.plate_number || ''}"
                             data-brand="${v.brand || ''}"
                             data-model="${v.model || ''}"
                             data-year="${v.year || ''}"
+                            data-color="${v.color || ''}"
                             data-chasis="${v.chasis_no || ''}">${label}</option>`);
                     });
                     $vehiclePickerGroup.show();
@@ -692,6 +699,7 @@
                     $('#vehicle_merk').val(opt.dataset.brand || '');
                     const typeYear = [opt.dataset.model, opt.dataset.year].filter(Boolean).join(' / ');
                     $('#vehicle_type_year').val(typeYear);
+                    $('#vehicle_color').val(opt.dataset.color || '');
                     $('#chasis_no').val(opt.dataset.chasis || '');
                 }
             });
