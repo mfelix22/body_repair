@@ -480,7 +480,7 @@
             <td class="totals-cell">
                 <table class="totals-rows">
                     <tr>
-                        <td class="t-label">Subtotal: Rp.</td>
+                        <td class="t-label">Total: Rp.</td>
                         <td class="t-colon"></td>
                         <td class="t-value">{{ number_format($subTotal, 0, ',', '.') }}</td>
                     </tr>
@@ -491,11 +491,6 @@
                             <td class="t-value" style="color:#c00;">— {{ number_format($discount, 0, ',', '.') }}</td>
                         </tr>
                     @endif
-                    <tr>
-                        <td class="t-label">Total: Rp.</td>
-                        <td class="t-colon"></td>
-                        <td class="t-value">{{ number_format($netTotal, 0, ',', '.') }}</td>
-                    </tr>
                     @if ($purchaseOrder->po_type === 'purchase_order' && $purchaseOrder->include_ppn)
                         <tr>
                             <td class="t-label">PPN (11%): Rp.</td>

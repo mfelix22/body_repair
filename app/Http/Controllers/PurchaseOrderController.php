@@ -1360,13 +1360,19 @@ class PurchaseOrderController extends Controller
 
         // Build details collection
         $details = collect();
+        $totalDiscount = 0;
+        $tempPo->total_amount = 0;
         foreach ($items as $itemData) {
             $detail = new \stdClass();
             $detail->quantity = (float)$itemData['quantity'];
             $detail->unit_price = (float)$itemData['unit_price'];
-            $detail->total_price = $detail->quantity * $detail->unit_price;
+            $gross = $detail->quantity * $detail->unit_price;
+            $itemDiscount = (float)($itemData['discount'] ?? 0);
+            $detail->total_price = max(0, $gross - $itemDiscount);
+            $detail->discount = $itemDiscount;
             $detail->remarks = $itemData['remarks'] ?? null;
             $tempPo->total_amount += $detail->total_price;
+            $totalDiscount += $itemDiscount;
 
             if ($poType === 'service_order') {
                 $detail->service_description = $itemData['service_description'];
@@ -1381,7 +1387,7 @@ class PurchaseOrderController extends Controller
             $details->push($detail);
         }
         $tempPo->details = $details;
-        $tempPo->total_amount = max(0, $tempPo->total_amount - $tempPo->discount);
+        $tempPo->discount = $totalDiscount;
 
         // Handle misc costs — use Eloquent-like objects with 'amount' key for ->sum('amount') to work
         $miscCosts = collect();
