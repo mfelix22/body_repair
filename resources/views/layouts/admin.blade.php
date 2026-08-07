@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{{ asset('admin/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-bs4/css/dataTables.bootstrap4.css') }}">
+    <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     @stack('styles')
 
     <style>
@@ -21,6 +22,12 @@
             display: flex;
             flex-wrap: wrap;
             gap: .25rem;
+        }
+        .table .badge {
+            white-space: normal;
+        }
+        .table td {
+            word-break: break-word;
         }
         @media (max-width: 767.98px) {
             .form-inline {
@@ -577,7 +584,15 @@
     <script src="{{ asset('admin/plugins/select2/js/select2.full.min.js') }}"></script>
     <script src="{{ asset('admin/plugins/datatables/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('admin/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ asset('admin/plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ asset('admin/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('admin/dist/js/adminlte.min.js') }}"></script>
+
+    <script>
+        $.extend(true, $.fn.dataTable.defaults, {
+            responsive: true
+        });
+    </script>
 
     <script>
         $(document).ready(function() {
@@ -682,7 +697,7 @@
 
     <script>
         $(document).ready(function () {
-            $('table.table').each(function () {
+            $('table.table:not([id])').each(function () {
                 var $table = $(this);
                 if ($table.closest('.table-responsive').length) {
                     return;

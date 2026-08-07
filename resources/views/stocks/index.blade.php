@@ -3,11 +3,6 @@
 @section('title', 'Stock Management')
 @section('page_title', 'Stock Management')
 
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-@endpush
-
 @section('content')
     <div class="row">
         <div class="col-12">
@@ -217,10 +212,7 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('admin/plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('admin/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('admin/plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('admin/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+
     <script>
         $(document).ready(function() {
             var table = $('#stocks-table').DataTable({

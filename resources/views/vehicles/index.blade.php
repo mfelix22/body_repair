@@ -101,7 +101,6 @@
         $(document).ready(function() {
             $('#vehicles-table').DataTable({
                 responsive: true,
-                autoWidth: false,
                 pageLength: 25,
                 order: [[0, 'asc']], // Sort by plate number
                 dom: 'Bfrtip',

@@ -97,7 +97,6 @@
         $(document).ready(function() {
             $('#customers-table').DataTable({
                 responsive: true,
-                autoWidth: false,
                 pageLength: 25,
                 order: [[1, 'asc']], // Sort by name
                 dom: 'Bfrtip',

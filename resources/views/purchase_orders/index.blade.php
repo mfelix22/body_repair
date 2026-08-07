@@ -54,8 +54,7 @@
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
-                            <div class="table-responsive">
-                                <table id="ppb-table" class="table table-bordered table-striped">
+                            <table id="ppb-table" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
                                             <th>PO Number</th>
@@ -114,8 +113,7 @@
                                             </tr>
                                         @endforelse
                                     </tbody>
-                                </table>
-                            </div>
+                            </table>
                         </div>
 
                         {{-- PPJ Tab --}}
@@ -128,8 +126,7 @@
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
-                            <div class="table-responsive">
-                                <table id="ppj-table" class="table table-bordered table-striped">
+                            <table id="ppj-table" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
                                             <th>SO Number</th>
@@ -188,8 +185,7 @@
                                             </tr>
                                         @endforelse
                                     </tbody>
-                                </table>
-                            </div>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -212,7 +208,6 @@
         $(document).ready(function() {
             function makeDtConfig() {
                 return {
-                    autoWidth: false,
                     pageLength: 25,
                     order: [
                         [2, 'desc']

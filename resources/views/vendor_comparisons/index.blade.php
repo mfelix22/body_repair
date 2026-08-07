@@ -102,7 +102,6 @@
         $(document).ready(function() {
             $('#vc-table').DataTable({
                 responsive: true,
-                autoWidth: false,
                 pageLength: 25,
                 order: [
                     [2, 'desc']
