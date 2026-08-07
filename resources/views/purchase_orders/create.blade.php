@@ -1259,6 +1259,8 @@
                     const conversion = row.querySelector(`[name*="[conversion_to_smallest]"]`);
                     const remarks = row.querySelector(`[name*="[remarks]"]`);
                     const prDetailId = row.querySelector(`[name*="[purchase_request_detail_id]"]`);
+                    const discountPct = row.querySelector('input[name$="[discount_percentage]"]');
+                    const discountAmt = row.querySelector('input[name$="[discount]"]');
 
                     if (itemId) formData.append(`items[${index}][item_id]`, itemId.value);
                     if (uomId) formData.append(`items[${index}][uom_id]`, uomId.value);
@@ -1268,6 +1270,8 @@
                     if (conversion) formData.append(`items[${index}][conversion_to_smallest]`, conversion.value);
                     if (remarks) formData.append(`items[${index}][remarks]`, remarks.value);
                     if (prDetailId) formData.append(`items[${index}][purchase_request_detail_id]`, prDetailId.value);
+                    if (discountPct) formData.append(`items[${index}][discount_percentage]`, discountPct.value);
+                    if (discountAmt) formData.append(`items[${index}][discount]`, discountAmt.value);
                 });
 
                 fetch('{{ route("purchase_orders.preview") }}', {
