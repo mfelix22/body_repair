@@ -67,7 +67,12 @@
                         </div>
 
                         {{-- Items Table --}}
-                        <h5><i class="fas fa-boxes"></i> Items</h5>
+                        <h5>
+                            <i class="fas fa-boxes"></i> Items
+                            <button type="button" class="btn btn-outline-info btn-sm ml-2" id="open-scanner-btn">
+                                <i class="fas fa-qrcode"></i> Scan Barcode / QR
+                            </button>
+                        </h5>
                         <div class="table-responsive">
                             <table class="table table-bordered" id="items-table">
                                 <thead class="thead-light">
@@ -130,6 +135,25 @@
             </div>
         </div>
     </div>
+
+    {{-- Barcode / QR Scanner Modal --}}
+    <div class="modal fade" id="scannerModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-qrcode"></i> Scan Item Barcode / QR</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="qr-reader" style="width: 100%;"></div>
+                    <div id="qr-reader-status" class="text-muted small mt-2 text-center">Point the camera at the item's
+                        barcode/QR code.</div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('styles')
@@ -153,11 +177,95 @@
             ->all();
     @endphp
     <script src="{{ asset('admin/plugins/select2/js/select2.full.min.js') }}"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         let rowIndex = 1;
 
         // Items data for JS
         const itemsData = @json($itemsJson);
+
+        // Find item by scanned code (exact match, then loose contains match)
+        function findItemByCode(scannedText) {
+            const code = (scannedText || '').trim();
+            if (!code) return null;
+            let match = itemsData.find(i => i.code.toLowerCase() === code.toLowerCase());
+            if (!match) {
+                match = itemsData.find(i =>
+                    code.toLowerCase().includes(i.code.toLowerCase()) ||
+                    i.code.toLowerCase().includes(code.toLowerCase())
+                );
+            }
+            return match || null;
+        }
+
+        // Apply a matched item to a row's select2, then focus qty input
+        function applyScannedItemToRow(row, item) {
+            const select = row.find('.item-select');
+            if (!select.find(`option[value="${item.id}"]`).length) {
+                select.append(new Option(`[${item.code}] ${item.name}`, item.id, false, false));
+            }
+            select.val(item.id).trigger('change.select2').trigger('change');
+            row.find('.qty-input').focus();
+        }
+
+        // Find an existing empty row, or add a new one
+        function getTargetRowForScan() {
+            let emptyRow = null;
+            $('.item-row').each(function() {
+                if (!$(this).find('.item-select').val()) {
+                    emptyRow = $(this);
+                    return false;
+                }
+            });
+            if (emptyRow) return emptyRow;
+            $('#add-row').trigger('click');
+            return $('.item-row').last();
+        }
+
+        let html5QrCode = null;
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+                html5QrCode = null;
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            const item = findItemByCode(decodedText);
+            const statusEl = $('#qr-reader-status');
+            if (!item) {
+                statusEl.removeClass('text-muted').addClass('text-danger')
+                    .text(`No item found for scanned code: "${decodedText}"`);
+                return;
+            }
+            statusEl.removeClass('text-danger').addClass('text-muted')
+                .text(`Matched: [${item.code}] ${item.name}`);
+            const row = getTargetRowForScan();
+            applyScannedItemToRow(row, item);
+            stopScanner();
+            $('#scannerModal').modal('hide');
+        }
+
+        $('#open-scanner-btn').on('click', function() {
+            $('#qr-reader-status').removeClass('text-danger').addClass('text-muted')
+                .text("Point the camera at the item's barcode/QR code.");
+            $('#scannerModal').modal('show');
+        });
+
+        $('#scannerModal').on('shown.bs.modal', function() {
+            html5QrCode = new Html5Qrcode('qr-reader');
+            html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: 220 },
+                onScanSuccess
+            ).catch(function(err) {
+                $('#qr-reader-status').removeClass('text-muted').addClass('text-danger')
+                    .text('Unable to access camera: ' + err);
+            });
+        });
+
+        $('#scannerModal').on('hidden.bs.modal', stopScanner);
 
         // Show/hide type hint
         $('#bon_out_type').on('change', function() {

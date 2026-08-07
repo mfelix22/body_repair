@@ -100,6 +100,10 @@
                                     data-section="{{ $sectionKey }}">
                                     <i class="fas fa-plus"></i> Add Material
                                 </button>
+                                <button type="button" class="btn btn-info btn-xs float-right mr-1 scan-section-btn"
+                                    data-section="{{ $sectionKey }}">
+                                    <i class="fas fa-qrcode"></i> Scan
+                                </button>
                             </div>
                             <div class="card-body p-2">
                                 <div class="section-items-container" id="section-items-{{ $sectionKey }}">
@@ -186,11 +190,104 @@
             </div>
         </div>
     </template>
+
+    {{-- Barcode / QR Scanner Modal --}}
+    <div class="modal fade" id="scannerModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-qrcode"></i> Scan Item Barcode / QR</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="qr-reader" style="width: 100%;"></div>
+                    <div id="qr-reader-status" class="text-muted small mt-2 text-center">Point the camera at the item's
+                        barcode/QR code.</div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         let materialIndex = 0;
+
+        // Item lookup data for barcode scanning (code -> {id, code, name, item_type})
+        const scanItemsData = @json(
+            $allItems->map(fn($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name])->values()
+        );
+
+        function findItemByCode(scannedText) {
+            const code = (scannedText || '').trim();
+            if (!code) return null;
+            let match = scanItemsData.find(i => i.code.toLowerCase() === code.toLowerCase());
+            if (!match) {
+                match = scanItemsData.find(i =>
+                    code.toLowerCase().includes(i.code.toLowerCase()) ||
+                    i.code.toLowerCase().includes(code.toLowerCase())
+                );
+            }
+            return match || null;
+        }
+
+        let html5QrCode = null;
+        let currentScanSection = null;
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+                html5QrCode = null;
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            const item = findItemByCode(decodedText);
+            const statusEl = $('#qr-reader-status');
+            if (!item) {
+                statusEl.removeClass('text-muted').addClass('text-danger')
+                    .text(`No item found for scanned code: "${decodedText}"`);
+                return;
+            }
+            statusEl.removeClass('text-danger').addClass('text-muted')
+                .text(`Matched: [${item.code}] ${item.name}`);
+
+            const row = addMaterialRow(currentScanSection);
+            const select = $(row).find('.material-select');
+            if (!select.find(`option[value="${item.id}"]`).length) {
+                select.append(new Option(`[${item.code}] ${item.name}`, item.id, false, false));
+            }
+            select.val(item.id).trigger('change');
+            select.trigger({ type: 'select2:select', params: { data: { element: select.find(':selected')[0] } } });
+            $(row).find('.qty-input').focus();
+
+            stopScanner();
+            $('#scannerModal').modal('hide');
+        }
+
+        $('.scan-section-btn').on('click', function() {
+            currentScanSection = this.dataset.section;
+            $('#qr-reader-status').removeClass('text-danger').addClass('text-muted')
+                .text("Point the camera at the item's barcode/QR code.");
+            $('#scannerModal').modal('show');
+        });
+
+        $('#scannerModal').on('shown.bs.modal', function() {
+            html5QrCode = new Html5Qrcode('qr-reader');
+            html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: 220 },
+                onScanSuccess
+            ).catch(function(err) {
+                $('#qr-reader-status').removeClass('text-muted').addClass('text-danger')
+                    .text('Unable to access camera: ' + err);
+            });
+        });
+
+        $('#scannerModal').on('hidden.bs.modal', stopScanner);
 
         const fmtRp = v => 'Rp ' + parseFloat(v || 0).toLocaleString('id-ID');
 
@@ -265,6 +362,7 @@
 
             materialIndex++;
             updateItemCount();
+            return row;
         }
 
         // Section "Add Material" buttons

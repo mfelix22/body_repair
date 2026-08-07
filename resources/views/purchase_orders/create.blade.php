@@ -144,7 +144,7 @@
                                     <label for="lokasi_pengerjaan">Lokasi Pengerjaan (Work Location)</label>
                                     <input type="text" name="lokasi_pengerjaan" id="lokasi_pengerjaan"
                                         class="form-control" placeholder="e.g., Workshop A, Bengkel Utama"
-                                        value="{{ old('lokasi_ engerjaan') }}">
+                                        value="{{ old('lokasi_pengerjaan') }}">
                                 </div>
                                 <div class="form-group" id="lokasi_pengiriman_field" style="display: none;">
                                     <label for="lokasi_pengiriman">Lokasi Pengiriman (Delivery Location)</label>

@@ -448,21 +448,23 @@
     </table>
 
     @php
-        $subTotal = $purchaseOrder->total_amount ?? 0;
+        $discount = $purchaseOrder->discount ?? 0;
+        $subTotal = ($purchaseOrder->total_amount ?? 0) + $discount;
+        $netTotal = $purchaseOrder->total_amount ?? 0;
         $miscCost = $purchaseOrder->miscCosts->sum('amount');
         $ppn =
             $purchaseOrder->include_ppn && $purchaseOrder->po_type === 'purchase_order'
-                ? ($subTotal + $miscCost) * 0.11
+                ? ($netTotal + $miscCost) * 0.11
                 : 0;
         $pph = 0;
         if ($purchaseOrder->po_type === 'service_order') {
             if ($purchaseOrder->pph_type === 'pph_21') {
-                $pph = $subTotal * 0.025;
+                $pph = $netTotal * 0.025;
             } elseif ($purchaseOrder->pph_type === 'pph_23') {
-                $pph = $subTotal * 0.02;
+                $pph = $netTotal * 0.02;
             }
         }
-        $grandTotal = $subTotal + $miscCost + $ppn - $pph;
+        $grandTotal = $netTotal + $miscCost + $ppn - $pph;
         $terbilang = NumberToIndonesian::convert((int) $grandTotal);
     @endphp
 
@@ -478,9 +480,21 @@
             <td class="totals-cell">
                 <table class="totals-rows">
                     <tr>
-                        <td class="t-label">Total: Rp.</td>
+                        <td class="t-label">Subtotal: Rp.</td>
                         <td class="t-colon"></td>
                         <td class="t-value">{{ number_format($subTotal, 0, ',', '.') }}</td>
+                    </tr>
+                    @if ($discount > 0)
+                        <tr>
+                            <td class="t-label">Diskon: Rp.</td>
+                            <td class="t-colon"></td>
+                            <td class="t-value" style="color:#c00;">— {{ number_format($discount, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    <tr>
+                        <td class="t-label">Total: Rp.</td>
+                        <td class="t-colon"></td>
+                        <td class="t-value">{{ number_format($netTotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($purchaseOrder->po_type === 'purchase_order' && $purchaseOrder->include_ppn)
                         <tr>
