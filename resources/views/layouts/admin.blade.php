@@ -15,6 +15,53 @@
     <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('admin/plugins/datatables-bs4/css/dataTables.bootstrap4.css') }}">
     @stack('styles')
+
+    <style>
+        .card-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .25rem;
+        }
+        @media (max-width: 767.98px) {
+            .form-inline {
+                display: block;
+            }
+            .form-inline .form-group {
+                margin-bottom: .75rem;
+            }
+            .form-inline .form-control,
+            .form-inline select,
+            .form-inline .btn {
+                width: 100%;
+            }
+            .dataTables_length,
+            .dataTables_filter,
+            .dataTables_paginate {
+                float: none !important;
+                text-align: left !important;
+            }
+            .dataTables_filter input {
+                width: 100%;
+                max-width: 100%;
+            }
+            .content-header h1 {
+                font-size: 1.4rem;
+            }
+            .card-title {
+                font-size: 1.1rem;
+            }
+            .main-header .navbar-nav.ml-auto {
+                flex-wrap: wrap;
+            }
+            .main-header .user-profile {
+                flex-wrap: wrap;
+            }
+            .main-header .nav-link {
+                padding-left: .5rem;
+                padding-right: .5rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -631,6 +678,18 @@
                 setInterval(doPoll, POLL_EVERY);
             }, POLL_EVERY);
         })();
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            $('table.table').each(function () {
+                var $table = $(this);
+                if ($table.closest('.table-responsive').length) {
+                    return;
+                }
+                $table.wrap('<div class="table-responsive"></div>');
+            });
+        });
     </script>
 
     @stack('scripts')
