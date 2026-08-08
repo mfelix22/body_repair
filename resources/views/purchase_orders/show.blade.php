@@ -111,7 +111,7 @@
                                     @elseif ($requiresDualApproval && $purchaseOrder->status === 'on_progress')
                                         Manager (Sigit) approval required (>Rp 5,000,000)
                                     @elseif ($requiresDualApproval)
-                                        Director approval required (>Rp 5,000,000) — Manager already approved
+                                        Opr. Regional Manager/Director approval required (>Rp 5,000,000) — Manager already approved
                                     @else
                                         Manager approval required (≤Rp 5,000,000) — Director cannot approve
                                     @endif

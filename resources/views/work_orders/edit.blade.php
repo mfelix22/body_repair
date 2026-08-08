@@ -173,6 +173,12 @@
                                         value="{{ old('vehicle_type_year', $workOrder->vehicle_type_year) }}">
                                 </div>
                                 <div class="form-group">
+                                    <label for="vehicle_color">Color</label>
+                                    <input type="text" name="vehicle_color" id="vehicle_color"
+                                        class="form-control" placeholder="e.g., Pearl White"
+                                        value="{{ old('vehicle_color', $workOrder->vehicle_color) }}">
+                                </div>
+                                <div class="form-group">
                                     <label for="vehicle_km">Mileage KM</label>
                                     <div class="input-group">
                                         <input type="number" name="vehicle_km" id="vehicle_km" class="form-control"
