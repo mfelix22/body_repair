@@ -48,11 +48,11 @@
                                 @endforeach
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-info btn-sm mr-1">
+                        <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
                             <i class="fas fa-filter mr-1"></i>Filter
                         </button>
                         @if (request('month') || request('year'))
-                            <a href="{{ route('invoices.index') }}" class="btn btn-secondary btn-sm">
+                            <a href="{{ route('invoices.index') }}" class="btn btn-secondary btn-sm d-inline-flex align-items-center">
                                 <i class="fas fa-times mr-1"></i>Clear
                             </a>
                         @endif

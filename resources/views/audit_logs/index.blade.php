@@ -12,8 +12,8 @@
                         <i class="fas fa-history"></i> Audit Trail - All Changes
                     </h3>
                     <div class="card-tools">
-                        <button type="button" class="btn btn-tool" data-toggle="collapse" data-target="#filterCollapse">
-                            <i class="fas fa-filter"></i> Filter
+                        <button type="button" class="btn btn-tool d-inline-flex align-items-center" data-toggle="collapse" data-target="#filterCollapse">
+                            <i class="fas fa-filter mr-1"></i>Filter
                         </button>
                     </div>
                 </div>

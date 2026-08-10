@@ -55,11 +55,11 @@
                             </select>
                         </div>
                         <div class="mb-2">
-                            <button type="submit" class="btn btn-info btn-sm mr-1">
+                            <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
                                 <i class="fas fa-filter mr-1"></i>Filter
                             </button>
                             @if ($month || $year || $category)
-                                <a href="{{ route('bon_outs.index') }}" class="btn btn-secondary btn-sm mr-2">
+                                <a href="{{ route('bon_outs.index') }}" class="btn btn-secondary btn-sm mr-2 d-inline-flex align-items-center">
                                     <i class="fas fa-times mr-1"></i>Clear
                                 </a>
                                 <span class="text-muted small">{{ $bonOuts->total() }} result(s)</span>

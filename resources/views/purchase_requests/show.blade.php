@@ -124,7 +124,8 @@
                             @endif
                         @endif
                         <span
-                            class="badge badge-{{ in_array($purchaseRequest->status, ['dept_head_approved', 'gm_approved', 'completed', 'printed']) ? 'success' : (in_array($purchaseRequest->status, ['rejected', 'cancelled']) ? 'danger' : ($purchaseRequest->status === 'closed' ? 'dark' : 'secondary')) }}">
+                            class="badge badge-{{ in_array($purchaseRequest->status, ['dept_head_approved', 'gm_approved', 'completed', 'printed']) ? 'success' : (in_array($purchaseRequest->status, ['rejected', 'cancelled']) ? 'danger' : ($purchaseRequest->status === 'closed' ? 'dark' : 'secondary')) }}"
+                            style="padding: .2em .4em; line-height: 1;">
                             {{ $purchaseRequest->status === 'closed' ? 'Closed' : ucwords(str_replace('_', ' ', $purchaseRequest->status)) }}
                         </span>
                     </div>
@@ -151,7 +152,8 @@
                                 <tr>
                                     <th>Status:</th>
                                     <td><span
-                                            class="badge badge-{{ in_array($purchaseRequest->status, ['dept_head_approved', 'gm_approved', 'completed', 'printed']) ? 'success' : ($purchaseRequest->status === 'rejected' ? 'danger' : ($purchaseRequest->status === 'closed' ? 'dark' : 'secondary')) }}">
+                                            class="badge badge-{{ in_array($purchaseRequest->status, ['dept_head_approved', 'gm_approved', 'completed', 'printed']) ? 'success' : ($purchaseRequest->status === 'rejected' ? 'danger' : ($purchaseRequest->status === 'closed' ? 'dark' : 'secondary')) }}"
+                                            style="padding: .2em .4em; line-height: 1;">
                                             {{ $purchaseRequest->status === 'closed' ? 'Closed' : ucwords(str_replace('_', ' ', $purchaseRequest->status)) }}
                                         </span>
                                     </td>
