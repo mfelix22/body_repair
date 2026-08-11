@@ -20,28 +20,16 @@ use Illuminate\Support\Facades\DB;
 
 class WorkOrderController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $search = $request->input('search');
-
         $wos = WorkOrder::with(['customer', 'creator', 'proformaInvoice'])
             ->withCount(['items', 'labors' => function ($query) {
                 $query->whereNotNull('labor_id');
             }])
-            ->when($search, function ($query, $search) {
-                $like = '%' . $search . '%';
-                $query->where(function ($q) use ($like) {
-                    $q->where('wo_number', 'like', $like)
-                        ->orWhere('vehicle_plate', 'like', $like)
-                        ->orWhereHas('customer', function ($customerQ) use ($like) {
-                            $customerQ->where('name', 'like', $like);
-                        });
-                });
-            })
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('work_orders.index', compact('wos', 'search'));
+        return view('work_orders.index', compact('wos'));
     }
 
     public function create()

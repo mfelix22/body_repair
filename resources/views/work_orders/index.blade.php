@@ -19,22 +19,8 @@
                 </div>
 
                 <div class="card-body">
-                    <form method="GET" action="{{ route('work_orders.index') }}" class="mb-3">
-                        <div class="row">
-                            <div class="col-md-10">
-                                <input type="text" name="search" class="form-control"
-                                    placeholder="Search WO number, customer, or plate..."
-                                    value="{{ $search ?? '' }}">
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary btn-block">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                            </div>
-                        </div>
-                    </form>
 
-                    <table class="table table-bordered table-striped">
+                    <table id="work-orders-table" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>WO Number</th>
@@ -97,3 +83,19 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(function() {
+            $('#work-orders-table').DataTable({
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'desc']],
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search work orders..."
+                }
+            });
+        });
+    </script>
+@endpush
