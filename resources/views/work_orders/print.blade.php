@@ -410,7 +410,7 @@
                 </table>
             </td>
             <td class="info-divider"></td>
-            <td class="car-size-cell">
+            {{-- <td class="car-size-cell">
                 @php
                     $tierLabels = [
                         '0_300'   => '0–300jt',
@@ -422,7 +422,7 @@
                 @endphp
                 <div class="car-size-box" style="font-size:11px;line-height:normal;padding:8px;">{{ $tierDisplay }}</div>
                 <div class="car-size-label">Kisaran Harga</div>
-            </td>
+            </td> --}}
         </tr>
     </table>
 
