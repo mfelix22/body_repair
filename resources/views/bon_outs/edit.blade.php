@@ -93,6 +93,10 @@
                                     <small class="text-muted ml-2">— Sparepart used to replace parts (e.g. bumper). Always billed to the customer.</small>
                                 @endif
                                 @if ($bonOut->bon_out_type != 3)
+                                <button type="button" class="btn btn-info btn-xs float-right mr-1 scan-section-btn"
+                                    data-section="{{ $sectionKey }}">
+                                    <i class="fas fa-qrcode"></i> Scan
+                                </button>
                                 <button type="button" class="btn btn-success btn-xs float-right add-section-btn"
                                     data-section="{{ $sectionKey }}">
                                     <i class="fas fa-plus"></i> Add Material
@@ -246,9 +250,29 @@
             </div>
         </div>
     </div>
+
+    {{-- Barcode / QR Scanner Modal --}}
+    <div class="modal fade" id="scannerModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-qrcode"></i> Scan Item Barcode / QR</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="qr-reader" style="width: 100%;"></div>
+                    <div id="qr-reader-status" class="text-muted small mt-2 text-center">Point the camera at the item's
+                        barcode/QR code.</div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         // New item index starts after all existing items to avoid key collisions
         let newItemIndex = 9000;
@@ -364,6 +388,8 @@
             });
 
             div.addEventListener('input', () => updateSectionSubtotal(section));
+
+            return div;
         }
 
         // Section "Add Material" buttons
@@ -393,5 +419,89 @@
                 }
             }
         });
+
+        // Barcode / QR scanner setup
+        const scanItemsData = allItems.map(i => ({ id: i.id, code: i.code, name: i.name, type: i.type, uom: i.uom, stock: i.stock }));
+
+        function findItemByCode(scannedText) {
+            const code = (scannedText || '').trim();
+            if (!code) return null;
+            let match = scanItemsData.find(i => i.code.toLowerCase() === code.toLowerCase());
+            if (!match) {
+                match = scanItemsData.find(i =>
+                    code.toLowerCase().includes(i.code.toLowerCase()) ||
+                    i.code.toLowerCase().includes(code.toLowerCase())
+                );
+            }
+            return match || null;
+        }
+
+        let html5QrCode = null;
+        let currentScanSection = null;
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+                html5QrCode = null;
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            const item = findItemByCode(decodedText);
+            const statusEl = document.getElementById('qr-reader-status');
+            if (!item) {
+                statusEl.classList.remove('text-muted');
+                statusEl.classList.add('text-danger');
+                statusEl.textContent = `No item found for scanned code: "${decodedText}"`;
+                return;
+            }
+
+            // Section E only allows sparepart (SP) items
+            if (currentScanSection === 'E' && item.type !== 'SP') {
+                statusEl.classList.remove('text-muted');
+                statusEl.classList.add('text-danger');
+                statusEl.textContent = `Section E only accepts sparepart items. Scanned code is not a sparepart.`;
+                return;
+            }
+
+            statusEl.classList.remove('text-danger');
+            statusEl.classList.add('text-muted');
+            statusEl.textContent = `Matched: [${item.code}] ${item.name}`;
+
+            const row = addMaterialRow(currentScanSection);
+            const $select = $(row).find('.new-item-select');
+            $select.val(item.id).trigger('select2:select');
+            $(row).find('.qty-input').focus();
+
+            stopScanner();
+            $('#scannerModal').modal('hide');
+        }
+
+        document.querySelectorAll('.scan-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentScanSection = this.dataset.section;
+                const statusEl = document.getElementById('qr-reader-status');
+                statusEl.classList.remove('text-danger');
+                statusEl.classList.add('text-muted');
+                statusEl.textContent = "Point the camera at the item's barcode/QR code.";
+                $('#scannerModal').modal('show');
+            });
+        });
+
+        $('#scannerModal').on('shown.bs.modal', function() {
+            html5QrCode = new Html5Qrcode('qr-reader');
+            html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: 220 },
+                onScanSuccess
+            ).catch(function(err) {
+                const statusEl = document.getElementById('qr-reader-status');
+                statusEl.classList.remove('text-muted');
+                statusEl.classList.add('text-danger');
+                statusEl.textContent = 'Unable to access camera: ' + err;
+            });
+        });
+
+        $('#scannerModal').on('hidden.bs.modal', stopScanner);
     </script>
 @endpush
