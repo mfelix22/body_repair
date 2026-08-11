@@ -237,6 +237,7 @@ class PurchaseRequestController extends Controller
             'requestor',
             'deptHeadApprover',
             'gmApprover',
+            'revoker',
             'details.item',
             'details.uom',
             'purchaseOrders.beritaAcaraUploader'
@@ -761,6 +762,62 @@ class PurchaseRequestController extends Controller
 
         return redirect()->route('purchase_requests.show', $purchaseRequest)
             ->with('success', 'PPB/PPJ has been closed. No further POs will be created from this request.');
+    }
+
+    public function revokeApproval(Request $request, PurchaseRequest $purchaseRequest)
+    {
+        $user = auth()->user();
+
+        if (!in_array($purchaseRequest->status, ['dept_head_approved', 'gm_approved', 'completed', 'printed'])) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Only approved, completed, or printed PPB/PPJ can be sent back for revision.');
+        }
+
+        // Only the requester (maker) or admin can send this PPB/PPJ back for revision
+        $isRequester = $purchaseRequest->requested_by === $user?->id;
+        $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+
+        if (!$user || (!$isRequester && !$isAdmin)) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Only the PPB/PPJ maker or an administrator can send it back for revision.');
+        }
+
+        // Block if a Purchase Order has already been created from this PPB/PPJ
+        if ($purchaseRequest->purchaseOrders()->exists()) {
+            return redirect()->route('purchase_requests.show', $purchaseRequest)
+                ->with('error', 'Cannot send back for revision — a Purchase Order has already been created from this PPB/PPJ.');
+        }
+
+        $request->validate([
+            'revocation_reason' => 'required|string|min:5|max:500',
+        ]);
+
+        $purchaseRequest->update([
+            'status'                 => 'on_progress',
+            'revoked_by'             => $user->id,
+            'revoked_at'             => now(),
+            'revocation_reason'      => $request->revocation_reason,
+            // Clear approval fields so it must be re-approved from the start
+            'dept_head_by'           => null,
+            'dept_head_at'           => null,
+            'gm_by'                  => null,
+            'gm_at'                  => null,
+            'purchasing_received_by' => null,
+            'purchasing_received_at' => null,
+        ]);
+
+        // Notify department head / director / purchasing that this PPB/PPJ needs re-approval
+        NotificationService::sendToRole(
+            ['manager', 'director', 'purchasing', 'admin', 'super_admin'],
+            'pr_revoked',
+            'PR Sent Back for Revision',
+            "PR {$purchaseRequest->pr_number} was sent back for revision by {$user->name}. Reason: {$request->revocation_reason}",
+            route('purchase_requests.show', $purchaseRequest),
+            $user->id
+        );
+
+        return redirect()->route('purchase_requests.show', $purchaseRequest)
+            ->with('success', 'PPB/PPJ has been sent back for revision.');
     }
 
     public function attachment(PurchaseRequest $purchaseRequest)

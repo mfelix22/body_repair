@@ -325,6 +325,16 @@
                         <td class="val">{{ $wo->customer->name ?? ($bonOut->issued_to ?? '-') }}</td>
                     </tr>
                     <tr>
+                        <td>WO Number</td>
+                        <td>:</td>
+                        <td class="val">{{ $wo->wo_number ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Plat Nomor</td>
+                        <td>:</td>
+                        <td class="val">{{ $wo->vehicle_plate ?? '-' }}</td>
+                    </tr>
+                    <tr>
                         <td>Date</td>
                         <td>:</td>
                         <td class="val">{{ $idDate($bonOut->issued_date) }}</td>

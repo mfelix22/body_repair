@@ -26,6 +26,13 @@
         .table .badge {
             white-space: normal;
         }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            line-height: 1;
+            padding: .2em .4em;
+        }
         .table td {
             word-break: break-word;
         }

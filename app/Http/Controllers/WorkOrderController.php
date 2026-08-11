@@ -20,15 +20,28 @@ use Illuminate\Support\Facades\DB;
 
 class WorkOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = $request->input('search');
+
         $wos = WorkOrder::with(['customer', 'creator', 'proformaInvoice'])
             ->withCount(['items', 'labors' => function ($query) {
                 $query->whereNotNull('labor_id');
             }])
+            ->when($search, function ($query, $search) {
+                $like = '%' . $search . '%';
+                $query->where(function ($q) use ($like) {
+                    $q->where('wo_number', 'like', $like)
+                        ->orWhere('vehicle_plate', 'like', $like)
+                        ->orWhereHas('customer', function ($customerQ) use ($like) {
+                            $customerQ->where('name', 'like', $like);
+                        });
+                });
+            })
             ->orderBy('created_at', 'desc')
             ->get();
-        return view('work_orders.index', compact('wos'));
+
+        return view('work_orders.index', compact('wos', 'search'));
     }
 
     public function create()
@@ -63,6 +76,7 @@ class WorkOrderController extends Controller
         }
 
         $validated = $request->validate([
+            'wo_number'            => 'nullable|string|max:50|unique:work_orders,wo_number',
             'customer_id'          => 'required|exists:customers,id',
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
@@ -97,15 +111,18 @@ class WorkOrderController extends Controller
 
         $priceTier = $validated['vehicle_price_tier'] ?? null;
 
-        // Auto-generate WO number: YYMM/HAS/SEQ (monthly reset)
-        $yy = date('y');
-        $mm = date('m');
-        $prefix = $yy . $mm . '/HAS/';
-        $lastWO = WorkOrder::where('wo_number', 'like', $prefix . '%')
-            ->orderBy('id', 'desc')
-            ->first();
-        $nextNumber = $lastWO ? intval(substr($lastWO->wo_number, -3)) + 1 : 1;
-        $woNumber = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        // Use manual WO number if provided; otherwise auto-generate: YYMM/HAS/SEQ (monthly reset)
+        $woNumber = $validated['wo_number'] ?? null;
+        if (empty($woNumber)) {
+            $yy = date('y');
+            $mm = date('m');
+            $prefix = $yy . $mm . '/HAS/';
+            $lastWO = WorkOrder::where('wo_number', 'like', $prefix . '%')
+                ->orderBy('id', 'desc')
+                ->first();
+            $nextNumber = $lastWO ? intval(substr($lastWO->wo_number, -3)) + 1 : 1;
+            $woNumber = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
 
         // Auto-save vehicle to master data if checkbox is ticked
         $vehicleId = $validated['vehicle_id'] ?? null;
@@ -253,6 +270,7 @@ class WorkOrderController extends Controller
         }
 
         $validated = $request->validate([
+            'wo_number'            => 'required|string|max:50|unique:work_orders,wo_number,' . $workOrder->id,
             'customer_id'          => 'required|exists:customers,id',
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
@@ -308,6 +326,7 @@ class WorkOrderController extends Controller
         }
 
         $workOrder->update([
+            'wo_number'            => $validated['wo_number'],
             'customer_id'          => $validated['customer_id'],
             'billing_customer_id'  => $validated['billing_customer_id'] ?? null,
             'vehicle_id'           => $vehicleId,

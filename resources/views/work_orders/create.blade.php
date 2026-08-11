@@ -21,8 +21,15 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-4">
-                                    <div class="alert alert-info py-2">
-                                        <i class="fas fa-info-circle"></i> WO Number will be auto-generated
+                                    <div class="form-group">
+                                        <label for="wo_number">WO Number <small class="text-muted">(leave blank to auto-generate)</small></label>
+                                        <input type="text" name="wo_number" id="wo_number"
+                                            class="form-control @error('wo_number') is-invalid @enderror"
+                                            placeholder="e.g., 2508/HAS/001"
+                                            value="{{ old('wo_number') }}">
+                                        @error('wo_number')
+                                            <span class="invalid-feedback">{{ $message }}</span>
+                                        @enderror
                                     </div>
 
                                     <div class="form-group">

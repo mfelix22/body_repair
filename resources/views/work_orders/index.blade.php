@@ -19,6 +19,20 @@
                 </div>
 
                 <div class="card-body">
+                    <form method="GET" action="{{ route('work_orders.index') }}" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-10">
+                                <input type="text" name="search" class="form-control"
+                                    placeholder="Search WO number, customer, or plate..."
+                                    value="{{ $search ?? '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
 
                     <table class="table table-bordered table-striped">
                         <thead>

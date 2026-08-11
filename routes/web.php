@@ -139,6 +139,7 @@ Route::middleware('auth')->group(function () {
         Route::post('purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->name('purchase_requests.reject');
         Route::post('purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase_requests.cancel');
         Route::post('purchase-requests/{purchaseRequest}/close', [PurchaseRequestController::class, 'close'])->name('purchase_requests.close');
+        Route::post('purchase-requests/{purchaseRequest}/revoke-approval', [PurchaseRequestController::class, 'revokeApproval'])->name('purchase_requests.revoke_approval');
         Route::post('purchase-requests/{purchaseRequest}/upload-berita-acara', [PurchaseRequestController::class, 'uploadBeritaAcara'])->name('purchase_requests.upload_berita_acara');
         Route::get('purchase-requests/{purchaseRequest}/print', [PurchaseRequestController::class, 'print'])->name('purchase_requests.print')->middleware('signed');
         Route::get('purchase-requests/{purchaseRequest}/print-preview', [PurchaseRequestController::class, 'printPreview'])->name('purchase_requests.print_preview')->middleware('signed');

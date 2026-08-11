@@ -27,6 +27,9 @@ class PurchaseRequest extends Model
         'berita_acara_path',
         'berita_acara_uploaded_by',
         'berita_acara_uploaded_at',
+        'revoked_by',
+        'revoked_at',
+        'revocation_reason',
     ];
 
     protected $casts = [
@@ -35,6 +38,7 @@ class PurchaseRequest extends Model
         'gm_at' => 'datetime',
         'purchasing_received_at' => 'datetime',
         'berita_acara_uploaded_at' => 'datetime',
+        'revoked_at' => 'datetime',
     ];
 
     public function requestor(): BelongsTo
@@ -65,6 +69,11 @@ class PurchaseRequest extends Model
     public function beritaAcaraUploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'berita_acara_uploaded_by');
+    }
+
+    public function revoker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 
     public function details(): HasMany
