@@ -593,6 +593,12 @@
                             </tr>
                         @endif
                     @endif
+                    @if ($orAmount > 0)
+                        <tr>
+                            <td><strong>OR (Own Risk)</strong></td>
+                            <td class="text-right" style="color:#c00;">— Rp {{ number_format($orAmount, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
         <tr class="grand-total">
             <td><strong>Grand Total</strong></td>
             <td class="text-right"><strong>Rp {{ number_format($grandTotal, 0, ',', '.') }}</strong></td>
