@@ -209,6 +209,7 @@ Route::middleware('auth')->group(function () {
     Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
     Route::post('invoices/{invoice}/change-customer', [InvoiceController::class, 'changeCustomer'])->name('invoices.changeCustomer');
     Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print')->middleware('signed');
+    Route::get('invoices/{invoice}/kwitansi-or', [InvoiceController::class, 'printKwitansiOr'])->name('invoices.kwitansiOr.print')->middleware('signed');
     Route::get('invoices/{invoice}/cogs-report', [InvoiceController::class, 'cogsReport'])->name('invoices.cogsReport');
 
     // Credit Notes

@@ -21,6 +21,12 @@
                                 </a>
                             @endif
                         @endif
+                        @if ((float) ($invoice->or_amount ?? 0) > 0 && $invoice->workOrder?->account_code === 'ASURANSI' && \App\Helpers\PermissionHelper::canPrint('invoices'))
+                            <a href="{{ \URL::temporarySignedRoute('invoices.kwitansiOr.print', now()->addMinutes(5), $invoice) }}"
+                                target="_blank" class="btn btn-warning btn-sm">
+                                <i class="fas fa-receipt"></i> Print Kwitansi OR
+                            </a>
+                        @endif
                         @if (
                             $invoice->status === 'on_progress' &&
                                 auth()->user()->hasAnyRole(['admin', 'super_admin']))

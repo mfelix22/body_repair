@@ -59,7 +59,9 @@ class InvoiceController extends Controller
         // Get pre-selected work order ID from query parameter
         $selectedWorkOrderId = $request->query('work_order_id');
 
-        return view('invoices.create', compact('workOrders', 'selectedWorkOrderId'));
+        $isFinance = auth()->user()->hasAnyRole(['finance', 'admin', 'super_admin']);
+
+        return view('invoices.create', compact('workOrders', 'selectedWorkOrderId', 'isFinance'));
     }
 
     public function store(Request $request)
@@ -73,6 +75,7 @@ class InvoiceController extends Controller
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date|after:invoice_date',
             'qq' => 'nullable|string|max:200',
+            'or_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -94,7 +97,8 @@ class InvoiceController extends Controller
                     throw new \RuntimeException('This Work Order has a proforma with a discount that is not yet approved.');
                 }
 
-                return $this->buildAndSaveInvoice($workOrder, $proforma, $validated);
+                $orAmount = (float) ($request->input('or_amount', 0) ?? 0);
+                return $this->buildAndSaveInvoice($workOrder, $proforma, $validated, $orAmount);
             });
         } catch (\RuntimeException $e) {
             return back()->withInput()->withErrors(['work_order_id' => $e->getMessage()]);
@@ -107,7 +111,7 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice)->with('success', 'Invoice created successfully!');
     }
 
-    private function buildAndSaveInvoice(WorkOrder $workOrder, $proforma, array $validated): Invoice
+    private function buildAndSaveInvoice(WorkOrder $workOrder, $proforma, array $validated, float $orAmount = 0): Invoice
     {
 
         $subtotal = $workOrder->grand_total;
@@ -192,6 +196,7 @@ class InvoiceController extends Controller
             'status'              => 'on_progress',
             'notes'               => $validated['notes'],
             'qq'                  => $validated['qq'] ?? null,
+            'or_amount'           => $workOrder->account_code === 'ASURANSI' ? $orAmount : 0,
             'created_by'          => auth()->id(),
         ]);
 
@@ -282,6 +287,32 @@ class InvoiceController extends Controller
 
         $invoice->load(['customer', 'workOrder.labors.labor', 'workOrder.proformaInvoice.discountLines', 'creator']);
         return view('invoices.print', compact('invoice'));
+    }
+
+    public function printKwitansiOr(Invoice $invoice)
+    {
+        if (!PermissionHelper::canView('invoices')) {
+            return PermissionHelper::denyAccess('invoices', 'view');
+        }
+
+        if ((float) ($invoice->or_amount ?? 0) <= 0) {
+            return redirect()->route('invoices.show', $invoice)
+                ->with('error', 'This invoice does not have an OR amount.');
+        }
+
+        $invoice->load(['customer', 'workOrder.customer', 'workOrder.billingCustomer', 'workOrder.insurance']);
+
+        $romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+        $invoiceDate = $invoice->invoice_date;
+        $monthRoman = $romans[$invoiceDate->month - 1];
+        $seq = Invoice::where('or_amount', '>', 0)
+            ->whereMonth('invoice_date', $invoiceDate->month)
+            ->whereYear('invoice_date', $invoiceDate->year)
+            ->where('id', '<=', $invoice->id)
+            ->count();
+        $receiptNumber = str_pad($seq, 3, '0', STR_PAD_LEFT) . '/HAS/FIN/' . $monthRoman . '/' . $invoiceDate->year;
+
+        return view('invoices.kwitansi_or_print', compact('invoice', 'receiptNumber'));
     }
 
     public function cogsReport(Invoice $invoice)

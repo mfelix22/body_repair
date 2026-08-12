@@ -27,6 +27,7 @@
                                     disabled onchange="updateWorkOrderDetails()">
                                     @foreach ($workOrders as $wo)
                                         <option value="{{ $wo->id }}" data-subtotal="{{ $wo->grand_total }}"
+                                            data-account-code="{{ $wo->account_code }}"
                                             data-discount-amt="{{ ($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0) }}"
                                             data-proforma="{{ $wo->approvedProforma?->proforma_number ?? '' }}"
                                             {{ $selectedWorkOrderId == $wo->id ? 'selected' : '' }}>
@@ -44,6 +45,7 @@
                                     <option value="">Select Work Order</option>
                                     @foreach ($workOrders as $wo)
                                         <option value="{{ $wo->id }}" data-subtotal="{{ $wo->grand_total }}"
+                                            data-account-code="{{ $wo->account_code }}"
                                             data-discount-amt="{{ ($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0) }}"
                                             data-proforma="{{ $wo->approvedProforma?->proforma_number ?? '' }}"
                                             {{ old('work_order_id') == $wo->id ? 'selected' : '' }}>
@@ -129,6 +131,24 @@
                                 value="{{ old('qq') }}">
                         </div>
 
+                        @if ($isFinance)
+                            <div class="form-group" id="or_amount_group" style="display:none;">
+                                <label for="or_amount">OR (Own Risk) Amount</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">Rp</span>
+                                    </div>
+                                    <input type="number" name="or_amount" id="or_amount"
+                                        class="form-control @error('or_amount') is-invalid @enderror"
+                                        step="1" min="0" value="{{ old('or_amount', 0) }}">
+                                    @error('or_amount')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                                <small class="text-muted">Khusus Work Order Asuransi. Hanya dapat diisi oleh Finance.</small>
+                            </div>
+                        @endif
+
                         <div class="form-group">
                             <label for="notes">Notes</label>
                             <textarea name="notes" id="notes" class="form-control" rows="3">{{ old('notes') }}</textarea>
@@ -157,6 +177,12 @@
             const effectivePct = subtotal > 0 ? (discountAmt / subtotal * 100) : 0;
             const proformaNum = opt.dataset.proforma || '';
             const total = subtotal - discountAmt;
+            const accountCode = opt.dataset.accountCode || '';
+
+            const orGroup = document.getElementById('or_amount_group');
+            if (orGroup) {
+                orGroup.style.display = accountCode === 'ASURANSI' ? 'block' : 'none';
+            }
 
             document.getElementById('subtotal').value = fmt(subtotal);
             document.getElementById('discountPctDisplay').value = effectivePct.toFixed(2) + '%';

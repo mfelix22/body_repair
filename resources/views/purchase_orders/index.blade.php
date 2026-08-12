@@ -83,7 +83,7 @@
                                                 <td>
                                                     <span
                                                         class="badge badge-{{ in_array($po->status, ['received', 'completed']) ? 'success' : ($po->status === 'approved' ? 'info' : ($po->status === 'partial' ? 'warning' : ($po->status === 'closed_shortage' ? 'dark' : ($po->status === 'cancelled' ? 'danger' : 'secondary')))) }}">
-                                                        {{ $po->status === 'on_progress' ? 'On Progress' : ($po->status === 'closed_shortage' ? 'Closed with Shortage' : ucfirst($po->status)) }}
+                                                        {{ $po->status === 'on_progress' ? 'On Progress' : ($po->status === 'closed_shortage' ? 'Closed with Shortage' : ucwords(str_replace('_', ' ', $po->status))) }}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -155,7 +155,7 @@
                                                 <td>
                                                     <span
                                                         class="badge badge-{{ in_array($so->status, ['received', 'completed']) ? 'success' : ($so->status === 'approved' ? 'info' : ($so->status === 'partial' ? 'warning' : ($so->status === 'closed_shortage' ? 'dark' : ($so->status === 'cancelled' ? 'danger' : 'secondary')))) }}">
-                                                        {{ $so->status === 'on_progress' ? 'On Progress' : ($so->status === 'closed_shortage' ? 'Closed with Shortage' : ucfirst($so->status)) }}
+                                                        {{ $so->status === 'on_progress' ? 'On Progress' : ($so->status === 'closed_shortage' ? 'Closed with Shortage' : ucwords(str_replace('_', ' ', $so->status))) }}
                                                     </span>
                                                 </td>
                                                 <td>

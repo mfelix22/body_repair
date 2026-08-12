@@ -22,6 +22,7 @@ class Invoice extends Model
         'cogm_material',
         'cogm_labor',
         'cogm',
+        'or_amount',
         'status',
         'notes',
         'cancellation_reason',
@@ -38,6 +39,7 @@ class Invoice extends Model
         'cogm_material'       => 'decimal:2',
         'cogm_labor'          => 'decimal:2',
         'cogm'                => 'decimal:2',
+        'or_amount'           => 'decimal:2',
     ];
 
     public function workOrder(): BelongsTo
