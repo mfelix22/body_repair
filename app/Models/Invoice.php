@@ -23,6 +23,7 @@ class Invoice extends Model
         'cogm_labor',
         'cogm',
         'or_amount',
+        'kwitansi_or_number',
         'status',
         'notes',
         'cancellation_reason',

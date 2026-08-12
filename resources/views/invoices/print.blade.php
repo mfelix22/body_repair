@@ -325,6 +325,7 @@
         $subtotal = (float) $invoice->subtotal;
         $discountPercentage = (float) ($invoice->discount_percentage ?? 0);
         $discountAmount = (float) ($invoice->discount_amount ?? 0);
+        $orAmount = (float) ($invoice->or_amount ?? 0);
         $grandTotal = (float) $invoice->grand_total;
 
         // Panels & labors
@@ -457,52 +458,14 @@
         </tr>
     </table>
 
+    {{-- ===== PANEL TABLE ===== --}}
+    @if ($baseLabors->isNotEmpty())
     <div class="section-label">Panel yang Dikerjakan</div>
     <table class="items-table">
         <thead>
             <tr>
                 <th style="width:12%">Panel Code</th>
                 <th style="width:38%">Panel</th>
-                <th style="width:8%" class="text-center">Qty</th>
-                <th style="width:18%">Rate</th>
-                <th style="width:10%">Discount</th>
-                <th style="width:14%">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($basePanels as $panel)
-                <tr>
-                    <td>{{ $panel->panel?->panel_code ?? '-' }}</td>
-                    <td>{{ $panel->description }}</td>
-                    <td class="text-center">{{ number_format($panel->qty, 0) }}</td>
-                    <td class="text-right">Rp {{ number_format($panel->rate ?? 0, 0, ',', '.') }}</td>
-                    <td class="text-center">
-                        @php
-                            $panelDisc = $lineDiscAmt > 0 && $basePanels->count() > 0
-                                ? round($lineDiscAmt / $basePanels->count())
-                                : 0;
-                        @endphp
-                        {{ $panelDisc > 0 ? number_format($discountPercentage, 1).'%' : '-' }}
-                    </td>
-                    <td class="text-right">Rp {{ number_format($panel->total_price ?? 0, 0, ',', '.') }}</td>
-                </tr>
-            @empty
-                <tr><td colspan="6" class="text-center" style="color:#999;">—</td></tr>
-            @endforelse
-            @for ($i = $basePanels->count(); $i < 3; $i++)
-                <tr class="empty-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
-            @endfor
-        </tbody>
-    </table>
-
-    {{-- ===== BASE LABOR TABLE ===== --}}
-    @if ($baseLabors->isNotEmpty())
-    <div class="section-label">Labor yang Dikerjakan</div>
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width:12%">Labor Code</th>
-                <th style="width:38%">Labor</th>
                 <th style="width:8%" class="text-center">Qty</th>
                 <th style="width:18%">Rate</th>
                 <th style="width:10%">Discount</th>
@@ -595,14 +558,8 @@
                 <table class="totals-table">
                     <tr>
                         <td style="width:45%"><strong>Total Panel</strong></td>
-                        <td class="text-right">Rp {{ number_format($panelTotal, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($panelTotal + $baseLaborTotal, 0, ',', '.') }}</td>
                     </tr>
-                    @if ($baseLaborTotal > 0)
-                        <tr>
-                            <td><strong>Total Labor</strong></td>
-                            <td class="text-right">Rp {{ number_format($baseLaborTotal, 0, ',', '.') }}</td>
-                        </tr>
-                    @endif
                     @if ($extraLaborTotal > 0)
                         <tr>
                             <td><strong>Total Extra Labor</strong></td>

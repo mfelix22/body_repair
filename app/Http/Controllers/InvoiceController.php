@@ -120,7 +120,7 @@ class InvoiceController extends Controller
         $voucherAmount      = $proforma ? (float) ($proforma->voucher_amount ?? 0) : 0;
         $discountAmount     = $proforma ? ((float) $proforma->discount_amount + $voucherAmount) : 0;
         $discountPercentage = $subtotal > 0 ? round($discountAmount / $subtotal * 100, 4) : 0;
-        $grandTotal = $subtotal - $discountAmount;
+        $grandTotal = $subtotal - $discountAmount - $orAmount;
 
         // Calculate COGM — use ALL BonOut actual quantities if available, else fallback to WO demand × avg_cost
         $cogmMaterial = 0.0;
@@ -180,6 +180,11 @@ class InvoiceController extends Controller
             ->count();
         $invoiceNumber = $prefix . $yyMm . '/HAS/' . str_pad($countInv + 1, 3, '0', STR_PAD_LEFT);
 
+        $kwitansiNumber = null;
+        if ($workOrder->account_code === 'ASURANSI' && $orAmount > 0) {
+            $kwitansiNumber = $this->generateKwitansiOrNumber(\Carbon\Carbon::parse($validated['invoice_date']));
+        }
+
         $invoice = Invoice::create([
             'invoice_number'      => $invoiceNumber,
             'work_order_id'       => $validated['work_order_id'],
@@ -197,6 +202,7 @@ class InvoiceController extends Controller
             'notes'               => $validated['notes'],
             'qq'                  => $validated['qq'] ?? null,
             'or_amount'           => $workOrder->account_code === 'ASURANSI' ? $orAmount : 0,
+            'kwitansi_or_number'  => $kwitansiNumber,
             'created_by'          => auth()->id(),
         ]);
 
@@ -240,7 +246,9 @@ class InvoiceController extends Controller
                 ->with('error', 'Only on progress invoices can be edited.');
         }
 
-        return view('invoices.edit', compact('invoice'));
+        $isFinance = auth()->user()->hasAnyRole(['finance', 'admin', 'super_admin']);
+
+        return view('invoices.edit', compact('invoice', 'isFinance'));
     }
 
     public function update(Request $request, Invoice $invoice)
@@ -259,12 +267,22 @@ class InvoiceController extends Controller
             'due_date' => 'nullable|date|after:invoice_date',
             'discount_percentage' => 'required|numeric|min:0|max:100',
             'discount_amount' => 'required|numeric|min:0',
+            'or_amount' => 'nullable|numeric|min:0',
             'qq' => 'nullable|string|max:200',
             'notes' => 'nullable|string',
         ]);
 
         $discountAmount = $validated['discount_amount'];
-        $grandTotal = $invoice->subtotal - $discountAmount;
+        $orAmount = $invoice->workOrder->account_code === 'ASURANSI'
+            ? ((float) ($validated['or_amount'] ?? $invoice->or_amount ?? 0))
+            : 0;
+
+        $kwitansiNumber = $invoice->kwitansi_or_number;
+        if ($orAmount > 0 && !$kwitansiNumber) {
+            $kwitansiNumber = $this->generateKwitansiOrNumber(\Carbon\Carbon::parse($validated['invoice_date']));
+        }
+
+        $grandTotal = $invoice->subtotal - $discountAmount - $orAmount;
 
         $invoice->update([
             'invoice_date'        => $validated['invoice_date'],
@@ -272,6 +290,8 @@ class InvoiceController extends Controller
             'discount_percentage' => $validated['discount_percentage'],
             'discount_amount'     => $discountAmount,
             'grand_total'         => $grandTotal,
+            'or_amount'           => $invoice->workOrder->account_code === 'ASURANSI' ? ((float) ($validated['or_amount'] ?? 0)) : 0,
+            'kwitansi_or_number'  => $kwitansiNumber,
             'qq'                  => $validated['qq'] ?? null,
             'notes'               => $validated['notes'],
         ]);
@@ -302,17 +322,27 @@ class InvoiceController extends Controller
 
         $invoice->load(['customer', 'workOrder.customer', 'workOrder.billingCustomer', 'workOrder.insurance']);
 
-        $romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
-        $invoiceDate = $invoice->invoice_date;
-        $monthRoman = $romans[$invoiceDate->month - 1];
-        $seq = Invoice::where('or_amount', '>', 0)
-            ->whereMonth('invoice_date', $invoiceDate->month)
-            ->whereYear('invoice_date', $invoiceDate->year)
-            ->where('id', '<=', $invoice->id)
-            ->count();
-        $receiptNumber = str_pad($seq, 3, '0', STR_PAD_LEFT) . '/HAS/FIN/' . $monthRoman . '/' . $invoiceDate->year;
+        $receiptNumber = $invoice->kwitansi_or_number;
+        if (!$receiptNumber) {
+            $receiptNumber = $this->generateKwitansiOrNumber($invoice->invoice_date);
+            $invoice->update(['kwitansi_or_number' => $receiptNumber]);
+        }
 
         return view('invoices.kwitansi_or_print', compact('invoice', 'receiptNumber'));
+    }
+
+    private function generateKwitansiOrNumber(\Carbon\Carbon $date): string
+    {
+        $romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+        $monthRoman = $romans[$date->month - 1];
+
+        $existing = Invoice::where('kwitansi_or_number', 'like', '%HAS/FIN/' . $monthRoman . '/' . $date->year)
+            ->get()
+            ->map(fn($inv) => (int) explode('/', $inv->kwitansi_or_number)[0])
+            ->max() ?? 0;
+
+        $seq = str_pad($existing + 1, 3, '0', STR_PAD_LEFT);
+        return $seq . '/HAS/FIN/' . $monthRoman . '/' . $date->year;
     }
 
     public function cogsReport(Invoice $invoice)

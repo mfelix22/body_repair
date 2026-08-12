@@ -70,12 +70,32 @@
                                 value="Rp {{ number_format($invoice->grand_total, 0, ',', '.') }}">
                         </div>
 
-                        <div class="form-group">
+                        @if ($isFinance && $invoice->workOrder?->account_code === 'ASURANSI')
+                            <div class="form-group">
+                                <label for="or_amount">OR (Own Risk) Amount</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">Rp</span>
+                                    </div>
+                                    <input type="number" name="or_amount" id="or_amount"
+                                        class="form-control @error('or_amount') is-invalid @enderror"
+                                        step="1" min="0"
+                                        value="{{ old('or_amount', $invoice->or_amount ?? 0) }}"
+                                        oninput="calculateTotal()">
+                                    @error('or_amount')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                                <small class="text-muted">Hanya dapat diisi oleh Finance untuk Work Order Asuransi.</small>
+                            </div>
+                        @endif
+
+                        {{-- <div class="form-group">
                             <label for="qq">QQ <small class="text-muted">(Insurance / Third Party
                                     Name)</small></label>
                             <input type="text" name="qq" id="qq" class="form-control"
                                 placeholder="e.g. PT Asuransi XYZ" value="{{ old('qq', $invoice->qq) }}">
-                        </div>
+                        </div> --}}
 
                         <div class="form-group">
                             <label for="notes">Notes</label>
@@ -99,7 +119,10 @@
 
             // Calculate discount amount from percentage
             const discountAmount = (subtotal * discountPercentage) / 100;
-            const total = subtotal - discountAmount;
+
+            const orInput = document.getElementById('or_amount');
+            const orAmount = orInput ? (parseFloat(orInput.value) || 0) : 0;
+            const total = subtotal - discountAmount - orAmount;
 
             // Update hidden field with discount amount for form submission
             document.getElementById('discount_amount').value = discountAmount.toFixed(2);

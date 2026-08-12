@@ -166,6 +166,11 @@
         $idDate = function ($date) use ($monthsId) {
             return $date->day . ' ' . $monthsId[$date->month] . ' ' . $date->year;
         };
+        $wo = $invoice->workOrder;
+        $insuranceName = $wo->insurance?->name ?? '-';
+        if ($insuranceName !== '-' && !\Illuminate\Support\Str::startsWith($insuranceName, 'PT ')) {
+            $insuranceName = 'PT ' . $insuranceName;
+        }
     @endphp
 
     <table class="info-table">
@@ -185,7 +190,7 @@
             <td></td>
             <td></td>
             <td>
-                Nopol {{ $invoice->workOrder->vehicle_plate ?? '-' }} (Asuransi {{ $invoice->workOrder->insurance?->name ?? '-' }}). WO : {{ $invoice->workOrder->wo_number }}.
+                Nopol {{ $wo->vehicle_plate ?? '-' }} (Asuransi {{ $insuranceName }}). WO : {{ $wo->wo_number }}.
             </td>
         </tr>
         <tr>

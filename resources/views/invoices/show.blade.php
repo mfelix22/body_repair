@@ -141,7 +141,7 @@
                     </div>
 
 
-                    <hr>
+                    {{-- <hr>
                     <h6>Panels</h6>
                     <table class="table table-striped">
                         <thead>
@@ -164,10 +164,10 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
+                    </table> --}}
 
                     <hr>
-                    <h6>Labor</h6>
+                    <h6>Panels</h6>
                     <table class="table table-striped">
                         <thead>
                             <tr>

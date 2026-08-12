@@ -125,11 +125,11 @@
                                 style="font-weight: bold; font-size: 1.2em;">
                         </div>
 
-                        <div class="form-group">
+                        {{-- <div class="form-group">
                             <label for="qq">QQ</label>
                             <input type="text" name="qq" id="qq" class="form-control"
                                 value="{{ old('qq') }}">
-                        </div>
+                        </div> --}}
 
                         @if ($isFinance)
                             <div class="form-group" id="or_amount_group" style="display:none;">
@@ -140,7 +140,8 @@
                                     </div>
                                     <input type="number" name="or_amount" id="or_amount"
                                         class="form-control @error('or_amount') is-invalid @enderror"
-                                        step="1" min="0" value="{{ old('or_amount', 0) }}">
+                                        step="1" min="0" value="{{ old('or_amount', 0) }}"
+                                        oninput="updateWorkOrderDetails()">
                                     @error('or_amount')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
@@ -176,8 +177,11 @@
             const discountAmt = parseFloat(opt.dataset.discountAmt) || 0;
             const effectivePct = subtotal > 0 ? (discountAmt / subtotal * 100) : 0;
             const proformaNum = opt.dataset.proforma || '';
-            const total = subtotal - discountAmt;
             const accountCode = opt.dataset.accountCode || '';
+            const orAmount = (accountCode === 'ASURANSI')
+                ? (parseFloat(document.getElementById('or_amount')?.value) || 0)
+                : 0;
+            const total = subtotal - discountAmt - orAmount;
 
             const orGroup = document.getElementById('or_amount_group');
             if (orGroup) {
