@@ -210,6 +210,13 @@
                                             {{ number_format($invoice->discount_amount, 0, ',', '.') }})</strong>
                                     </td>
                                 </tr>
+                                @if ((float) ($invoice->or_amount ?? 0) > 0)
+                                    <tr>
+                                        <th>OR (Own Risk):</th>
+                                        <td><strong class="text-danger">— Rp
+                                                {{ number_format($invoice->or_amount, 0, ',', '.') }}</strong></td>
+                                    </tr>
+                                @endif
                                 <tr style="border-top: 2px solid #dee2e6; font-size: 1.3em;">
                                     <th>Grand Total:</th>
                                     <td><strong>Rp {{ number_format($invoice->grand_total, 0, ',', '.') }}</strong></td>
