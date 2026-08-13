@@ -135,11 +135,8 @@
                         @endif
                     @endif
 
-                    @php
-                        $woItems = $estimasi->workOrder->items ?? collect();
-                    @endphp
-                    @if ($woItems->isNotEmpty())
-                        <h6 class="font-weight-bold mt-4">Pergantian Sparepart</h6>
+                    @if ($estimasi->items->isNotEmpty())
+                        <h6 class="font-weight-bold mt-4">Sparepart Dibutuhkan (untuk Asuransi)</h6>
                         <table class="table table-bordered table-sm" style="max-width:650px;">
                             <thead class="bg-light">
                                 <tr>
@@ -150,20 +147,12 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($woItems as $woItem)
-                                    @php
-                                        $price = $woItem->total_price !== null
-                                            ? (float) $woItem->unit_price
-                                            : (float) (optional($woItem->item->stock)->avg_cost ?? 0);
-                                        $lineTotal = $woItem->total_price !== null
-                                            ? (float) $woItem->total_price
-                                            : $price * (float) $woItem->demand_quantity;
-                                    @endphp
+                                @foreach ($estimasi->items as $spItem)
                                     <tr>
-                                        <td>{{ $woItem->item->code ?? '-' }} — {{ $woItem->item->name ?? '-' }}</td>
-                                        <td class="text-right">Rp {{ number_format($price, 0, ',', '.') }}</td>
-                                        <td class="text-right">{{ number_format($woItem->demand_quantity, 0) }}</td>
-                                        <td class="text-right">Rp {{ number_format($lineTotal, 0, ',', '.') }}</td>
+                                        <td>{{ $spItem->description }}</td>
+                                        <td class="text-right">Rp {{ number_format($spItem->unit_price, 0, ',', '.') }}</td>
+                                        <td class="text-right">{{ number_format($spItem->quantity, 0) }}</td>
+                                        <td class="text-right">Rp {{ number_format($spItem->total_price, 0, ',', '.') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

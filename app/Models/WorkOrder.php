@@ -32,6 +32,11 @@ class WorkOrder extends Model
         'labor_total',
         'material_total',
         'grand_total',
+        'estimasi_discount_percentage_panel',
+        'estimasi_discount_percentage_sparepart',
+        'estimasi_discount_amount_panel',
+        'estimasi_discount_amount_sparepart',
+        'active_estimasi_id',
         'notes',
         'cancellation_reason',
         'sa_sales',
@@ -46,6 +51,10 @@ class WorkOrder extends Model
         'labor_total'   => 'decimal:2',
         'material_total' => 'decimal:2',
         'grand_total'   => 'decimal:2',
+        'estimasi_discount_percentage_panel'     => 'decimal:2',
+        'estimasi_discount_percentage_sparepart' => 'decimal:2',
+        'estimasi_discount_amount_panel'         => 'decimal:2',
+        'estimasi_discount_amount_sparepart'     => 'decimal:2',
         'started_at'         => 'datetime',
         'completed_at'       => 'datetime',
         'vehicle_price_tier' => 'string',
@@ -145,6 +154,15 @@ class WorkOrder extends Model
         return $this->hasMany(Estimasi::class)->orderBy('id', 'desc');
     }
 
+    /**
+     * The most recently approved Estimasi whose discount is currently applied
+     * to this Work Order (only relevant for account_code === 'ASURANSI').
+     */
+    public function activeEstimasi(): BelongsTo
+    {
+        return $this->belongsTo(Estimasi::class, 'active_estimasi_id');
+    }
+
     public function bonOut(): HasOne
     {
         return $this->hasOne(BonOut::class);
@@ -214,5 +232,59 @@ class WorkOrder extends Model
         $this->labor_total    = $baseLabor + $extraLabor;
         $this->grand_total    = $this->material_total + $this->labor_total;
         $this->save();
+    }
+
+    /**
+     * Whether this Work Order's discount is governed by an approved Estimasi
+     * (Insurance jobs) rather than the ProformaInvoice flow (Cash/Internal jobs).
+     */
+    public function usesEstimasiDiscount(): bool
+    {
+        return $this->account_code === 'ASURANSI';
+    }
+
+    /**
+     * Labor total after applying the active Estimasi's approved panel
+     * discount percentage (ASURANSI Work Orders only).
+     */
+    public function discountedLaborTotal(): float
+    {
+        if (!$this->usesEstimasiDiscount()) {
+            return (float) $this->labor_total;
+        }
+        $pct = (float) $this->estimasi_discount_percentage_panel;
+        return round((float) $this->labor_total * (1 - $pct / 100), 2);
+    }
+
+    /**
+     * Material total after applying the active Estimasi's approved sparepart
+     * discount percentage (ASURANSI Work Orders only).
+     */
+    public function discountedMaterialTotal(): float
+    {
+        if (!$this->usesEstimasiDiscount()) {
+            return (float) $this->material_total;
+        }
+        $pct = (float) $this->estimasi_discount_percentage_sparepart;
+        return round((float) $this->material_total * (1 - $pct / 100), 2);
+    }
+
+    /**
+     * Grand total after applying the active Estimasi's approved discounts
+     * (ASURANSI Work Orders only). Falls back to the plain grand_total for
+     * every other account code, which continues to rely on ProformaInvoice
+     * at Invoice-creation time instead.
+     */
+    public function discountedGrandTotal(): float
+    {
+        return $this->discountedLaborTotal() + $this->discountedMaterialTotal();
+    }
+
+    /**
+     * Total discount amount (Rp) currently applied via the active Estimasi.
+     */
+    public function estimasiDiscountAmount(): float
+    {
+        return round((float) $this->grand_total - $this->discountedGrandTotal(), 2);
     }
 }

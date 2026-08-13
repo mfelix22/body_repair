@@ -325,13 +325,8 @@
         // combined into a single "Labor" table later).
         $laborTotal = $panelTotal + $baseLaborTotal;
 
-        $sparepartItems = $wo->items;
-        $sparepartTotal = (float) $sparepartItems->sum(function ($woItem) {
-            if ($woItem->total_price !== null) {
-                return (float) $woItem->total_price;
-            }
-            return (float) (optional($woItem->item->stock)->avg_cost ?? 0) * (float) $woItem->demand_quantity;
-        });
+        $sparepartItems = $estimasi->items;
+        $sparepartTotal = (float) $sparepartItems->sum('total_price');
     @endphp
 
     {{-- ===== PRINT BUTTON ===== --}}
@@ -502,35 +497,23 @@
     @endif
 
     @if ($sparepartItems->isNotEmpty())
-        <div class="section-label">Pergantian Sparepart</div>
+        <div class="section-label">Sparepart Dibutuhkan (untuk disediakan oleh Asuransi)</div>
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width:12%">Kode</th>
-                    <th style="width:38%">Sparepart</th>
+                    <th style="width:50%">Sparepart</th>
                     <th style="width:8%" class="text-center">Qty</th>
                     <th style="width:18%">Harga Satuan</th>
-                    <th style="width:10%">Discount</th>
-                    <th style="width:14%">Jumlah</th>
+                    <th style="width:24%">Jumlah</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($sparepartItems as $woItem)
-                    @php
-                        $spPrice = $woItem->total_price !== null
-                            ? (float) $woItem->unit_price
-                            : (float) (optional($woItem->item->stock)->avg_cost ?? 0);
-                        $spTotal = $woItem->total_price !== null
-                            ? (float) $woItem->total_price
-                            : $spPrice * (float) $woItem->demand_quantity;
-                    @endphp
+                @foreach ($sparepartItems as $spItem)
                     <tr>
-                        <td>{{ $woItem->item->code ?? '-' }}</td>
-                        <td>{{ $woItem->item->name ?? '-' }}</td>
-                        <td class="text-center">{{ number_format($woItem->demand_quantity, 0) }}</td>
-                        <td class="text-right">Rp {{ number_format($spPrice, 0, ',', '.') }}</td>
-                        <td class="text-center">-</td>
-                        <td class="text-right">Rp {{ number_format($spTotal, 0, ',', '.') }}</td>
+                        <td>{{ $spItem->description }}</td>
+                        <td class="text-center">{{ number_format($spItem->quantity, 0) }}</td>
+                        <td class="text-right">Rp {{ number_format($spItem->unit_price, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($spItem->total_price, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             </tbody>

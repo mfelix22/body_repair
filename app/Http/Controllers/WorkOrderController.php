@@ -215,7 +215,7 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'items.uom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis']);
+        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'items.uom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis', 'activeEstimasi']);
 
         return view('work_orders.show', compact('workOrder'));
     }

@@ -316,6 +316,10 @@
                                 </div>
                             </div>{{-- end row --}}
 
+                            {{-- Sparepart selection at WO stage has been hidden. Sparepart needed for
+                                 an Estimasi (to be supplied by Insurance) is now entered manually
+                                 by the Service Advisor when creating the Estimasi. --}}
+                            @if (false)
                             <div class="row mt-3">
                                 <div class="col-12">
                                     <h6><i class="fas fa-cogs"></i> Pergantian Sparepart</h6>
@@ -359,6 +363,7 @@
                                     </button>
                                 </div>
                             </div>
+                            @endif
 
                         </div>
 

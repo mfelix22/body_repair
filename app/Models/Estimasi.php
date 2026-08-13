@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Estimasi extends Model
 {
@@ -41,6 +42,37 @@ class Estimasi extends Model
     public function workOrder()
     {
         return $this->belongsTo(WorkOrder::class);
+    }
+
+    /**
+     * Sparepart items manually entered by the Service Advisor for this
+     * Estimasi, to be supplied by Insurance (not tied to internal stock).
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(EstimasiItem::class);
+    }
+
+    /**
+     * Propagate this Estimasi's discount to its Work Order (ASURANSI account
+     * code only). Called once the Estimasi reaches a final state ('approved'
+     * or 'no_discount'). A later Estimasi that is approved will overwrite the
+     * Work Order's discount fields, since pricing follows the newest Estimasi.
+     */
+    public function applyToWorkOrder(): void
+    {
+        $wo = $this->workOrder;
+        if (!$wo || $wo->account_code !== 'ASURANSI') {
+            return;
+        }
+
+        $wo->update([
+            'estimasi_discount_percentage_panel'     => $this->panel_discount_percentage,
+            'estimasi_discount_percentage_sparepart' => $this->sparepart_discount_percentage,
+            'estimasi_discount_amount_panel'         => $this->panel_discount_amount,
+            'estimasi_discount_amount_sparepart'     => $this->sparepart_discount_amount,
+            'active_estimasi_id'                     => $this->id,
+        ]);
     }
 
     public function creator()

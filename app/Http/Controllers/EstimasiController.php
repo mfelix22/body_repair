@@ -73,13 +73,15 @@ class EstimasiController extends Controller
         }
 
         $workOrderId = $request->query('work_order_id');
-        $workOrder = WorkOrder::with('customer', 'items.item')->whereIn('status', ['on_progress', 'in_progress'])->find($workOrderId);
+        $workOrder = WorkOrder::with('customer')->whereIn('status', ['on_progress', 'in_progress'])->find($workOrderId);
 
         if (!$workOrder) {
             return redirect()->route('dashboard')->with('error', 'Work Order not found or is not Pending/Working.');
         }
 
-        $sparepartTotal = $workOrder->sparepartTotal();
+        // Sparepart is now entered manually by the Service Advisor on this form
+        // (to be supplied by Insurance), so it starts at 0 until rows are added.
+        $sparepartTotal = 0.0;
         $estimasiSubtotal = (float) $workOrder->grand_total + $sparepartTotal;
 
         return view('estimasis.create', compact('workOrder', 'sparepartTotal', 'estimasiSubtotal'));
@@ -97,13 +99,20 @@ class EstimasiController extends Controller
             'discount_percentage_panel' => 'required|numeric|min:0|max:100',
             'discount_percentage_sparepart' => 'required|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
+            'sparepart_items' => 'nullable|array',
+            'sparepart_items.*.description' => 'required_with:sparepart_items|string|max:255',
+            'sparepart_items.*.quantity' => 'required_with:sparepart_items|numeric|min:0.01',
+            'sparepart_items.*.unit_price' => 'required_with:sparepart_items|numeric|min:0',
         ]);
 
         $panelPct     = (float) $validated['discount_percentage_panel'];
         $sparepartPct = (float) $validated['discount_percentage_sparepart'];
+        $sparepartItems = array_values(array_filter($validated['sparepart_items'] ?? [], function ($row) {
+            return !empty($row['description']);
+        }));
 
         try {
-            $estimasi = DB::transaction(function () use ($validated, $user, $panelPct, $sparepartPct) {
+            $estimasi = DB::transaction(function () use ($validated, $user, $panelPct, $sparepartPct, $sparepartItems) {
                 $wo = WorkOrder::lockForUpdate()->findOrFail($validated['work_order_id']);
 
                 if (!in_array($wo->status, ['on_progress', 'in_progress'])) {
@@ -114,7 +123,9 @@ class EstimasiController extends Controller
                 $estimasiNumber = $wo->wo_number . '/EST-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
                 $panelSubtotal     = (float) $wo->grand_total;
-                $sparepartSubtotal = $wo->sparepartTotal();
+                $sparepartSubtotal = array_reduce($sparepartItems, function ($sum, $row) {
+                    return $sum + ((float) $row['quantity'] * (float) $row['unit_price']);
+                }, 0.0);
                 $subtotal          = $panelSubtotal + $sparepartSubtotal;
 
                 $panelDiscountAmt     = round($panelSubtotal * $panelPct / 100, 2);
@@ -146,26 +157,44 @@ class EstimasiController extends Controller
                 ];
 
                 if ($blendedPct <= 0) {
-                    return Estimasi::create($baseAttributes + [
+                    $estimasi = Estimasi::create($baseAttributes + [
                         'discount_percentage' => 0,
                         'discount_amount'     => 0,
                         'total'               => $subtotal,
                         'status'              => 'no_discount',
                         'approvals_required'  => 0,
                     ]);
+                } else {
+                    $approvers = $this->getApprovers();
+
+                    $estimasi = Estimasi::create($baseAttributes + [
+                        'discount_percentage' => $blendedPct,
+                        'discount_amount'     => $discountAmt,
+                        'total'               => $total,
+                        'status'              => 'pending_approval',
+                        'approvals_required'  => $blendedPct <= 20 ? 1 : 2,
+                        'approver1_id'        => $approvers['sigit']->id,
+                        'approver2_id'        => $blendedPct > 20 ? $approvers['director']->id : null,
+                    ]);
                 }
 
-                $approvers = $this->getApprovers();
+                foreach ($sparepartItems as $row) {
+                    $qty = (float) $row['quantity'];
+                    $price = (float) $row['unit_price'];
+                    $estimasi->items()->create([
+                        'description'  => $row['description'],
+                        'quantity'     => $qty,
+                        'unit_price'   => $price,
+                        'total_price'  => $qty * $price,
+                    ]);
+                }
 
-                return Estimasi::create($baseAttributes + [
-                    'discount_percentage' => $blendedPct,
-                    'discount_amount'     => $discountAmt,
-                    'total'               => $total,
-                    'status'              => 'pending_approval',
-                    'approvals_required'  => $blendedPct <= 20 ? 1 : 2,
-                    'approver1_id'        => $approvers['sigit']->id,
-                    'approver2_id'        => $blendedPct > 20 ? $approvers['director']->id : null,
-                ]);
+                // No approval required (0% discount) — already final, apply immediately.
+                if ($estimasi->status === 'no_discount') {
+                    $estimasi->applyToWorkOrder();
+                }
+
+                return $estimasi;
             });
         } catch (\RuntimeException $e) {
             return back()->withInput()->withErrors(['work_order_id' => $e->getMessage()]);
@@ -184,7 +213,7 @@ class EstimasiController extends Controller
 
     public function show(Estimasi $estimasi)
     {
-        $estimasi->load(['workOrder.customer', 'workOrder.items.item', 'creator', 'approver1', 'approver2']);
+        $estimasi->load(['workOrder.customer', 'items', 'creator', 'approver1', 'approver2']);
 
         $user = auth()->user();
         $pendingMyApproval = $estimasi->isPendingMyApproval($user->id);
@@ -202,7 +231,7 @@ class EstimasiController extends Controller
             'workOrder.customer',
             'workOrder.labors.labor',
             'workOrder.panelLabors.panel',
-            'workOrder.items.item',
+            'items',
             'creator',
         ]);
 
@@ -227,6 +256,7 @@ class EstimasiController extends Controller
             $estimasi->approver1_approved_at = $now;
             $estimasi->status = 'approved';
             $estimasi->save();
+            $estimasi->applyToWorkOrder();
 
             NotificationService::send(
                 $estimasi->created_by,
@@ -268,6 +298,7 @@ class EstimasiController extends Controller
                 $estimasi->approver2_approved_at = $now;
                 $estimasi->status = 'approved';
                 $estimasi->save();
+                $estimasi->applyToWorkOrder();
 
                 NotificationService::send(
                     $estimasi->created_by,

@@ -296,10 +296,34 @@
                                         <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
-                                <tr class="table-success">
-                                    <th><strong>Grand Total:</strong></th>
-                                    <td class="text-right"><strong>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong></td>
-                                </tr>
+                                @if ($workOrder->usesEstimasiDiscount() && $workOrder->estimasiDiscountAmount() > 0)
+                                    <tr>
+                                        <th>Grand Total:</th>
+                                        <td class="text-right">Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Estimasi Discount:</th>
+                                        <td class="text-right text-danger">
+                                            — Rp {{ number_format($workOrder->estimasiDiscountAmount(), 0, ',', '.') }}
+                                            @if ($workOrder->activeEstimasi)
+                                                <small class="text-muted d-block">
+                                                    ({{ $workOrder->activeEstimasi->estimasi_number }}:
+                                                    Panel {{ number_format($workOrder->estimasi_discount_percentage_panel, 2) }}%,
+                                                    Sparepart {{ number_format($workOrder->estimasi_discount_percentage_sparepart, 2) }}%)
+                                                </small>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <th><strong>Discounted Total:</strong></th>
+                                        <td class="text-right"><strong>Rp {{ number_format($workOrder->discountedGrandTotal(), 0, ',', '.') }}</strong></td>
+                                    </tr>
+                                @else
+                                    <tr class="table-success">
+                                        <th><strong>Grand Total:</strong></th>
+                                        <td class="text-right"><strong>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong></td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Status:</th>
                                     <td>@include('partials.wo_status_badge', ['status' => $workOrder->status])</td>
