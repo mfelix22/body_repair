@@ -380,8 +380,8 @@
                                                     <i class="fas fa-exclamation-circle"></i> Partial
                                                 </span>
                                             @else
-                                                <span class="badge badge-secondary" title="Not ordered yet">
-                                                    <i class="fas fa-minus-circle"></i> Not Ordered
+                                                <span class="badge" title="Not ordered yet" style="white-space: nowrap; background-color: #e9ecef; color: #6c757d; padding: 0.5em 0.75em; font-size: 0.85em; border-radius: 0.5rem; border: 1px solid #dee2e6;">
+                                                    <i class="fas fa-minus-circle" style="margin-right: 0.35em;"></i> Not Ordered
                                                 </span>
                                             @endif
                                         </td>
