@@ -59,7 +59,8 @@
                                         <option value="">— Manual —</option>
                                         @foreach ($stockItems as $item)
                                             @php
-                                                $stockPrice = $item->stock?->avg_cost > 0 ? $item->stock->avg_cost : ($item->selling_price > 0 ? $item->selling_price : 0);
+                                                $avgCost = $item->stock?->avg_cost ?? $item->stocks->first()?->avg_cost ?? 0;
+                                                $stockPrice = $avgCost > 0 ? $avgCost : ($item->selling_price > 0 ? $item->selling_price : 0);
                                             @endphp
                                             <option value="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $stockPrice }}">
                                                 {{ $item->code }} - {{ $item->name }}
@@ -265,21 +266,21 @@
                 }
             });
 
-            itemsContainer.addEventListener('change', function(e) {
-                const select = e.target.closest('.sparepart-item-select');
-                if (!select) return;
+            $(itemsContainer).on('change', '.sparepart-item-select', function() {
+                const select = this;
+                const $option = $(select).find('option:selected');
+                const name = $option.data('name');
+                const price = parseFloat($option.data('price')) || 0;
+
                 const row = select.closest('.sparepart-row');
-                const option = select.options[select.selectedIndex];
-                if (select.value && option && option.dataset.name) {
-                    const name = option.dataset.name;
-                    const price = parseFloat(option.dataset.price) || 0;
-                    const descInput = row.querySelector('.sparepart-description');
-                    const priceInput = row.querySelector('.sparepart-price');
-                    if (name && !descInput.value.trim()) descInput.value = name;
-                    if (price > 0) priceInput.value = price;
-                    updateRowTotal(row);
-                    update();
-                }
+                if (!row || !select.value || !name) return;
+
+                const descInput = row.querySelector('.sparepart-description');
+                const priceInput = row.querySelector('.sparepart-price');
+                if (name && !descInput.value.trim()) descInput.value = name;
+                if (price > 0) priceInput.value = price;
+                updateRowTotal(row);
+                update();
             });
 
             itemsContainer.addEventListener('click', function(e) {
