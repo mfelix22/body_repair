@@ -59,7 +59,7 @@
                                         <option value="">— Manual —</option>
                                         @foreach ($stockItems as $item)
                                             @php
-                                                $stockPrice = $item->selling_price > 0 ? $item->selling_price : ($item->stock?->avg_cost ?? 0);
+                                                $stockPrice = $item->stock?->avg_cost > 0 ? $item->stock->avg_cost : ($item->selling_price > 0 ? $item->selling_price : 0);
                                             @endphp
                                             <option value="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $stockPrice }}">
                                                 {{ $item->code }} - {{ $item->name }}
