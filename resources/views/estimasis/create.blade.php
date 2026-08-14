@@ -304,9 +304,12 @@
                 });
             });
 
-            // Start with one empty row for convenience
-            addRow();
-            update();
+            // Start with one empty row for convenience, but wait until the
+            // layout's Select2 initializers have run so ours is the final one.
+            $(document).ready(function() {
+                addRow();
+                update();
+            });
         })();
     </script>
 @endpush
