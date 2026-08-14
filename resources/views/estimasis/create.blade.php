@@ -58,7 +58,10 @@
                                     <select name="sparepart_items[__INDEX__][item_id]" class="form-control form-control-sm sparepart-item-select" style="width: 100%;" data-placeholder="— Pilih dari stock —">
                                         <option value="">— Manual —</option>
                                         @foreach ($stockItems as $item)
-                                            <option value="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $item->selling_price }}">
+                                            @php
+                                                $stockPrice = $item->selling_price > 0 ? $item->selling_price : ($item->stock?->avg_cost ?? 0);
+                                            @endphp
+                                            <option value="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $stockPrice }}">
                                                 {{ $item->code }} - {{ $item->name }}
                                             </option>
                                         @endforeach
@@ -272,7 +275,7 @@
                     const price = parseFloat(option.dataset.price) || 0;
                     const descInput = row.querySelector('.sparepart-description');
                     const priceInput = row.querySelector('.sparepart-price');
-                    if (name) descInput.value = name;
+                    if (name && !descInput.value.trim()) descInput.value = name;
                     if (price > 0) priceInput.value = price;
                     updateRowTotal(row);
                     update();

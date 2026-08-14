@@ -89,7 +89,8 @@ class EstimasiController extends Controller
         $sparepartTotal = 0.0;
         $estimasiSubtotal = (float) $workOrder->grand_total + $sparepartTotal;
 
-        $stockItems = Item::where('is_active', true)
+        $stockItems = Item::with('stock')
+            ->where('is_active', true)
             ->where('item_type', 'SP')
             ->orderBy('name')
             ->get(['id', 'code', 'name', 'selling_price']);
