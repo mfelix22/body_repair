@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Estimasi;
+use App\Models\Item;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class EstimasiController extends Controller
 {
@@ -84,7 +86,12 @@ class EstimasiController extends Controller
         $sparepartTotal = 0.0;
         $estimasiSubtotal = (float) $workOrder->grand_total + $sparepartTotal;
 
-        return view('estimasis.create', compact('workOrder', 'sparepartTotal', 'estimasiSubtotal'));
+        $stockItems = Item::where('is_active', true)
+            ->where('item_type', 'SP')
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'selling_price']);
+
+        return view('estimasis.create', compact('workOrder', 'sparepartTotal', 'estimasiSubtotal', 'stockItems'));
     }
 
     public function store(Request $request)
@@ -94,12 +101,22 @@ class EstimasiController extends Controller
             return redirect()->route('dashboard')->with('error', 'Only Service Advisors can create an Estimasi.');
         }
 
+        // Treat empty item_id strings as null so stock/manual selection works
+        // regardless of whether ConvertEmptyStringsToNull middleware is active.
+        $request->merge([
+            'sparepart_items' => collect($request->input('sparepart_items', []))->map(function ($row) {
+                $row['item_id'] = !empty($row['item_id']) ? $row['item_id'] : null;
+                return $row;
+            })->values()->all(),
+        ]);
+
         $validated = $request->validate([
             'work_order_id' => 'required|exists:work_orders,id',
             'discount_percentage_panel' => 'required|numeric|min:0|max:100',
             'discount_percentage_sparepart' => 'required|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
             'sparepart_items' => 'nullable|array',
+            'sparepart_items.*.item_id' => 'nullable|exists:items,id',
             'sparepart_items.*.description' => 'required_with:sparepart_items|string|max:255',
             'sparepart_items.*.quantity' => 'required_with:sparepart_items|numeric|min:0.01',
             'sparepart_items.*.unit_price' => 'required_with:sparepart_items|numeric|min:0',
@@ -108,7 +125,7 @@ class EstimasiController extends Controller
         $panelPct     = (float) $validated['discount_percentage_panel'];
         $sparepartPct = (float) $validated['discount_percentage_sparepart'];
         $sparepartItems = array_values(array_filter($validated['sparepart_items'] ?? [], function ($row) {
-            return !empty($row['description']);
+            return !empty($row['item_id']) || !empty($row['description']);
         }));
 
         try {
@@ -181,11 +198,26 @@ class EstimasiController extends Controller
                 foreach ($sparepartItems as $row) {
                     $qty = (float) $row['quantity'];
                     $price = (float) $row['unit_price'];
+
                     $estimasi->items()->create([
+                        'item_id'      => $row['item_id'] ?? null,
                         'description'  => $row['description'],
                         'quantity'     => $qty,
                         'unit_price'   => $price,
                         'total_price'  => $qty * $price,
+                    ]);
+                }
+
+                // Snapshot the Work Order's panel/labor lines so this Estimasi
+                // keeps a record of what was submitted, even if the Work Order
+                // is edited later after an insurance rejection.
+                foreach ($wo->labors as $labor) {
+                    $estimasi->labors()->create([
+                        'labor_id'    => $labor->labor_id,
+                        'description' => $labor->description,
+                        'quantity'    => $labor->qty ?? 1,
+                        'rate'        => $labor->rate,
+                        'total_price' => $labor->total_price,
                     ]);
                 }
 
@@ -213,7 +245,7 @@ class EstimasiController extends Controller
 
     public function show(Estimasi $estimasi)
     {
-        $estimasi->load(['workOrder.customer', 'items', 'creator', 'approver1', 'approver2']);
+        $estimasi->load(['workOrder.customer', 'labors.labor', 'items', 'creator', 'approver1', 'approver2']);
 
         $user = auth()->user();
         $pendingMyApproval = $estimasi->isPendingMyApproval($user->id);
@@ -352,5 +384,33 @@ class EstimasiController extends Controller
         );
 
         return redirect()->route('estimasis.show', $estimasi)->with('info', 'Estimasi rejected.');
+    }
+
+    public function uploadApproval(Request $request, Estimasi $estimasi)
+    {
+        $user = auth()->user();
+
+        if (!$user->hasAnyRole(['service_advisor', 'admin', 'super_admin'])) {
+            return redirect()->route('estimasis.show', $estimasi)->with('error', 'Only Service Advisors can upload approval documents.');
+        }
+
+        $request->validate([
+            'approval_document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $file = $request->file('approval_document');
+
+        if ($estimasi->approval_document_path) {
+            Storage::disk('public')->delete($estimasi->approval_document_path);
+        }
+
+        $path = $file->store('estimasi_approvals', 'public');
+
+        $estimasi->update([
+            'approval_document_path' => $path,
+            'approval_document_name' => $file->getClientOriginalName(),
+        ]);
+
+        return redirect()->route('estimasis.show', $estimasi)->with('success', 'Insurance approval document uploaded.');
     }
 }

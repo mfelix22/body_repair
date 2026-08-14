@@ -161,6 +161,31 @@
 
                     {{-- Pricing Summary --}}
                     <h6 class="font-weight-bold mt-4">Pricing Summary</h6>
+                    @if (auth()->user()->hasAnyRole(['service_advisor', 'admin', 'super_admin']))
+                        <h6 class="font-weight-bold mt-4">Insurance Approval Document</h6>
+
+                        @if ($estimasi->approval_document_path)
+                            <p>
+                                <a href="{{ asset('storage/' . $estimasi->approval_document_path) }}" target="_blank" class="btn btn-info btn-sm">
+                                    <i class="fas fa-file-download"></i> Download: {{ $estimasi->approval_document_name }}
+                                </a>
+                            </p>
+                        @else
+                            <p class="text-muted small">No insurance approval document uploaded yet.</p>
+                        @endif
+
+                        <form action="{{ route('estimasis.upload_approval', $estimasi) }}" method="POST" enctype="multipart/form-data" class="form-inline">
+                            @csrf
+                            <div class="form-group">
+                                <input type="file" name="approval_document" class="form-control-file form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm ml-2">
+                                <i class="fas fa-upload"></i> {{ $estimasi->approval_document_path ? 'Replace' : 'Upload' }}
+                            </button>
+                        </form>
+                    @endif
+
+                    <h6 class="font-weight-bold mt-4">Pricing Summary</h6>
                     <table class="table table-bordered table-sm" style="max-width:450px;">
                         <tr>
                             <th>Panel Subtotal</th>

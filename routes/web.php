@@ -239,6 +239,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('estimasis', EstimasiController::class)->except(['edit', 'update', 'destroy']);
     Route::post('estimasis/{estimasi}/approve', [EstimasiController::class, 'approve'])->name('estimasis.approve');
     Route::post('estimasis/{estimasi}/reject', [EstimasiController::class, 'reject'])->name('estimasis.reject');
+    Route::post('estimasis/{estimasi}/upload-approval', [EstimasiController::class, 'uploadApproval'])->name('estimasis.upload_approval');
     Route::get('estimasis/{estimasi}/print', [EstimasiController::class, 'print'])->name('estimasis.print')->middleware('signed');
 
 

@@ -422,19 +422,6 @@
                         <td>:</td>
                         <td class="val">{{ optional($wo->customer)->phone ?? '-' }}</td>
                     </tr>
-                    <tr>
-                        <td>Status</td>
-                        <td>:</td>
-                        <td class="val">
-                            @php $badge = $estimasi->getStatusBadge(); @endphp
-                            {{ $badge['label'] }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Estimasi Date</td>
-                        <td>:</td>
-                        <td class="val">{{ $idDate($estimasi->created_at) }}</td>
-                    </tr>
                 </table>
             </td>
         </tr>
@@ -530,16 +517,8 @@
     {{-- ===== BOTTOM: PAYMENT + TOTALS ===== --}}
     <table class="bottom-section">
         <tr>
-            <td style="width:55%;">
-                <div class="payment-info">
-                    <strong>Pembayaran Melalui</strong>
-                    <br>
-                    Rekening BCA : <strong>088 869 5080</strong><br>
-                    a.n <strong>PT Hartono Auto Studio</strong>
-                </div>
-            </td>
-            <td style="width:45%;">
-                <table class="totals-table">
+            <td style="width:100%;">
+                <table class="totals-table" style="margin-left:auto;">
                     @if ($laborTotal > 0)
                         <tr>
                             <td style="width:45%"><strong>Total Labor</strong></td>
@@ -606,7 +585,7 @@
             <td style="width:55%;">
                 <div class="company-footer">
                     <strong>PT Hartono Auto Studio</strong><br>
-                    Jl. Demak No. 166 - 168, Gundih, Kec. Bubutan, Surabaya, Jawa Timur, 60172<br>
+                    Jl. Daan Mogot Km. 1 No. 99, RT.6/RW.5, Duri Kepa, Kecamatan Kebon Jeruk, Kota Jakarta Barat, DKI Jakarta 11510<br>
                     Jam Buka: Senin-Jumat 08:00-17:00 Sabtu 08:00-13:00<br>
                     <a href="mailto:hrautostudio@hartonomotor.com">hrautostudio@hartonomotor.com</a><br>
                     +62 877 2095 5959

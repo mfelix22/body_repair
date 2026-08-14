@@ -30,6 +30,8 @@ class Estimasi extends Model
         'approver2_approved_at',
         'approver2_rejected_at',
         'notes',
+        'approval_document_path',
+        'approval_document_name',
     ];
 
     protected $casts = [
@@ -51,6 +53,15 @@ class Estimasi extends Model
     public function items(): HasMany
     {
         return $this->hasMany(EstimasiItem::class);
+    }
+
+    /**
+     * Snapshot of the Work Order's panel/labor lines at the time this
+     * Estimasi was created. Used for resubmission when Insurance rejects.
+     */
+    public function labors(): HasMany
+    {
+        return $this->hasMany(EstimasiLabor::class);
     }
 
     /**

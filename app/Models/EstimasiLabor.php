@@ -5,20 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class EstimasiItem extends Model
+class EstimasiLabor extends Model
 {
     protected $fillable = [
         'estimasi_id',
-        'item_id',
+        'labor_id',
         'description',
         'quantity',
-        'unit_price',
+        'rate',
         'total_price',
     ];
 
     protected $casts = [
         'quantity'    => 'decimal:2',
-        'unit_price'  => 'decimal:2',
+        'rate'        => 'decimal:2',
         'total_price' => 'decimal:2',
     ];
 
@@ -27,8 +27,8 @@ class EstimasiItem extends Model
         return $this->belongsTo(Estimasi::class);
     }
 
-    public function item(): BelongsTo
+    public function labor(): BelongsTo
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Labor::class);
     }
 }

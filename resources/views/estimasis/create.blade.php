@@ -52,9 +52,32 @@
                             Masukkan manual sparepart yang dibutuhkan untuk pekerjaan ini. Daftar ini akan
                             dicetak pada Estimasi untuk disediakan oleh pihak Asuransi.
                         </p>
+                        <template id="sparepart-row-template">
+                            <tr class="sparepart-row">
+                                <td style="width: 220px;">
+                                    <select name="sparepart_items[__INDEX__][item_id]" class="form-control form-control-sm sparepart-item-select" style="width: 100%;" data-placeholder="— Pilih dari stock —">
+                                        <option value="">— Manual —</option>
+                                        @foreach ($stockItems as $item)
+                                            <option value="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $item->selling_price }}">
+                                                {{ $item->code }} - {{ $item->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                                <td><input type="text" name="sparepart_items[__INDEX__][description]" class="form-control form-control-sm sparepart-description" placeholder="e.g. Bumper Depan"></td>
+                                <td style="width: 100px;"><input type="number" name="sparepart_items[__INDEX__][quantity]" class="form-control form-control-sm sparepart-qty text-right" step="0.01" min="0.01" value="1"></td>
+                                <td style="width: 150px;"><input type="number" name="sparepart_items[__INDEX__][unit_price]" class="form-control form-control-sm sparepart-price text-right" step="1" min="0" value="0"></td>
+                                <td style="width: 150px;"><input type="text" class="form-control form-control-sm sparepart-row-total text-right" readonly value="Rp 0"></td>
+                                <td style="width: 50px;" class="text-center">
+                                    <button type="button" class="btn btn-danger btn-xs remove-sparepart-item"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </template>
+
                         <table class="table table-sm table-bordered">
                             <thead class="bg-light">
                                 <tr>
+                                    <th style="width: 220px;">Pilih dari Stock</th>
                                     <th>Nama Sparepart</th>
                                     <th style="width: 100px;">Qty</th>
                                     <th style="width: 150px;">Harga Satuan</th>
@@ -143,7 +166,13 @@
     </div>
 @endsection
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('admin/plugins/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('admin/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
+@endpush
+
 @push('scripts')
+    <script src="{{ asset('admin/plugins/select2/js/select2.full.min.js') }}"></script>
     <script>
         (function() {
             const panelInput = document.getElementById('discount_percentage_panel');
@@ -204,18 +233,21 @@
                 document.getElementById('preview-total').textContent = fmt(total);
             }
 
+            const rowTemplate = document.getElementById('sparepart-row-template');
+
             function addRow() {
-                const row = document.createElement('tr');
-                row.className = 'sparepart-row';
-                row.innerHTML = `
-                    <td><input type="text" name="sparepart_items[${itemIndex}][description]" class="form-control form-control-sm sparepart-description" placeholder="e.g. Bumper Depan"></td>
-                    <td><input type="number" name="sparepart_items[${itemIndex}][quantity]" class="form-control form-control-sm sparepart-qty text-right" step="0.01" min="0.01" value="1"></td>
-                    <td><input type="number" name="sparepart_items[${itemIndex}][unit_price]" class="form-control form-control-sm sparepart-price text-right" step="1" min="0" value="0"></td>
-                    <td><input type="text" class="form-control form-control-sm sparepart-row-total text-right" readonly value="Rp 0"></td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-danger btn-xs remove-sparepart-item"><i class="fas fa-trash"></i></button>
-                    </td>`;
+                const html = rowTemplate.innerHTML.replace(/__INDEX__/g, itemIndex);
+                const wrapper = document.createElement('tbody');
+                wrapper.innerHTML = html;
+                const row = wrapper.firstElementChild;
                 itemsContainer.appendChild(row);
+
+                $(row.querySelector('.sparepart-item-select')).select2({
+                    placeholder: '— Pilih dari stock —',
+                    allowClear: true,
+                    width: '100%'
+                });
+
                 itemIndex++;
             }
 
@@ -225,6 +257,23 @@
                 const row = e.target.closest('.sparepart-row');
                 if (!row) return;
                 if (e.target.classList.contains('sparepart-qty') || e.target.classList.contains('sparepart-price')) {
+                    updateRowTotal(row);
+                    update();
+                }
+            });
+
+            itemsContainer.addEventListener('change', function(e) {
+                const select = e.target.closest('.sparepart-item-select');
+                if (!select) return;
+                const row = select.closest('.sparepart-row');
+                const option = select.options[select.selectedIndex];
+                if (select.value && option && option.dataset.name) {
+                    const name = option.dataset.name;
+                    const price = parseFloat(option.dataset.price) || 0;
+                    const descInput = row.querySelector('.sparepart-description');
+                    const priceInput = row.querySelector('.sparepart-price');
+                    if (name) descInput.value = name;
+                    if (price > 0) priceInput.value = price;
                     updateRowTotal(row);
                     update();
                 }
@@ -240,12 +289,18 @@
             panelInput.addEventListener('input', update);
             sparepartInput.addEventListener('input', update);
 
-            // Strip empty sparepart rows before submit so validation doesn't
-            // block the form when a row was left blank.
+            // Strip empty sparepart rows and clear empty item_id names before submit.
             document.querySelector('form').addEventListener('submit', function() {
                 itemsContainer.querySelectorAll('.sparepart-row').forEach(function(row) {
+                    const itemSelect = row.querySelector('.sparepart-item-select');
+                    const itemId = itemSelect?.value;
                     const desc = row.querySelector('.sparepart-description');
-                    if (!desc || !desc.value.trim()) row.remove();
+
+                    if ((!desc || !desc.value.trim()) && !itemId) {
+                        row.remove();
+                    } else if (itemSelect && !itemId) {
+                        itemSelect.removeAttribute('name');
+                    }
                 });
             });
 
