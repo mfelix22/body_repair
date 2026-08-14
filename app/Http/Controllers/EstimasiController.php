@@ -9,6 +9,7 @@ use App\Models\WorkOrder;
 use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -54,7 +55,8 @@ class EstimasiController extends Controller
 
     public function index()
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         $estimasis = Estimasi::with(['workOrder.customer', 'creator'])
             ->orderBy('created_at', 'desc')
@@ -69,7 +71,8 @@ class EstimasiController extends Controller
 
     public function create(Request $request)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         if (!$user->hasAnyRole(['service_advisor', 'admin', 'super_admin'])) {
             return redirect()->route('dashboard')->with('error', 'Only Service Advisors can create an Estimasi.');
         }
@@ -96,7 +99,8 @@ class EstimasiController extends Controller
 
     public function store(Request $request)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         if (!$user->hasAnyRole(['service_advisor', 'admin', 'super_admin'])) {
             return redirect()->route('dashboard')->with('error', 'Only Service Advisors can create an Estimasi.');
         }
@@ -247,7 +251,8 @@ class EstimasiController extends Controller
     {
         $estimasi->load(['workOrder.customer', 'labors.labor', 'items', 'creator', 'approver1', 'approver2']);
 
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $pendingMyApproval = $estimasi->isPendingMyApproval($user->id);
 
         return view('estimasis.show', compact('estimasi', 'pendingMyApproval'));
@@ -272,7 +277,8 @@ class EstimasiController extends Controller
 
     public function approve(Request $request, Estimasi $estimasi)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         if ($estimasi->status !== 'pending_approval') {
             return redirect()->route('estimasis.show', $estimasi)->with('error', 'This Estimasi is not pending approval.');
@@ -349,7 +355,8 @@ class EstimasiController extends Controller
 
     public function reject(Request $request, Estimasi $estimasi)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         if ($estimasi->status !== 'pending_approval') {
             return redirect()->route('estimasis.show', $estimasi)->with('error', 'This Estimasi is not pending approval.');
@@ -388,7 +395,8 @@ class EstimasiController extends Controller
 
     public function uploadApproval(Request $request, Estimasi $estimasi)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
         if (!$user->hasAnyRole(['service_advisor', 'admin', 'super_admin'])) {
             return redirect()->route('estimasis.show', $estimasi)->with('error', 'Only Service Advisors can upload approval documents.');
