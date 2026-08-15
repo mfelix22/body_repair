@@ -41,7 +41,7 @@ class ItemController extends Controller
             return PermissionHelper::denyAccess('items', 'create');
         }
         $validated = $request->validate([
-            'item_type' => 'required|in:A,B,C,E,T,TE,SP,AXT',
+            'item_type' => 'required|in:A,B,C,E,T,TE,SP,P,D',
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -65,13 +65,8 @@ class ItemController extends Controller
             ->orderBy('id', 'desc')
             ->first();
 
-        if ($prefix === 'AXT') {
-            $pattern = '/AXT-?(\d+)/';
-            $codePrefix = 'AXT-';
-        } else {
-            $pattern = '/' . $prefix . '(\d+)/';
-            $codePrefix = $prefix;
-        }
+        $pattern = '/' . $prefix . '(\d+)/';
+        $codePrefix = $prefix;
 
         if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
             $nextNumber = intval($matches[1]) + 1;

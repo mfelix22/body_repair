@@ -254,6 +254,8 @@
                             <option value="T">Tools</option>
                             <option value="TE">Tools &amp; Equipment</option>
                             <option value="SP">Sparepart</option>
+                            <option value="P">Cat</option>
+                            <option value="D">Body</option>
                         </select>
                     </div>
                     <div class="col-md-3 new-item-section" style="display:none;">
