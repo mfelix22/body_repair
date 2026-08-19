@@ -213,14 +213,23 @@
 @endsection
 
 @section('scripts')
+    @php
+        $scanItemsData = $allItems->map(function ($item) {
+            $defaultStock = $item->stocks->where('location', 'default')->first();
+            return [
+                'id'    => $item->id,
+                'code'  => $item->code,
+                'name'  => $item->name,
+                'price' => $defaultStock ? $defaultStock->avg_cost : 0,
+            ];
+        })->values();
+    @endphp
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         let materialIndex = 0;
 
         // Item lookup data for barcode scanning (code -> {id, code, name, item_type, price})
-        const scanItemsData = @json(
-            $allItems->map(fn($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name, 'price' => optional($i->stocks->where('location', 'default')->first())->avg_cost ?? 0])->values()
-        );
+        const scanItemsData = @json($scanItemsData);
 
         function findItemByCode(scannedText) {
             const code = (scannedText || '').trim();
