@@ -147,7 +147,8 @@
                             <option value="{{ $item->id }}"
                                 data-type="{{ $item->item_type }}"
                                 data-uom="{{ $item->smallestUom->code ?? '-' }}"
-                                data-stock="{{ $item->stocks->sum('quantity') }}">
+                                data-stock="{{ $item->stocks->sum('quantity') }}"
+                                data-price="{{ optional($item->stocks->where('location', 'default')->first())->avg_cost ?? 0 }}">
                                 [{{ $item->code }}] {{ $item->name }}
                                 (Stock: {{ number_format($item->stocks->sum('quantity'), 2) }} {{ $item->smallestUom->code ?? '-' }})
                             </option>
@@ -216,9 +217,9 @@
     <script>
         let materialIndex = 0;
 
-        // Item lookup data for barcode scanning (code -> {id, code, name, item_type})
+        // Item lookup data for barcode scanning (code -> {id, code, name, item_type, price})
         const scanItemsData = @json(
-            $allItems->map(fn($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name])->values()
+            $allItems->map(fn($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name, 'price' => optional($i->stocks->where('location', 'default')->first())->avg_cost ?? 0])->values()
         );
 
         function findItemByCode(scannedText) {
@@ -258,10 +259,17 @@
             const row = addMaterialRow(currentScanSection);
             const select = $(row).find('.material-select');
             if (!select.find(`option[value="${item.id}"]`).length) {
-                select.append(new Option(`[${item.code}] ${item.name}`, item.id, false, false));
+                const newOpt = new Option(`[${item.code}] ${item.name}`, item.id, false, false);
+                newOpt.dataset.price = item.price || 0;
+                select.append(newOpt);
             }
             select.val(item.id).trigger('change');
             select.trigger({ type: 'select2:select', params: { data: { element: select.find(':selected')[0] } } });
+            const priceInput = row.querySelector('.price-input');
+            if (priceInput && (item.price || 0) > 0) {
+                priceInput.value = item.price;
+                updateSectionSubtotal(currentScanSection);
+            }
             $(row).find('.qty-input').focus();
 
             stopScanner();
@@ -352,9 +360,15 @@
                 const opt = e.params.data.element;
                 const uom   = opt?.dataset?.uom   || '-';
                 const stock = opt?.dataset?.stock  || '0';
+                const price = parseFloat(opt?.dataset?.price || 0);
                 row.querySelector('.stock-display').value = parseFloat(stock).toFixed(2) + ' ' + uom;
                 row.querySelector('.uom-label').textContent = uom;
                 row.querySelector('.qty-input').setAttribute('max', stock);
+                const priceInput = row.querySelector('.price-input');
+                if (priceInput && price > 0) {
+                    priceInput.value = price;
+                    updateSectionSubtotal(section);
+                }
             });
 
             // Recalculate on qty/price change

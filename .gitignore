@@ -36,3 +36,6 @@ body_repair.sql
 /sync-procurement.log
 /compare-procurement.sh
 /backup-server.sh
+*.txt
+*.sql
+*.py

@@ -286,6 +286,7 @@
                     'type'  => $i->item_type,
                     'uom'   => $i->smallestUom->code ?? '-',
                     'stock' => $i->stocks->sum('quantity'),
+                    'price' => optional($i->stocks->where('location', 'default')->first())->avg_cost ?? 0,
                 ])
                 ->values();
         @endphp
@@ -308,7 +309,7 @@
         function buildItemOptions(section) {
             const filtered = section === 'E' ? allItems.filter(i => i.type === 'SP') : allItems;
             return filtered.map(i =>
-                `<option value="${i.id}" data-uom="${i.uom}" data-stock="${i.stock}">[${i.code}] ${i.name} (Stock: ${parseFloat(i.stock).toFixed(2)} ${i.uom})</option>`
+                `<option value="${i.id}" data-uom="${i.uom}" data-stock="${i.stock}" data-price="${i.price || 0}">[${i.code}] ${i.name} (Stock: ${parseFloat(i.stock).toFixed(2)} ${i.uom})</option>`
             ).join('');
         }
 
@@ -381,9 +382,14 @@
                 const opt   = this.options[this.selectedIndex];
                 const uom   = opt?.dataset?.uom   || '-';
                 const stock = parseFloat(opt?.dataset?.stock || 0).toFixed(2);
+                const price = parseFloat(opt?.dataset?.price || 0);
                 div.querySelector('.stock-display').value = stock + ' ' + uom;
                 div.querySelector('.uom-label').textContent = uom;
                 div.querySelector('.qty-input').setAttribute('max', opt?.dataset?.stock || '');
+                const priceInput = div.querySelector('.price-input');
+                if (priceInput && price > 0) {
+                    priceInput.value = price;
+                }
                 updateSectionSubtotal(section);
             });
 
