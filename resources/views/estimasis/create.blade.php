@@ -72,6 +72,10 @@
                                 <td style="width: 100px;"><input type="number" name="sparepart_items[__INDEX__][quantity]" class="form-control form-control-sm sparepart-qty text-right" step="0.01" min="0.01" value="1"></td>
                                 <td style="width: 150px;"><input type="number" name="sparepart_items[__INDEX__][unit_price]" class="form-control form-control-sm sparepart-price text-right" step="1" min="0" value="0"></td>
                                 <td style="width: 150px;"><input type="text" class="form-control form-control-sm sparepart-row-total text-right" readonly value="Rp 0"></td>
+                                <td style="width: 90px;" class="text-center">
+                                    <input type="hidden" name="sparepart_items[__INDEX__][is_supply]" value="0">
+                                    <input type="checkbox" class="sparepart-is-supply" name="sparepart_items[__INDEX__][is_supply]" value="1" title="Disupply oleh Asuransi">
+                                </td>
                                 <td style="width: 50px;" class="text-center">
                                     <button type="button" class="btn btn-danger btn-xs remove-sparepart-item"><i class="fas fa-trash"></i></button>
                                 </td>
@@ -86,12 +90,18 @@
                                     <th style="width: 100px;">Qty</th>
                                     <th style="width: 150px;">Harga Satuan</th>
                                     <th style="width: 150px;">Jumlah</th>
+                                    <th style="width: 90px;">Supply Asuransi</th>
                                     <th style="width: 50px;"></th>
                                 </tr>
                             </thead>
                             <tbody id="sparepart-items-container">
                             </tbody>
                         </table>
+                        <p class="text-muted small mb-2" style="margin-top:-8px;">
+                            <i class="fas fa-info-circle"></i>
+                            Centang <strong>Supply Asuransi</strong> jika sparepart tersebut akan disediakan/disupply oleh pihak Asuransi.
+                            Jika tidak dicentang, sparepart dianggap diambil dari stock gudang kita sendiri.
+                        </p>
                         <button type="button" class="btn btn-warning btn-sm mb-3" id="add-sparepart-item">
                             <i class="fas fa-plus"></i> Tambah Sparepart
                         </button>

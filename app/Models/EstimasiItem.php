@@ -14,12 +14,14 @@ class EstimasiItem extends Model
         'quantity',
         'unit_price',
         'total_price',
+        'is_supply',
     ];
 
     protected $casts = [
         'quantity'    => 'decimal:2',
         'unit_price'  => 'decimal:2',
         'total_price' => 'decimal:2',
+        'is_supply'   => 'boolean',
     ];
 
     public function estimasi(): BelongsTo

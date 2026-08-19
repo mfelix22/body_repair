@@ -488,10 +488,11 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width:50%">Sparepart</th>
+                    <th style="width:40%">Sparepart</th>
                     <th style="width:8%" class="text-center">Qty</th>
-                    <th style="width:18%">Harga Satuan</th>
-                    <th style="width:24%">Jumlah</th>
+                    <th style="width:16%">Harga Satuan</th>
+                    <th style="width:20%">Jumlah</th>
+                    <th style="width:16%">Sumber</th>
                 </tr>
             </thead>
             <tbody>
@@ -501,6 +502,7 @@
                         <td class="text-center">{{ number_format($spItem->quantity, 0) }}</td>
                         <td class="text-right">Rp {{ number_format($spItem->unit_price, 0, ',', '.') }}</td>
                         <td class="text-right">Rp {{ number_format($spItem->total_price, 0, ',', '.') }}</td>
+                        <td class="text-center">{{ $spItem->is_supply ? 'Supply Asuransi' : 'Stock Sendiri' }}</td>
                     </tr>
                 @endforeach
             </tbody>

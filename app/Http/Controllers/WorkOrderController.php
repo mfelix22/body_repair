@@ -441,10 +441,10 @@ class WorkOrderController extends Controller
                 ->with('error', 'Only in-progress Work Orders can be completed.');
         }
 
-        if (!$workOrder->bonOuts()->exists()) {
-            return redirect()->route('work_orders.show', $workOrder)
-                ->with('error', 'Cannot complete Work Order: at least one Bon Out is required before completing.');
-        }
+        // if (!$workOrder->bonOuts()->exists()) {
+        //     return redirect()->route('work_orders.show', $workOrder)
+        //         ->with('error', 'Cannot complete Work Order: at least one Bon Out is required before completing.');
+        // }
 
         if ($workOrder->hasIncompleteBonOuts()) {
             return redirect()->route('work_orders.show', $workOrder)

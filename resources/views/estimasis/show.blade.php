@@ -137,13 +137,14 @@
 
                     @if ($estimasi->items->isNotEmpty())
                         <h6 class="font-weight-bold mt-4">Sparepart Dibutuhkan (untuk Asuransi)</h6>
-                        <table class="table table-bordered table-sm" style="max-width:650px;">
+                        <table class="table table-bordered table-sm" style="max-width:750px;">
                             <thead class="bg-light">
                                 <tr>
                                     <th>Sparepart</th>
                                     <th class="text-right" style="width:130px;">Harga Satuan</th>
                                     <th class="text-right" style="width:80px;">Qty</th>
                                     <th class="text-right" style="width:130px;">Jumlah</th>
+                                    <th class="text-center" style="width:110px;">Sumber</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -153,6 +154,13 @@
                                         <td class="text-right">Rp {{ number_format($spItem->unit_price, 0, ',', '.') }}</td>
                                         <td class="text-right">{{ number_format($spItem->quantity, 0) }}</td>
                                         <td class="text-right">Rp {{ number_format($spItem->total_price, 0, ',', '.') }}</td>
+                                        <td class="text-center">
+                                            @if ($spItem->is_supply)
+                                                <span class="badge badge-info">Supply Asuransi</span>
+                                            @else
+                                                <span class="badge badge-secondary">Stock Sendiri</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

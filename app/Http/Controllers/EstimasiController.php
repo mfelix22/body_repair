@@ -111,6 +111,7 @@ class EstimasiController extends Controller
         $request->merge([
             'sparepart_items' => collect($request->input('sparepart_items', []))->map(function ($row) {
                 $row['item_id'] = !empty($row['item_id']) ? $row['item_id'] : null;
+                $row['is_supply'] = !empty($row['is_supply']);
                 return $row;
             })->values()->all(),
         ]);
@@ -125,6 +126,7 @@ class EstimasiController extends Controller
             'sparepart_items.*.description' => 'required_with:sparepart_items|string|max:255',
             'sparepart_items.*.quantity' => 'required_with:sparepart_items|numeric|min:0.01',
             'sparepart_items.*.unit_price' => 'required_with:sparepart_items|numeric|min:0',
+            'sparepart_items.*.is_supply' => 'nullable|boolean',
         ]);
 
         $panelPct     = (float) $validated['discount_percentage_panel'];
@@ -210,6 +212,7 @@ class EstimasiController extends Controller
                         'quantity'     => $qty,
                         'unit_price'   => $price,
                         'total_price'  => $qty * $price,
+                        'is_supply'    => !empty($row['is_supply']),
                     ]);
                 }
 
