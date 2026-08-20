@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">New Estimasi for {{ $workOrder->wo_number }}</h3>
@@ -54,7 +54,7 @@
                         </p>
                         <template id="sparepart-row-template">
                             <tr class="sparepart-row">
-                                <td style="width: 220px;">
+                                <td style="width: 15%;">
                                     <select name="sparepart_items[__INDEX__][item_id]" class="form-control form-control-sm sparepart-item-select" style="width: 100%;" data-placeholder="— Pilih dari stock —">
                                         <option value="">— Manual —</option>
                                         @foreach ($stockItems as $item)
@@ -68,35 +68,37 @@
                                         @endforeach
                                     </select>
                                 </td>
-                                <td><input type="text" name="sparepart_items[__INDEX__][description]" class="form-control form-control-sm sparepart-description" placeholder="e.g. Bumper Depan"></td>
-                                <td style="width: 100px;"><input type="number" name="sparepart_items[__INDEX__][quantity]" class="form-control form-control-sm sparepart-qty text-right" step="0.01" min="0.01" value="1"></td>
-                                <td style="width: 150px;"><input type="number" name="sparepart_items[__INDEX__][unit_price]" class="form-control form-control-sm sparepart-price text-right" step="1" min="0" value="0"></td>
-                                <td style="width: 150px;"><input type="text" class="form-control form-control-sm sparepart-row-total text-right" readonly value="Rp 0"></td>
-                                <td style="width: 90px;" class="text-center">
+                                <td style="width: 30%;"><input type="text" name="sparepart_items[__INDEX__][description]" class="form-control form-control-sm sparepart-description" placeholder="e.g. Bumper Depan"></td>
+                                <td style="width: 7%;"><input type="number" name="sparepart_items[__INDEX__][quantity]" class="form-control form-control-sm sparepart-qty text-right" step="0.01" min="0.01" value="1"></td>
+                                <td style="width: 16%;"><input type="number" name="sparepart_items[__INDEX__][unit_price]" class="form-control form-control-sm sparepart-price text-right" step="1" min="0" value="0"></td>
+                                <td style="width: 13%;"><input type="text" class="form-control form-control-sm sparepart-row-total text-right" readonly value="Rp 0"></td>
+                                <td style="width: 14%;" class="text-center">
                                     <input type="hidden" name="sparepart_items[__INDEX__][is_supply]" value="0">
                                     <input type="checkbox" class="sparepart-is-supply" name="sparepart_items[__INDEX__][is_supply]" value="1" title="Disupply oleh Asuransi">
                                 </td>
-                                <td style="width: 50px;" class="text-center">
+                                <td style="width: 5%;" class="text-center">
                                     <button type="button" class="btn btn-danger btn-xs remove-sparepart-item"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         </template>
 
-                        <table class="table table-sm table-bordered">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th style="width: 220px;">Pilih dari Stock</th>
-                                    <th>Nama Sparepart</th>
-                                    <th style="width: 100px;">Qty</th>
-                                    <th style="width: 150px;">Harga Satuan</th>
-                                    <th style="width: 150px;">Jumlah</th>
-                                    <th style="width: 90px;">Supply Asuransi</th>
-                                    <th style="width: 50px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="sparepart-items-container">
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="width: 15%;">Pilih dari Stock</th>
+                                        <th style="width: 30%;">Nama Sparepart</th>
+                                        <th style="width: 7%;">Qty</th>
+                                        <th style="width: 16%;">Harga Satuan</th>
+                                        <th style="width: 13%;">Jumlah</th>
+                                        <th style="width: 14%;">Supply Asuransi</th>
+                                        <th style="width: 5%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sparepart-items-container">
+                                </tbody>
+                            </table>
+                        </div>
                         <p class="text-muted small mb-2" style="margin-top:-8px;">
                             <i class="fas fa-info-circle"></i>
                             Centang <strong>Supply Asuransi</strong> jika sparepart tersebut akan disediakan/disupply oleh pihak Asuransi.
