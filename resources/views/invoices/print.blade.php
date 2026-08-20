@@ -530,6 +530,38 @@
     </table>
     @endif
 
+    {{-- ===== SPAREPART TABLE ===== --}}
+    @php
+        $spareparts = $wo->items->whereNotNull('total_price');
+    @endphp
+    @if ($spareparts->isNotEmpty())
+    <div class="section-label">Sparepart yang Digunakan</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:12%">Item Code</th>
+                <th style="width:38%">Sparepart</th>
+                <th style="width:8%" class="text-center">Qty</th>
+                <th style="width:18%" class="text-center">UOM</th>
+                <th style="width:10%" class="text-center">Discount</th>
+                <th style="width:14%">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($spareparts as $woItem)
+                <tr>
+                    <td>{{ $woItem->item?->code ?? '-' }}</td>
+                    <td>{{ $woItem->item?->name ?? '-' }}</td>
+                    <td class="text-center">{{ number_format($woItem->actual_quantity ?? $woItem->demand_quantity, 0) }}</td>
+                    <td class="text-center">{{ $woItem->uom?->code ?? optional($woItem->item?->smallestUom)->code ?? '-' }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">Rp {{ number_format($woItem->total_price ?? 0, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- ===== NOTES ===== --}}
     @if ($invoice->notes)
         <div style="margin-top:10px; font-size:11px; line-height:1.5;">

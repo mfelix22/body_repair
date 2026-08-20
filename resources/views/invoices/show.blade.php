@@ -195,6 +195,40 @@
                         <small class="text-muted">Base labor: Rp {{ number_format($baseLabor, 0, ',', '.') }} (included in total).</small>
                     @endif
 
+                    @php
+                        $spareparts = $invoice->workOrder->items->whereNotNull('total_price');
+                    @endphp
+                    @if ($spareparts->isNotEmpty())
+                        <hr>
+                        <h6>Sparepart yang Digunakan</h6>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Sparepart</th>
+                                    <th class="text-center">Qty</th>
+                                    <th>UOM</th>
+                                    <th class="text-right">Harga Satuan (Rp)</th>
+                                    <th class="text-right">Total (Rp)</th>
+                                    <th>Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($spareparts as $woItem)
+                                    <tr>
+                                        <td>{{ $woItem->item?->code ?? '—' }}</td>
+                                        <td>{{ $woItem->item?->name ?? '—' }}</td>
+                                        <td class="text-center">{{ number_format($woItem->actual_quantity ?? $woItem->demand_quantity, 2) }}</td>
+                                        <td>{{ $woItem->uom?->code ?? optional($woItem->item?->smallestUom)->name ?? '-' }}</td>
+                                        <td class="text-right">{{ $woItem->unit_price ? number_format($woItem->unit_price, 0, ',', '.') : '—' }}</td>
+                                        <td class="text-right"><strong>{{ $woItem->total_price ? number_format($woItem->total_price, 0, ',', '.') : '—' }}</strong></td>
+                                        <td>{{ $woItem->remark ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+
                     <hr>
                     <div class="row">
                         <div class="col-md-6"></div>

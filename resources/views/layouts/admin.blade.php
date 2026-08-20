@@ -424,7 +424,7 @@
                                             </a>
                                         </li>
                                     @endif
-                                    @if (\App\Helpers\PermissionHelper::canView('proforma_invoices'))
+                                    {{-- @if (\App\Helpers\PermissionHelper::canView('proforma_invoices'))
                                         <li class="nav-item">
                                             <a href="{{ route('proforma_invoices.index') }}"
                                                 class="nav-link {{ request()->routeIs('proforma_invoices.*') ? 'active' : '' }}">
@@ -432,7 +432,7 @@
                                                 <p>Proforma Invoice</p>
                                             </a>
                                         </li>
-                                    @endif
+                                    @endif --}}
                                     @if (\App\Helpers\PermissionHelper::canView('estimasis'))
                                         <li class="nav-item">
                                             <a href="{{ route('estimasis.index') }}"

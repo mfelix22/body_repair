@@ -87,12 +87,12 @@
                             @endphp
 
                             {{-- SA: Create Proforma (only if no proforma AND no invoice yet) --}}
-                            @if (\App\Helpers\PermissionHelper::canCreate('proforma_invoices') && !$pf && !$inv)
+                            {{-- @if (\App\Helpers\PermissionHelper::canCreate('proforma_invoices') && !$pf && !$inv)
                                 <a href="{{ route('proforma_invoices.create', ['work_order_id' => $workOrder->id]) }}"
                                     class="btn btn-warning btn-sm">
                                     <i class="fas fa-file-alt"></i> Create Proforma
                                 </a>
-                            @endif
+                            @endif --}}
 
                             {{-- Proforma status link (visible to anyone who can view proformas) --}}
                             @if ($pf)
