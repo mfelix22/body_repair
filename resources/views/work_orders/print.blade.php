@@ -588,7 +588,7 @@
     {{-- ===== COMPANY FOOTER ===== --}}
     <div class="company-footer">
         <strong>PT Hartono Auto Studio</strong><br>
-        Jl. Demak No. 166 - 168, Gundih, Kec. Bubutan, Surabaya, Jawa Timur, 60172<br>
+        Jl. Daan Mogot Km. 1 No. 99, RT.6/RW.5, Duri Kepa, Kecamatan Kebon Jeruk, Kota Jakarta Barat, DKI Jakarta 11510<br>
         <a href="mailto:hrautostudio@hartonomotor.com">hrautostudio@hartonomotor.com</a><br>
         +62 877 2095 5959
     </div>
