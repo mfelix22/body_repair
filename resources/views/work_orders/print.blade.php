@@ -512,6 +512,34 @@
     </table>
     @endif
 
+    {{-- ===== SPAREPART / MATERIALS TABLE ===== --}}
+    @if ($workOrder->items->isNotEmpty())
+    <table class="section-table">
+        <thead>
+            <tr>
+                <td style="width:15%">Item Code</td>
+                <td style="width:45%">Sparepart / Material</td>
+                <td style="width:10%;text-align:center;">Qty</td>
+                <td style="width:15%;text-align:center;">UOM</td>
+                <td style="width:15%;text-align:right;">Unit Price</td>
+                <td style="width:15%;text-align:right;">Total</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($workOrder->items as $woItem)
+                <tr>
+                    <td>{{ $woItem->item?->code ?? '-' }}</td>
+                    <td>{{ $woItem->item?->name ?? '-' }}</td>
+                    <td style="text-align:center;">{{ number_format($woItem->actual_quantity ?? $woItem->demand_quantity, 2) }}</td>
+                    <td style="text-align:center;">{{ optional($woItem->item?->smallestUom)->code ?? '-' }}</td>
+                    <td style="text-align:right;">{{ $woItem->unit_price ? number_format($woItem->unit_price, 0, ',', '.') : '-' }}</td>
+                    <td style="text-align:right;">{{ $woItem->total_price ? number_format($woItem->total_price, 0, ',', '.') : '-' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- ===== RECEIVED BY / SA ROW ===== --}}
     <table style="width:100%;margin:6px 0;">
         <tr>

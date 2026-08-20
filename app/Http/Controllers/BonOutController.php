@@ -205,9 +205,9 @@ class BonOutController extends Controller
                     $demandQuantity = $woItem ? $woItem->demand_quantity : 0;
                 }
 
-                // Selling price only applies to extra materials (not WO items)
-                $unitPrice = empty($itemData['work_order_item_id'])
-                    ? (isset($itemData['unit_price']) && $itemData['unit_price'] > 0 ? $itemData['unit_price'] : null)
+                // Selling price applies to any item with a price entered (spareparts always require one)
+                $unitPrice = (isset($itemData['unit_price']) && (float) $itemData['unit_price'] > 0)
+                    ? (float) $itemData['unit_price']
                     : null;
 
                 BonOutItem::create([
@@ -416,8 +416,8 @@ class BonOutController extends Controller
                         $demandQty = $woItem ? $woItem->demand_quantity : 0;
                     }
 
-                    $unitPrice = empty($itemData['work_order_item_id'])
-                        ? (isset($itemData['unit_price']) && $itemData['unit_price'] > 0 ? $itemData['unit_price'] : null)
+                    $unitPrice = (isset($itemData['unit_price']) && (float) $itemData['unit_price'] > 0)
+                        ? (float) $itemData['unit_price']
                         : null;
 
                     BonOutItem::create([
@@ -511,19 +511,36 @@ class BonOutController extends Controller
                 }
             }
 
-            // Push extra items with selling price into WO billing
+            // Push items with selling price into WO billing
             if (!$isStandalone && $bonOut->work_order_id) {
                 $woNeedsRecalc = false;
-                foreach ($bonOut->items->where('work_order_item_id', null) as $extraItem) {
-                    if ($extraItem->unit_price > 0 && $extraItem->actual_quantity > 0) {
+                foreach ($bonOut->items as $bonOutItem) {
+                    if ((float) $bonOutItem->actual_quantity <= 0 || (float) $bonOutItem->unit_price <= 0) {
+                        continue;
+                    }
+
+                    if ($bonOutItem->work_order_item_id) {
+                        // Selling price came from a Bon Out for an original WO demand line
+                        $woItem = WorkOrderItem::find($bonOutItem->work_order_item_id);
+                        if ($woItem) {
+                            $newTotal = (float) $bonOutItem->actual_quantity * (float) $bonOutItem->unit_price;
+                            $existingTotal = (float) ($woItem->total_price ?? 0);
+                            $woItem->update([
+                                'unit_price'  => $bonOutItem->unit_price,
+                                'total_price' => $existingTotal + $newTotal,
+                            ]);
+                            $woNeedsRecalc = true;
+                        }
+                    } else {
+                        // Extra material not originally on WO — create a new billed line
                         WorkOrderItem::create([
                             'work_order_id'   => $bonOut->work_order_id,
-                            'item_id'         => $extraItem->item_id,
-                            'uom_id'          => $extraItem->uom_id,
-                            'demand_quantity' => $extraItem->actual_quantity,
-                            'actual_quantity' => $extraItem->actual_quantity,
-                            'unit_price'      => $extraItem->unit_price,
-                            'total_price'     => $extraItem->actual_quantity * $extraItem->unit_price,
+                            'item_id'         => $bonOutItem->item_id,
+                            'uom_id'          => $bonOutItem->uom_id,
+                            'demand_quantity' => $bonOutItem->actual_quantity,
+                            'actual_quantity' => $bonOutItem->actual_quantity,
+                            'unit_price'      => $bonOutItem->unit_price,
+                            'total_price'     => (float) $bonOutItem->actual_quantity * (float) $bonOutItem->unit_price,
                         ]);
                         $woNeedsRecalc = true;
                     }

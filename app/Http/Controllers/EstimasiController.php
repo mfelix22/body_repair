@@ -108,11 +108,20 @@ class EstimasiController extends Controller
 
         // Treat empty item_id strings as null so stock/manual selection works
         // regardless of whether ConvertEmptyStringsToNull middleware is active.
+        $rawSparepartItems = $request->input('sparepart_items', []) ?: [];
+        $itemIds = collect($rawSparepartItems)->pluck('item_id')->filter()->unique()->values()->all();
+        $itemNames = !empty($itemIds) ? Item::whereIn('id', $itemIds)->pluck('name', 'id') : collect();
+
         $request->merge([
-            'sparepart_items' => collect($request->input('sparepart_items', []))->map(function ($row) {
+            'sparepart_items' => collect($rawSparepartItems)->map(function ($row) use ($itemNames) {
                 $row['item_id'] = !empty($row['item_id']) ? $row['item_id'] : null;
+                if (!empty($row['item_id']) && empty($row['description'])) {
+                    $row['description'] = $itemNames[$row['item_id']] ?? $row['description'];
+                }
                 $row['is_supply'] = !empty($row['is_supply']);
                 return $row;
+            })->filter(function ($row) {
+                return !empty($row['item_id']) || !empty($row['description']);
             })->values()->all(),
         ]);
 
