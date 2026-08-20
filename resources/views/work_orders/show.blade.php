@@ -280,19 +280,19 @@
                                 @endif
                                 @if ($laborTotal > 0)
                                     <tr>
-                                        <th>Total Panel:</th>
+                                        <th>Total Jasa:</th>
                                         <td class="text-right">Rp {{ number_format($laborTotal, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 @if ($extraMaterial > 0)
                                     <tr>
-                                        <th>Extra Materials:</th>
+                                        <th>Sparepart:</th>
                                         <td class="text-right text-info">+ Rp {{ number_format($extraMaterial, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif
                                 @if ($extraLabor > 0)
                                     <tr>
-                                        <th>Extra Panel:</th>
+                                        <th>Extra Jasa:</th>
                                         <td class="text-right text-info">+ Rp {{ number_format($extraLabor, 0, ',', '.') }}</td>
                                     </tr>
                                 @endif

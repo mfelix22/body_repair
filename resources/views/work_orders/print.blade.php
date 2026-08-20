@@ -432,7 +432,7 @@
         $baseLabors  = $workOrder->generalLabors->where('is_extra', false);
         $extraLabors = $workOrder->generalLabors->where('is_extra', true);
     @endphp
-    <table class="section-table">
+    {{-- <table class="section-table">
         <thead>
             <tr>
                 <td style="width:15%">Panel Code</td>
@@ -458,7 +458,7 @@
                 <tr class="empty-row"><td colspan="5">&nbsp;</td></tr>
             @endfor
         </tbody>
-    </table>
+    </table> --}}
 
     {{-- ===== PANEL TABLE ===== --}}
     @if ($baseLabors->isNotEmpty())
