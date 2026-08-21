@@ -301,16 +301,30 @@
                                         <th>Grand Total:</th>
                                         <td class="text-right">Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
                                     </tr>
+                                    @if ($workOrder->panelDiscountAmount() > 0)
+                                        <tr>
+                                            <th>Panel/Labor Discount:</th>
+                                            <td class="text-right text-danger">
+                                                — Rp {{ number_format($workOrder->panelDiscountAmount(), 0, ',', '.') }}
+                                                <small class="text-muted">({{ number_format($workOrder->estimasi_discount_percentage_panel, 2) }}% of Rp {{ number_format($workOrder->labor_total, 0, ',', '.') }})</small>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                    @if ($workOrder->sparepartDiscountAmount() > 0)
+                                        <tr>
+                                            <th>Sparepart Discount:</th>
+                                            <td class="text-right text-danger">
+                                                — Rp {{ number_format($workOrder->sparepartDiscountAmount(), 0, ',', '.') }}
+                                                <small class="text-muted">({{ number_format($workOrder->estimasi_discount_percentage_sparepart, 2) }}% of Rp {{ number_format($workOrder->material_total, 0, ',', '.') }})</small>
+                                            </td>
+                                        </tr>
+                                    @endif
                                     <tr>
-                                        <th>Estimasi Discount:</th>
+                                        <th>Total Estimasi Discount:</th>
                                         <td class="text-right text-danger">
                                             — Rp {{ number_format($workOrder->estimasiDiscountAmount(), 0, ',', '.') }}
                                             @if ($workOrder->activeEstimasi)
-                                                <small class="text-muted d-block">
-                                                    ({{ $workOrder->activeEstimasi->estimasi_number }}:
-                                                    Panel {{ number_format($workOrder->estimasi_discount_percentage_panel, 2) }}%,
-                                                    Sparepart {{ number_format($workOrder->estimasi_discount_percentage_sparepart, 2) }}%)
-                                                </small>
+                                                <small class="text-muted d-block">({{ $workOrder->activeEstimasi->estimasi_number }})</small>
                                             @endif
                                         </td>
                                     </tr>

@@ -155,7 +155,7 @@ class EstimasiController extends Controller
                 $seq = $wo->estimasis()->count() + 1;
                 $estimasiNumber = $wo->wo_number . '/EST-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
-                $panelSubtotal     = (float) $wo->grand_total;
+                $panelSubtotal     = (float) $wo->labor_total;
                 $sparepartSubtotal = array_reduce($sparepartItems, function ($sum, $row) {
                     return $sum + ((float) $row['quantity'] * (float) $row['unit_price']);
                 }, 0.0);

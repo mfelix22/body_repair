@@ -287,4 +287,23 @@ class WorkOrder extends Model
     {
         return round((float) $this->grand_total - $this->discountedGrandTotal(), 2);
     }
+
+    /**
+     * Panel/labor discount amount (Rp) currently applied via the active
+     * Estimasi's approved panel discount percentage (ASURANSI WOs only).
+     */
+    public function panelDiscountAmount(): float
+    {
+        return round((float) $this->labor_total - $this->discountedLaborTotal(), 2);
+    }
+
+    /**
+     * Sparepart/material discount amount (Rp) currently applied via the
+     * active Estimasi's approved sparepart discount percentage (ASURANSI
+     * WOs only).
+     */
+    public function sparepartDiscountAmount(): float
+    {
+        return round((float) $this->material_total - $this->discountedMaterialTotal(), 2);
+    }
 }
