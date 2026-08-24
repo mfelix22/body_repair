@@ -1457,11 +1457,23 @@ class PurchaseOrderController extends Controller
     public function exportExcel(Request $request)
     {
         $poType = $request->query('type', 'purchase_order');
+        $month = $request->query('month');
+        $status = $request->query('status');
 
-        $orders = PurchaseOrder::with(['details.item', 'details.uom', 'creator', 'approver'])
-            ->where('po_type', $poType)
-            ->orderBy('order_date', 'desc')
-            ->get();
+        $query = PurchaseOrder::with(['details.item', 'details.uom', 'creator', 'approver'])
+            ->where('po_type', $poType);
+
+        if ($month) {
+            $start = \Carbon\Carbon::parse($month)->startOfMonth();
+            $end = \Carbon\Carbon::parse($month)->endOfMonth();
+            $query->whereBetween('order_date', [$start, $end]);
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $orders = $query->orderBy('order_date', 'desc')->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

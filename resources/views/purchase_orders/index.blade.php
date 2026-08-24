@@ -46,11 +46,22 @@
                     <div class="tab-content" id="poTabsContent">
                         {{-- PPB Tab --}}
                         <div class="tab-pane fade show active" id="ppb" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
                                 <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by item name..." style="max-width:320px">
+                                    placeholder="Filter by item name..." style="max-width:220px">
+                                <input type="month" id="ppb-month-filter" class="form-control form-control-sm" style="max-width:160px">
+                                <select id="ppb-status-filter" class="form-control form-control-sm" style="max-width:160px">
+                                    <option value="">All Status</option>
+                                    <option value="on_progress">On Progress</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="received">Received</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="closed_shortage">Closed with Shortage</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'purchase_order']) }}"
-                                   class="btn btn-sm btn-success ml-2">
+                                   class="btn btn-sm btn-success ml-2" id="ppb-export">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -118,11 +129,22 @@
 
                         {{-- PPJ Tab --}}
                         <div class="tab-pane fade" id="ppj" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2">
+                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
                                 <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by service description..." style="max-width:320px">
+                                    placeholder="Filter by service description..." style="max-width:220px">
+                                <input type="month" id="ppj-month-filter" class="form-control form-control-sm" style="max-width:160px">
+                                <select id="ppj-status-filter" class="form-control form-control-sm" style="max-width:160px">
+                                    <option value="">All Status</option>
+                                    <option value="on_progress">On Progress</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="received">Received</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="closed_shortage">Closed with Shortage</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'service_order']) }}"
-                                   class="btn btn-sm btn-success ml-2">
+                                   class="btn btn-sm btn-success ml-2" id="ppj-export">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -233,6 +255,27 @@
                     ]
                 };
             }
+
+            function updateExportLink(type) {
+                var month = $('#' + type + '-month-filter').val();
+                var status = $('#' + type + '-status-filter').val();
+                var baseUrl = $('#' + type + '-export').attr('href').split('?')[0];
+                var params = {type: type === 'ppb' ? 'purchase_order' : 'service_order'};
+                if (month) params.month = month;
+                if (status) params.status = status;
+                $('#' + type + '-export').attr('href', baseUrl + '?' + $.param(params));
+            }
+
+            $('#ppb-month-filter, #ppb-status-filter').on('change', function() {
+                updateExportLink('ppb');
+            });
+
+            $('#ppj-month-filter, #ppj-status-filter').on('change', function() {
+                updateExportLink('ppj');
+            });
+
+            updateExportLink('ppb');
+            updateExportLink('ppj');
 
             // Item filter: match against data-items attribute on each <tr>
             // Use settings.aoData[dataIndex].nTr to get the correct row node regardless of pagination
