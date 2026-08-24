@@ -99,7 +99,9 @@
                                     <tbody>
                                         @forelse ($purchaseOrders as $po)
                                             <tr
-                                                data-items="{{ strtolower($po->details->pluck('item.name')->filter()->implode(' ')) }}">
+                                                data-items="{{ strtolower($po->details->pluck('item.name')->filter()->implode(' ')) }}"
+                                                data-month="{{ $po->order_date->format('Y-m') }}"
+                                                data-status="{{ $po->status }}">
                                                 <td><strong>{{ $po->po_number }}</strong></td>
                                                 <td>{{ $po->supplier_name }}</td>
                                                 <td>{{ $po->order_date->format('M d, Y') }}</td>
@@ -198,7 +200,9 @@
                                     <tbody>
                                         @forelse ($serviceOrders as $so)
                                             <tr
-                                                data-items="{{ strtolower($so->details->pluck('service_description')->filter()->implode(' ')) }}">
+                                                data-items="{{ strtolower($so->details->pluck('service_description')->filter()->implode(' ')) }}"
+                                                data-month="{{ $so->order_date->format('Y-m') }}"
+                                                data-status="{{ $so->status }}">
                                                 <td><strong>{{ $so->po_number }}</strong></td>
                                                 <td>{{ $so->supplier_name }}</td>
                                                 <td>{{ $so->order_date->format('M d, Y') }}</td>
@@ -300,27 +304,46 @@
 
             $('#ppb-month-filter, #ppb-status-filter').on('change', function() {
                 updateExportLink('ppb');
+                ppbTable.draw();
             });
 
             $('#ppj-month-filter, #ppj-status-filter').on('change', function() {
                 updateExportLink('ppj');
+                if (ppjTable) ppjTable.draw();
             });
 
             updateExportLink('ppb');
             updateExportLink('ppj');
 
-            // Item filter: match against data-items attribute on each <tr>
+            // Item, month, and status filter: match against data-* attributes on each <tr>
             // Use settings.aoData[dataIndex].nTr to get the correct row node regardless of pagination
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 var tableId = settings.nTable.id;
-                var input = tableId === 'ppb-table' ?
-                    $('#ppb-item-filter').val() :
-                    ($('#ppj-item-filter').val() || '');
-                if (!input) return true;
                 var rowNode = settings.aoData[dataIndex].nTr;
                 if (!rowNode) return true;
-                var items = ($(rowNode).data('items') || '').toLowerCase();
-                return items.indexOf(input.toLowerCase()) !== -1;
+
+                // Item filter
+                var itemInput = tableId === 'ppb-table' ?
+                    $('#ppb-item-filter').val() :
+                    ($('#ppj-item-filter').val() || '');
+                if (itemInput) {
+                    var items = ($(rowNode).data('items') || '').toLowerCase();
+                    if (items.indexOf(itemInput.toLowerCase()) === -1) return false;
+                }
+
+                // Month filter
+                var monthInput = tableId === 'ppb-table' ?
+                    $('#ppb-month-filter').val() :
+                    $('#ppj-month-filter').val();
+                if (monthInput && $(rowNode).data('month') !== monthInput) return false;
+
+                // Status filter
+                var statusInput = tableId === 'ppb-table' ?
+                    $('#ppb-status-filter').val() :
+                    $('#ppj-status-filter').val();
+                if (statusInput && $(rowNode).data('status') !== statusInput) return false;
+
+                return true;
             });
 
             // Init PPB table immediately (it's visible on load)
