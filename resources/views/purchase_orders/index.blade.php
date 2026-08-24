@@ -10,13 +10,6 @@
 
 @section('content')
     @php($canViewPrices = \App\Helpers\PermissionHelper::canViewPrices())
-    @php
-        $months = collect();
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $months->push(['value' => $date->format('Y-m'), 'label' => $date->format('M Y')]);
-        }
-    @endphp
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -63,9 +56,10 @@
                                         </div>
                                         <select id="ppb-month-filter" class="form-control">
                                             <option value="">All Months</option>
-                                            @foreach($months as $month)
-                                                <option value="{{ $month['value'] }}">{{ $month['label'] }}</option>
-                                            @endforeach
+                                            @for ($i = 11; $i >= 0; $i--)
+                                                @php($month = now()->subMonths($i))
+                                                <option value="{{ $month->format('Y-m') }}">{{ $month->format('M Y') }}</option>
+                                            @endfor
                                         </select>
                                     </div>
                                     <select id="ppb-status-filter" class="form-control form-control-sm" style="max-width:145px">
@@ -161,9 +155,10 @@
                                         </div>
                                         <select id="ppj-month-filter" class="form-control">
                                             <option value="">All Months</option>
-                                            @foreach($months as $month)
-                                                <option value="{{ $month['value'] }}">{{ $month['label'] }}</option>
-                                            @endforeach
+                                            @for ($i = 11; $i >= 0; $i--)
+                                                @php($month = now()->subMonths($i))
+                                                <option value="{{ $month->format('Y-m') }}">{{ $month->format('M Y') }}</option>
+                                            @endfor
                                         </select>
                                     </div>
                                     <select id="ppj-status-filter" class="form-control form-control-sm" style="max-width:145px">
