@@ -10,6 +10,13 @@
 
 @section('content')
     @php($canViewPrices = \App\Helpers\PermissionHelper::canViewPrices())
+    @php
+        $months = collect();
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $months->push(['value' => $date->format('Y-m'), 'label' => $date->format('M Y')]);
+        }
+    @endphp
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -50,11 +57,16 @@
                                 <div class="d-flex align-items-center flex-wrap" style="gap: .5rem;">
                                     <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
                                         placeholder="Filter by item name..." style="max-width:180px">
-                                    <div class="input-group input-group-sm" style="max-width:190px">
+                                    <div class="input-group input-group-sm" style="max-width:210px">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">Month</span>
                                         </div>
-                                        <input type="month" id="ppb-month-filter" class="form-control">
+                                        <select id="ppb-month-filter" class="form-control">
+                                            <option value="">All Months</option>
+                                            @foreach($months as $month)
+                                                <option value="{{ $month['value'] }}">{{ $month['label'] }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <select id="ppb-status-filter" class="form-control form-control-sm" style="max-width:145px">
                                         <option value="">All Status</option>
@@ -143,11 +155,16 @@
                                 <div class="d-flex align-items-center flex-wrap" style="gap: .5rem;">
                                     <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
                                         placeholder="Filter by service description..." style="max-width:180px">
-                                    <div class="input-group input-group-sm" style="max-width:190px">
+                                    <div class="input-group input-group-sm" style="max-width:210px">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">Month</span>
                                         </div>
-                                        <input type="month" id="ppj-month-filter" class="form-control">
+                                        <select id="ppj-month-filter" class="form-control">
+                                            <option value="">All Months</option>
+                                            @foreach($months as $month)
+                                                <option value="{{ $month['value'] }}">{{ $month['label'] }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <select id="ppj-status-filter" class="form-control form-control-sm" style="max-width:145px">
                                         <option value="">All Status</option>
