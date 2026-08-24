@@ -46,22 +46,32 @@
                     <div class="tab-content" id="poTabsContent">
                         {{-- PPB Tab --}}
                         <div class="tab-pane fade show active" id="ppb" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
-                                <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by item name..." style="max-width:220px">
-                                <input type="month" id="ppb-month-filter" class="form-control form-control-sm" style="max-width:160px">
-                                <select id="ppb-status-filter" class="form-control form-control-sm" style="max-width:160px">
-                                    <option value="">All Status</option>
-                                    <option value="on_progress">On Progress</option>
-                                    <option value="approved">Approved</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="received">Received</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="closed_shortage">Closed with Shortage</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
+                            <div class="mt-3 mb-2 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between" style="gap: .5rem;">
+                                <div class="d-flex align-items-center flex-wrap" style="gap: .5rem;">
+                                    <input type="text" id="ppb-item-filter" class="form-control form-control-sm"
+                                        placeholder="Filter by item name..." style="max-width:180px">
+                                    <div class="input-group input-group-sm" style="max-width:190px">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">Month</span>
+                                        </div>
+                                        <input type="month" id="ppb-month-filter" class="form-control">
+                                    </div>
+                                    <select id="ppb-status-filter" class="form-control form-control-sm" style="max-width:145px">
+                                        <option value="">All Status</option>
+                                        <option value="on_progress">On Progress</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="received">Received</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="closed_shortage">Closed with Shortage</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                    <button type="button" id="ppb-clear-filters" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-undo"></i> Clear
+                                    </button>
+                                </div>
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'purchase_order']) }}"
-                                   class="btn btn-sm btn-success ml-2" id="ppb-export">
+                                   class="btn btn-sm btn-success" id="ppb-export">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -129,22 +139,32 @@
 
                         {{-- PPJ Tab --}}
                         <div class="tab-pane fade" id="ppj" role="tabpanel">
-                            <div class="mt-3 mb-2 d-flex align-items-center gap-2 flex-wrap">
-                                <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
-                                    placeholder="Filter by service description..." style="max-width:220px">
-                                <input type="month" id="ppj-month-filter" class="form-control form-control-sm" style="max-width:160px">
-                                <select id="ppj-status-filter" class="form-control form-control-sm" style="max-width:160px">
-                                    <option value="">All Status</option>
-                                    <option value="on_progress">On Progress</option>
-                                    <option value="approved">Approved</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="received">Received</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="closed_shortage">Closed with Shortage</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
+                            <div class="mt-3 mb-2 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between" style="gap: .5rem;">
+                                <div class="d-flex align-items-center flex-wrap" style="gap: .5rem;">
+                                    <input type="text" id="ppj-item-filter" class="form-control form-control-sm"
+                                        placeholder="Filter by service description..." style="max-width:180px">
+                                    <div class="input-group input-group-sm" style="max-width:190px">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">Month</span>
+                                        </div>
+                                        <input type="month" id="ppj-month-filter" class="form-control">
+                                    </div>
+                                    <select id="ppj-status-filter" class="form-control form-control-sm" style="max-width:145px">
+                                        <option value="">All Status</option>
+                                        <option value="on_progress">On Progress</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="received">Received</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="closed_shortage">Closed with Shortage</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                    <button type="button" id="ppj-clear-filters" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-undo"></i> Clear
+                                    </button>
+                                </div>
                                 <a href="{{ route('purchase_orders.export_excel', ['type' => 'service_order']) }}"
-                                   class="btn btn-sm btn-success ml-2" id="ppj-export">
+                                   class="btn btn-sm btn-success" id="ppj-export">
                                     <i class="fas fa-file-excel"></i> Export Excel
                                 </a>
                             </div>
@@ -305,6 +325,19 @@
                 $('#ppj-item-filter').on('keyup', function() {
                     ppjTable.draw();
                 });
+            });
+
+            // Clear filter buttons
+            $('#ppb-clear-filters').on('click', function() {
+                $('#ppb-item-filter, #ppb-month-filter, #ppb-status-filter').val('');
+                updateExportLink('ppb');
+                ppbTable.draw();
+            });
+
+            $('#ppj-clear-filters').on('click', function() {
+                $('#ppj-item-filter, #ppj-month-filter, #ppj-status-filter').val('');
+                updateExportLink('ppj');
+                if (ppjTable) ppjTable.draw();
             });
         });
     </script>
