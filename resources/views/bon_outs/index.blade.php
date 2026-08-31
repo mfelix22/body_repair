@@ -54,22 +54,15 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="form-group mr-2 mb-2">
-                            <label class="mr-1 font-weight-bold">Search</label>
-                            <input type="text" name="search" class="form-control form-control-sm"
-                                style="min-width: 220px;"
-                                placeholder="Bon Out #, WO, customer..."
-                                value="{{ $search }}">
-                        </div>
                         <div class="mb-2">
                             <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
                                 <i class="fas fa-filter mr-1"></i>Filter
                             </button>
-                            @if ($month || $year || $category || $search)
+                            @if ($month || $year || $category)
                                 <a href="{{ route('bon_outs.index') }}" class="btn btn-secondary btn-sm mr-2 d-inline-flex align-items-center">
                                     <i class="fas fa-times mr-1"></i>Clear
                                 </a>
-                                <span class="text-muted small">{{ $bonOuts->total() }} result(s)</span>
+                                <span class="text-muted small">{{ $bonOuts->count() }} result(s)</span>
                             @endif
                         </div>
                     </form>
@@ -77,7 +70,7 @@
 
                 <div class="card-body">
 
-                    <table class="table table-bordered table-striped">
+                    <table id="bon-outs-table" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>Bon Out #</th>
@@ -140,11 +133,23 @@
                         </tbody>
                     </table>
                 </div>
-
-                <div class="card-footer clearfix">
-                    {{ $bonOuts->links('pagination::bootstrap-4') }}
-                </div>
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(function() {
+            $('#bon-outs-table').DataTable({
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'desc']],
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search bon outs..."
+                }
+            });
+        });
+    </script>
+@endpush

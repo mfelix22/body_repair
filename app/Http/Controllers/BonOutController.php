@@ -27,7 +27,6 @@ class BonOutController extends Controller
         $month    = $request->input('month');
         $year     = $request->input('year', date('Y'));
         $category = $request->input('category');
-        $search   = trim($request->input('search', ''));
 
         $query = BonOut::with(['creator', 'workOrder.customer'])
             ->orderBy('issued_date', 'desc')
@@ -44,27 +43,15 @@ class BonOutController extends Controller
                 $q->where('item_type', $category);
             });
         }
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('bon_out_number', 'like', "%{$search}%")
-                    ->orWhereHas('workOrder', function ($q2) use ($search) {
-                        $q2->where('wo_number', 'like', "%{$search}%")
-                            ->orWhere('vehicle_plate', 'like', "%{$search}%")
-                            ->orWhereHas('customer', function ($q3) use ($search) {
-                                $q3->where('name', 'like', "%{$search}%");
-                            });
-                    });
-            });
-        }
 
-        $bonOuts = $query->paginate(20)->appends($request->query());
+        $bonOuts = $query->get();
 
         $allYears  = BonOut::selectRaw('YEAR(issued_date) as year')
             ->distinct()->orderBy('year', 'desc')->pluck('year');
         $categories = DB::table('items')->select('item_type')
             ->distinct()->orderBy('item_type')->pluck('item_type');
 
-        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'category', 'search', 'allYears', 'categories'));
+        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'category', 'allYears', 'categories'));
     }
 
     /**
