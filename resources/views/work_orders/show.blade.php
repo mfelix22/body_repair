@@ -57,6 +57,11 @@
                                     <i class="fas fa-dolly-flatbed"></i> Create Bon Out
                                 </a>
                             @endif
+                            @foreach ($workOrder->bonOuts as $bo)
+                                <a href="{{ route('bon_outs.show', $bo) }}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-dolly-flatbed"></i> Bon Out #{{ $bo->bon_out_number }}
+                                </a>
+                            @endforeach
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
                                 @php $hasIncompleteBonOuts = $workOrder->hasIncompleteBonOuts(); @endphp
                                 @if ($hasIncompleteBonOuts)
