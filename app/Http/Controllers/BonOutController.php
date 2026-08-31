@@ -14,6 +14,7 @@ use App\Models\WorkOrder;
 use App\Models\AuditLog;
 use App\Models\WorkOrderItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class BonOutController extends Controller
@@ -192,7 +193,7 @@ class BonOutController extends Controller
                 'purpose'        => "Bon Out for WO {$workOrder->wo_number}",
                 'notes'          => $validated['notes'] ?? null,
                 'status'         => 'on_progress',
-                'created_by'     => auth()->id(),
+                'created_by'     => Auth::id(),
             ]);
 
             foreach ($itemsToSave as $itemData) {
@@ -201,7 +202,7 @@ class BonOutController extends Controller
                 // Get demand_quantity from WO item if it exists, otherwise 0 (for new materials)
                 $demandQuantity = 0;
                 if (!empty($itemData['work_order_item_id'])) {
-                    $woItem = $workOrder->items->firstWhere('id', $itemData['work_order_item_id']);
+                    $woItem = $workOrder->items()->find($itemData['work_order_item_id']);
                     $demandQuantity = $woItem ? $woItem->demand_quantity : 0;
                 }
 
@@ -273,11 +274,11 @@ class BonOutController extends Controller
                 'bon_out_number' => $bonOutNumber,
                 'bon_out_type'   => $bonOutType,
                 'issued_date'    => now()->toDateString(),
-                'issued_to'      => auth()->user()->name,
+                'issued_to'      => Auth::user()?->name,
                 'purpose'        => $validated['purpose'],
                 'notes'          => $validated['notes'] ?? null,
                 'status'         => 'on_progress',
-                'created_by'     => auth()->id(),
+                'created_by'     => Auth::id(),
             ]);
 
             foreach ($validated['items'] as $itemData) {
@@ -503,7 +504,7 @@ class BonOutController extends Controller
                         'reference_type'   => $isStandalone ? 'ADJUSTMENT_OUT' : 'BON_OUT',
                         'reference_id'     => $bonOut->id,
                         'notes'            => $refNotes,
-                        'created_by'       => auth()->id(),
+                        'created_by'       => Auth::id(),
                     ]);
 
                     // Accumulate material cost for COGM
@@ -553,7 +554,7 @@ class BonOutController extends Controller
             $bonOut->update([
                 'status'       => 'completed',
                 'total_cogs'   => $cogmMaterial,
-                'completed_by' => auth()->id(),
+                'completed_by' => Auth::id(),
                 'completed_at' => now(),
             ]);
 

@@ -140,15 +140,10 @@
 
 @push('scripts')
     <script>
-        $(function() {
+        $(document).ready(function() {
             $('#bon-outs-table').DataTable({
-                responsive: true,
                 pageLength: 25,
-                order: [[0, 'desc']],
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Search bon outs..."
-                }
+                order: [[0, 'desc']]
             });
         });
     </script>
