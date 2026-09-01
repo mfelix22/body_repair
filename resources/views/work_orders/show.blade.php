@@ -57,11 +57,20 @@
                                     <i class="fas fa-dolly-flatbed"></i> Create Bon Out
                                 </a>
                             @endif
-                            @foreach ($workOrder->bonOuts as $bo)
-                                <a href="{{ route('bon_outs.show', $bo) }}" class="btn btn-info btn-sm">
-                                    <i class="fas fa-dolly-flatbed"></i> Bon Out #{{ $bo->bon_out_number }}
-                                </a>
-                            @endforeach
+                            @if ($workOrder->bonOuts->count() > 0)
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-dolly-flatbed"></i> Bon Out <span class="badge badge-light">{{ $workOrder->bonOuts->count() }}</span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        @foreach ($workOrder->bonOuts as $bo)
+                                            <a class="dropdown-item" href="{{ route('bon_outs.show', $bo) }}">
+                                                Bon Out #{{ $bo->bon_out_number }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                             @if (\App\Helpers\PermissionHelper::canUpdate('work_orders'))
                                 @php $hasIncompleteBonOuts = $workOrder->hasIncompleteBonOuts(); @endphp
                                 @if ($hasIncompleteBonOuts)
@@ -81,11 +90,20 @@
                                 @endif
                             @endif
                         @elseif($workOrder->status === 'completed')
-                            @foreach ($workOrder->bonOuts as $bo)
-                                <a href="{{ route('bon_outs.show', $bo) }}" class="btn btn-info btn-sm">
-                                    <i class="fas fa-dolly-flatbed"></i> Bon Out #{{ $bo->bon_out_number }}
-                                </a>
-                            @endforeach
+                            @if ($workOrder->bonOuts->count() > 0)
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-dolly-flatbed"></i> Bon Out <span class="badge badge-light">{{ $workOrder->bonOuts->count() }}</span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        @foreach ($workOrder->bonOuts as $bo)
+                                            <a class="dropdown-item" href="{{ route('bon_outs.show', $bo) }}">
+                                                Bon Out #{{ $bo->bon_out_number }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                             @php
                                 $pf = $workOrder->proformaInvoice;
                                 $inv = $workOrder->activeInvoice;
@@ -156,11 +174,20 @@
                                     <span class="badge badge-danger">Cancelled</span>
                                 </a>
                             @endif
-                            @foreach ($workOrder->bonOuts as $bo)
-                                <a href="{{ route('bon_outs.show', $bo) }}" class="btn btn-info btn-sm">
-                                    <i class="fas fa-dolly-flatbed"></i> Bon Out #{{ $bo->bon_out_number }}
-                                </a>
-                            @endforeach
+                            @if ($workOrder->bonOuts->count() > 0)
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-dolly-flatbed"></i> Bon Out <span class="badge badge-light">{{ $workOrder->bonOuts->count() }}</span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        @foreach ($workOrder->bonOuts as $bo)
+                                            <a class="dropdown-item" href="{{ route('bon_outs.show', $bo) }}">
+                                                Bon Out #{{ $bo->bon_out_number }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         @elseif($workOrder->status === 'pending_cancellation')
                             @php $sigit = \App\Models\User::where('name', 'like', '%Sigit%')->first(); @endphp
                             @if ($sigit && auth()->user()->id === $sigit->id)
