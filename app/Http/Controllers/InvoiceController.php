@@ -6,20 +6,30 @@ use App\Helpers\PermissionHelper;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\AuditLog;
+use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
+    /**
+     * @return User|null
+     */
+    private function currentUser(): ?User
+    {
+        return Auth::user();
+    }
+
     public function index()
     {
         if (!PermissionHelper::canView('invoices')) {
             return PermissionHelper::denyAccess('invoices', 'view');
         }
 
-        $user = auth()->user();
+        $user = $this->currentUser();
         $canChangeStatus = PermissionHelper::canUpdate('invoices');
         $canModify = PermissionHelper::canUpdate('invoices');
         $canEdit = $user->hasAnyRole(['admin', 'super_admin']);
@@ -71,7 +81,7 @@ class InvoiceController extends Controller
         // Get pre-selected work order ID from query parameter
         $selectedWorkOrderId = $request->query('work_order_id');
 
-        $isFinance = auth()->user()->hasAnyRole(['finance', 'admin', 'super_admin']);
+        $isFinance = $this->currentUser()->hasAnyRole(['finance', 'admin', 'super_admin']);
 
         return view('invoices.create', compact('workOrders', 'selectedWorkOrderId', 'isFinance'));
     }
@@ -230,7 +240,7 @@ class InvoiceController extends Controller
             'qq'                  => $validated['qq'] ?? null,
             'or_amount'           => $workOrder->account_code === 'ASURANSI' ? $orAmount : 0,
             'kwitansi_or_number'  => $kwitansiNumber,
-            'created_by'          => auth()->id(),
+            'created_by'          => Auth::id(),
         ]);
 
         $workOrder->update(['status' => 'invoiced']);
@@ -249,6 +259,8 @@ class InvoiceController extends Controller
             'workOrder.items.item.smallestUom',
             'workOrder.labors',
             'workOrder.bonOuts.items.item.smallestUom',
+            'workOrder.activeEstimasi',
+            'workOrder.proformaInvoice',
             'creator',
         ]);
 
@@ -263,7 +275,7 @@ class InvoiceController extends Controller
             return PermissionHelper::denyAccess('invoices', 'update');
         }
 
-        if (!auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
+        if (!$this->currentUser()?->hasAnyRole(['admin', 'super_admin'])) {
             return redirect()->route('invoices.show', $invoice)
                 ->with('error', 'Only admins can edit invoices.');
         }
@@ -273,7 +285,7 @@ class InvoiceController extends Controller
                 ->with('error', 'Only on progress invoices can be edited.');
         }
 
-        $isFinance = auth()->user()->hasAnyRole(['finance', 'admin', 'super_admin']);
+        $isFinance = $this->currentUser()->hasAnyRole(['finance', 'admin', 'super_admin']);
 
         return view('invoices.edit', compact('invoice', 'isFinance'));
     }
@@ -383,6 +395,8 @@ class InvoiceController extends Controller
             'workOrder.items.item.smallestUom',
             'workOrder.labors',
             'workOrder.bonOuts.items.item.smallestUom',
+            'workOrder.activeEstimasi',
+            'workOrder.proformaInvoice',
             'creator',
         ]);
         return view('invoices.cogs_report', compact('invoice'));
@@ -408,7 +422,7 @@ class InvoiceController extends Controller
 
     public function cancel(Request $request, Invoice $invoice)
     {
-        if (!auth()->user()?->hasAnyRole(['admin', 'super_admin', 'finance'])) {
+        if (!$this->currentUser()?->hasAnyRole(['admin', 'super_admin', 'finance'])) {
             return redirect()->route('invoices.show', $invoice)
                 ->with('error', 'You do not have permission to cancel invoices.');
         }
@@ -457,7 +471,7 @@ class InvoiceController extends Controller
             'grand_total'         => $invoice->grand_total,
             'notes'               => $invoice->notes,
             'cancellation_reason' => $request->cancellation_reason,
-            'created_by'          => auth()->id(),
+            'created_by'          => Auth::id(),
         ]);
 
         return redirect()->route('invoices.show', $invoice)->with('success', 'Invoice cancelled. Work order reverted to completed. Credit note generated.');
@@ -465,7 +479,7 @@ class InvoiceController extends Controller
 
     public function changeCustomer(Request $request, Invoice $invoice)
     {
-        if (!auth()->user()?->hasAnyRole(['finance', 'admin', 'super_admin'])) {
+        if (!$this->currentUser()?->hasAnyRole(['finance', 'admin', 'super_admin'])) {
             return redirect()->route('invoices.show', $invoice)
                 ->with('error', 'Only Finance can change the customer on an invoice.');
         }

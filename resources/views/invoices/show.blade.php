@@ -238,6 +238,18 @@
                                     <th width="50%">Subtotal:</th>
                                     <td><strong>Rp {{ number_format($invoice->subtotal, 0, ',', '.') }}</strong></td>
                                 </tr>
+                                @if ($invoice->workOrder->usesEstimasiDiscount() && $invoice->workOrder->activeEstimasi)
+                                    <tr>
+                                        <th>Estimasi Discount:</th>
+                                        <td>
+                                            Panel {{ number_format($invoice->workOrder->estimasi_discount_percentage_panel, 2) }}%
+                                            @if ($invoice->workOrder->estimasi_discount_percentage_sparepart > 0)
+                                                / Sparepart {{ number_format($invoice->workOrder->estimasi_discount_percentage_sparepart, 2) }}%
+                                            @endif
+                                            <small class="text-muted">({{ $invoice->workOrder->activeEstimasi->estimasi_number }})</small>
+                                        </td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Discount:</th>
                                     <td><strong>{{ number_format($invoice->discount_percentage ?? 0, 2) }}% (-Rp
