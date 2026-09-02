@@ -28,7 +28,10 @@
                                     @foreach ($workOrders as $wo)
                                         <option value="{{ $wo->id }}" data-subtotal="{{ $wo->grand_total }}"
                                             data-account-code="{{ $wo->account_code }}"
-                                            data-discount-amt="{{ ($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0) }}"
+                                            data-panel-pct="{{ $wo->estimasi_discount_percentage_panel }}"
+                                            data-sparepart-pct="{{ $wo->estimasi_discount_percentage_sparepart }}"
+                                            data-estimasi-number="{{ $wo->activeEstimasi?->estimasi_number ?? '' }}"
+                                            data-discount-amt="{{ $wo->usesEstimasiDiscount() ? $wo->estimasiDiscountAmount() : (($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0)) }}"
                                             data-proforma="{{ $wo->approvedProforma?->proforma_number ?? '' }}"
                                             {{ $selectedWorkOrderId == $wo->id ? 'selected' : '' }}>
                                             {{ $wo->wo_number }} - {{ $wo->customer->name }}
@@ -46,7 +49,10 @@
                                     @foreach ($workOrders as $wo)
                                         <option value="{{ $wo->id }}" data-subtotal="{{ $wo->grand_total }}"
                                             data-account-code="{{ $wo->account_code }}"
-                                            data-discount-amt="{{ ($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0) }}"
+                                            data-panel-pct="{{ $wo->estimasi_discount_percentage_panel }}"
+                                            data-sparepart-pct="{{ $wo->estimasi_discount_percentage_sparepart }}"
+                                            data-estimasi-number="{{ $wo->activeEstimasi?->estimasi_number ?? '' }}"
+                                            data-discount-amt="{{ $wo->usesEstimasiDiscount() ? $wo->estimasiDiscountAmount() : (($wo->approvedProforma?->discount_amount ?? 0) + ($wo->approvedProforma?->voucher_amount ?? 0)) }}"
                                             data-proforma="{{ $wo->approvedProforma?->proforma_number ?? '' }}"
                                             {{ old('work_order_id') == $wo->id ? 'selected' : '' }}>
                                             {{ $wo->wo_number }} - {{ $wo->customer->name }}
@@ -63,7 +69,7 @@
                         {{-- Proforma info banner --}}
                         <div id="proformaBanner" class="alert alert-info" style="display:none;">
                             <i class="fas fa-file-invoice"></i>
-                            Linked Proforma: <strong id="proformaNumber">—</strong> &nbsp;|&nbsp;
+                            Linked Proforma / Estimasi: <strong id="proformaNumber">—</strong> &nbsp;|&nbsp;
                             Discount: <strong id="proformaDiscount">—</strong>
                         </div>
 
@@ -106,13 +112,13 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Discount % <small class="text-muted">(from Proforma)</small></label>
+                                    <label>Discount % <small class="text-muted">(from Proforma / Estimasi)</small></label>
                                     <input type="text" id="discountPctDisplay" class="form-control" readonly disabled>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Discount Amount <small class="text-muted">(from Proforma)</small></label>
+                                    <label>Discount Amount <small class="text-muted">(from Proforma / Estimasi)</small></label>
                                     <input type="text" id="discount_amount_display" class="form-control" readonly
                                         disabled>
                                 </div>
@@ -178,6 +184,9 @@
             const effectivePct = subtotal > 0 ? (discountAmt / subtotal * 100) : 0;
             const proformaNum = opt.dataset.proforma || '';
             const accountCode = opt.dataset.accountCode || '';
+            const panelPct = parseFloat(opt.dataset.panelPct) || 0;
+            const sparepartPct = parseFloat(opt.dataset.sparepartPct) || 0;
+            const estimasiNumber = opt.dataset.estimasiNumber || '';
             const orAmount = (accountCode === 'ASURANSI')
                 ? (parseFloat(document.getElementById('or_amount')?.value) || 0)
                 : 0;
@@ -188,12 +197,27 @@
                 orGroup.style.display = accountCode === 'ASURANSI' ? 'block' : 'none';
             }
 
+            let pctDisplay;
+            if (accountCode === 'ASURANSI' && (panelPct > 0 || sparepartPct > 0 || estimasiNumber)) {
+                const parts = [];
+                if (panelPct > 0) parts.push(`Panel ${panelPct.toFixed(2)}%`);
+                if (sparepartPct > 0) parts.push(`Sparepart ${sparepartPct.toFixed(2)}%`);
+                pctDisplay = parts.length ? parts.join(' / ') : '0.00%';
+            } else {
+                pctDisplay = effectivePct.toFixed(2) + '%';
+            }
+
             document.getElementById('subtotal').value = fmt(subtotal);
-            document.getElementById('discountPctDisplay').value = effectivePct.toFixed(2) + '%';
+            document.getElementById('discountPctDisplay').value = pctDisplay;
             document.getElementById('discount_amount_display').value = fmt(discountAmt);
             document.getElementById('grand_total').value = fmt(total);
 
-            if (proformaNum) {
+            if (accountCode === 'ASURANSI' && estimasiNumber) {
+                document.getElementById('proformaNumber').textContent = estimasiNumber;
+                document.getElementById('proformaDiscount').textContent =
+                    discountAmt > 0 ? (fmt(discountAmt) + ' (' + pctDisplay + ')') : 'No discount';
+                document.getElementById('proformaBanner').style.display = 'block';
+            } else if (proformaNum) {
                 document.getElementById('proformaNumber').textContent = proformaNum;
                 document.getElementById('proformaDiscount').textContent =
                     discountAmt > 0 ? (fmt(discountAmt) + ' (' + effectivePct.toFixed(2) + '%)') : 'No discount';

@@ -8,6 +8,8 @@ use App\Models\Invoice;
 use App\Models\AuditLog;
 use App\Models\WorkOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
@@ -63,7 +65,7 @@ class InvoiceController extends Controller
                             });
                     });
             })
-            ->with(['customer', 'approvedProforma'])
+            ->with(['customer', 'approvedProforma', 'activeEstimasi'])
             ->get();
 
         // Get pre-selected work order ID from query parameter
@@ -91,7 +93,7 @@ class InvoiceController extends Controller
 
         // Wrap in a transaction and lock the WO row to prevent simultaneous proforma/invoice creation
         try {
-            $invoice = \DB::transaction(function () use ($validated, $request) {
+            $invoice = DB::transaction(function () use ($validated, $request) {
                 $workOrder = WorkOrder::with(['bonOut.items', 'items'])
                     ->lockForUpdate()
                     ->findOrFail($validated['work_order_id']);
@@ -122,7 +124,7 @@ class InvoiceController extends Controller
             return back()->withInput()->withErrors(['work_order_id' => $e->getMessage()]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Likely a DB-level failure (e.g. enum value not yet in schema on server)
-            \Log::error('Invoice creation DB error: ' . $e->getMessage());
+            Log::error('Invoice creation DB error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'A database error occurred while creating the invoice. Please ensure all server migrations have been run (php artisan migrate --force). Error: ' . $e->getPrevious()?->getMessage());
         }
 
