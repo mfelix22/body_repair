@@ -326,6 +326,7 @@
         $discountPercentage = (float) ($invoice->discount_percentage ?? 0);
         $discountAmount = (float) ($invoice->discount_amount ?? 0);
         $orAmount = (float) ($invoice->or_amount ?? 0);
+        $materai = (float) ($invoice->materai ?? 0);
         $grandTotal = (float) $invoice->grand_total;
 
         // Panels & labors
@@ -629,6 +630,12 @@
                         <tr>
                             <td><strong>OR (Own Risk)</strong></td>
                             <td class="text-right" style="color:#c00;">— Rp {{ number_format($orAmount, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($materai > 0)
+                        <tr>
+                            <td><strong>Materai</strong></td>
+                            <td class="text-right" style="color:#060;">+ Rp {{ number_format($materai, 0, ',', '.') }}</td>
                         </tr>
                     @endif
         <tr class="grand-total">

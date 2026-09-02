@@ -23,6 +23,7 @@ class Invoice extends Model
         'cogm_labor',
         'cogm',
         'or_amount',
+        'materai',
         'kwitansi_or_number',
         'status',
         'notes',
@@ -41,6 +42,7 @@ class Invoice extends Model
         'cogm_labor'          => 'decimal:2',
         'cogm'                => 'decimal:2',
         'or_amount'           => 'decimal:2',
+        'materai'             => 'decimal:2',
     ];
 
     public function workOrder(): BelongsTo

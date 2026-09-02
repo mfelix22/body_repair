@@ -157,7 +157,9 @@ class InvoiceController extends Controller
             $discountAmount = $proforma ? ((float) $proforma->discount_amount + $voucherAmount) : 0;
         }
         $discountPercentage = $subtotal > 0 ? round($discountAmount / $subtotal * 100, 4) : 0;
-        $grandTotal = $subtotal - $discountAmount - $orAmount;
+        $baseTotal = $subtotal - $discountAmount - $orAmount;
+        $materai   = $baseTotal > 5000000 ? 10000 : 0;
+        $grandTotal = $baseTotal + $materai;
 
         // Calculate COGM — use ALL BonOut actual quantities if available, else fallback to WO demand × avg_cost
         $cogmMaterial = 0.0;
@@ -239,6 +241,7 @@ class InvoiceController extends Controller
             'notes'               => $validated['notes'],
             'qq'                  => $validated['qq'] ?? null,
             'or_amount'           => $workOrder->account_code === 'ASURANSI' ? $orAmount : 0,
+            'materai'             => $materai,
             'kwitansi_or_number'  => $kwitansiNumber,
             'created_by'          => Auth::id(),
         ]);
@@ -321,7 +324,9 @@ class InvoiceController extends Controller
             $kwitansiNumber = $this->generateKwitansiOrNumber(\Carbon\Carbon::parse($validated['invoice_date']));
         }
 
-        $grandTotal = $invoice->subtotal - $discountAmount - $orAmount;
+        $baseTotal = $invoice->subtotal - $discountAmount - $orAmount;
+        $materai   = $baseTotal > 5000000 ? 10000 : 0;
+        $grandTotal = $baseTotal + $materai;
 
         $invoice->update([
             'invoice_date'        => $validated['invoice_date'],
@@ -329,6 +334,7 @@ class InvoiceController extends Controller
             'discount_percentage' => $validated['discount_percentage'],
             'discount_amount'     => $discountAmount,
             'grand_total'         => $grandTotal,
+            'materai'             => $materai,
             'or_amount'           => $invoice->workOrder->account_code === 'ASURANSI' ? ((float) ($validated['or_amount'] ?? 0)) : 0,
             'kwitansi_or_number'  => $kwitansiNumber,
             'qq'                  => $validated['qq'] ?? null,

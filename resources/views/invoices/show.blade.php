@@ -263,6 +263,13 @@
                                                 {{ number_format($invoice->or_amount, 0, ',', '.') }}</strong></td>
                                     </tr>
                                 @endif
+                                @if ((float) ($invoice->materai ?? 0) > 0)
+                                    <tr>
+                                        <th>Materai:</th>
+                                        <td><strong class="text-success">+ Rp
+                                                {{ number_format($invoice->materai, 0, ',', '.') }}</strong></td>
+                                    </tr>
+                                @endif
                                 <tr style="border-top: 2px solid #dee2e6; font-size: 1.3em;">
                                     <th>Grand Total:</th>
                                     <td><strong>Rp {{ number_format($invoice->grand_total, 0, ',', '.') }}</strong></td>

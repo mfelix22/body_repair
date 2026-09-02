@@ -125,6 +125,12 @@
                             </div>
                         </div>
 
+                        <div class="form-group" id="materai_group" style="display: none;">
+                            <label for="materai_amount">Materai</label>
+                            <input type="text" id="materai_amount" class="form-control" readonly disabled
+                                value="Rp 0">
+                        </div>
+
                         <div class="form-group">
                             <label for="grand_total">Grand Total</label>
                             <input type="text" id="grand_total" class="form-control" readonly disabled
@@ -190,11 +196,18 @@
             const orAmount = (accountCode === 'ASURANSI')
                 ? (parseFloat(document.getElementById('or_amount')?.value) || 0)
                 : 0;
-            const total = subtotal - discountAmt - orAmount;
+            const baseTotal = subtotal - discountAmt - orAmount;
+            const materai = baseTotal > 5000000 ? 10000 : 0;
+            const total = baseTotal + materai;
 
             const orGroup = document.getElementById('or_amount_group');
             if (orGroup) {
                 orGroup.style.display = accountCode === 'ASURANSI' ? 'block' : 'none';
+            }
+
+            const materaiGroup = document.getElementById('materai_group');
+            if (materaiGroup) {
+                materaiGroup.style.display = materai > 0 ? 'block' : 'none';
             }
 
             let pctDisplay;
@@ -210,6 +223,7 @@
             document.getElementById('subtotal').value = fmt(subtotal);
             document.getElementById('discountPctDisplay').value = pctDisplay;
             document.getElementById('discount_amount_display').value = fmt(discountAmt);
+            document.getElementById('materai_amount').value = fmt(materai);
             document.getElementById('grand_total').value = fmt(total);
 
             if (accountCode === 'ASURANSI' && estimasiNumber) {
