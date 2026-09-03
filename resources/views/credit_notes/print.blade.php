@@ -438,14 +438,11 @@
                         <td>Customer Name</td>
                         <td>:</td>
                         <td class="val">
-                            @if ($wo->account_code === 'ASURANSI')
-                                {{ $wo->insurance?->name ?? $creditNote->customer->name ?? '-' }}
+                            @if ($wo->account_code === 'ASURANSI' && $wo->insurance)
+                                {{ $wo->insurance->name }} - {{ $creditNote->customer->name ?? '-' }}
                             @else
                                 {{ $creditNote->customer->name ?? '-' }}
                             @endif
-                            {{-- @if ($creditNote->qq)
-                                - {{ $creditNote->qq }}
-                            @endif --}}
                         </td>
                     </tr>
                     <tr>
