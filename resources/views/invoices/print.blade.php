@@ -584,7 +584,7 @@
                         <strong>Pembayaran Melalui</strong>
                     @endif
                     <br>
-                    Rekening BCA : <strong>088 869 5080</strong><br>
+                    Rekening BCA : <strong>012-8585-080</strong><br>
                     a.n <strong>PT Hartono Auto Studio</strong>
                 </div>
             </td>
@@ -672,8 +672,8 @@
                     <strong>PT Hartono Auto Studio</strong><br>
                     Jl. Daan Mogot Km. 1 No. 99, RT.6/RW.5, Duri Kepa, Kecamatan Kebon Jeruk, Kota Jakarta Barat, DKI Jakarta 11510<br>
                     Jam Buka: Senin-Jumat 08:00-17:00 Sabtu 08:00-13:00<br>
-                    <a href="mailto:hrautostudio@hartonomotor.com">hrautostudio@hartonomotor.com</a><br>
-                    +62 877 2095 5959
+                    <a href="mailto:has-jkt.insurance@hartonomotor.com">has-jkt.insurance@hartonomotor.com</a><br>
+                    +62 812 3459 3685
                 </div>
             </td>
             <td style="width:45%; text-align:right;">
