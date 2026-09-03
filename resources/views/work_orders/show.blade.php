@@ -233,6 +233,12 @@
                                         @endif
                                     </td>
                                 </tr>
+                                @if ($workOrder->account_code === 'ASURANSI')
+                                    <tr>
+                                        <th>Asuransi:</th>
+                                        <td>{{ $workOrder->insurance?->name ?? '-' }}</td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <th>Sales Name:</th>
                                     <td>{{ $workOrder->sa_sales ?? '-' }}</td>
