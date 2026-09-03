@@ -433,9 +433,9 @@
                             @else
                                 {{ $invoice->customer->name ?? '-' }}
                             @endif
-                            @if ($invoice->qq)
+                            {{-- @if ($invoice->qq)
                                 - {{ $invoice->qq }}
-                            @endif
+                            @endif --}}
                         </td>
                     </tr>
                     <tr>
