@@ -344,6 +344,17 @@
 
         $voucherAmt = $proforma ? (float) ($proforma->voucher_amount ?? 0) : 0;
         $lineDiscAmt = $discountAmount - $voucherAmt;
+
+        // Estimasi discount percentages (0 for non-ASURANSI)
+        $panelPct = $wo->usesEstimasiDiscount() ? (float) ($wo->estimasi_discount_percentage_panel ?? 0) : 0;
+        $sparepartPct = $wo->usesEstimasiDiscount() ? (float) ($wo->estimasi_discount_percentage_sparepart ?? 0) : 0;
+
+        // Net discounted section totals
+        $sparepartTotal = (float) $wo->items->whereNotNull('total_price')->sum('total_price');
+        $discountedPanelTotal = round(($panelTotal + $baseLaborTotal) * (1 - $panelPct / 100), 2);
+        $discountedExtraLaborTotal = round($extraLaborTotal * (1 - $panelPct / 100), 2);
+        $discountedSparepartTotal = round($sparepartTotal * (1 - $sparepartPct / 100), 2);
+        $discountedSubtotal = $discountedPanelTotal + $discountedExtraLaborTotal + $discountedSparepartTotal;
     @endphp
 
     {{-- ===== PRINT BUTTON ===== --}}
@@ -506,7 +517,8 @@
                             -
                         @endif
                     </td>
-                    <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
+                    @php $laborNet = round((float) ($labor->total_price ?? 0) * (1 - $panelPct / 100), 2); @endphp
+                    <td class="text-right">Rp {{ number_format($laborNet, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -534,8 +546,15 @@
                     <td>{{ $labor->description }}</td>
                     <td class="text-center">{{ number_format($labor->qty, 0) }}</td>
                     <td class="text-right">Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
-                    <td class="text-center">-</td>
-                    <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
+                    <td class="text-center">
+                        @if ($wo->usesEstimasiDiscount() && $wo->estimasi_discount_percentage_panel > 0)
+                            {{ number_format($wo->estimasi_discount_percentage_panel, 2) }}%
+                        @else
+                            -
+                        @endif
+                    </td>
+                    @php $extraNet = round((float) ($labor->total_price ?? 0) * (1 - $panelPct / 100), 2); @endphp
+                    <td class="text-right">Rp {{ number_format($extraNet, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
             @if ($hasLines)
@@ -587,7 +606,8 @@
                             -
                         @endif
                     </td>
-                    <td class="text-right">Rp {{ number_format($woItem->total_price ?? 0, 0, ',', '.') }}</td>
+                    @php $spareNet = round((float) ($woItem->total_price ?? 0) * (1 - $sparepartPct / 100), 2); @endphp
+                    <td class="text-right">Rp {{ number_format($spareNet, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -622,17 +642,17 @@
                 <table class="totals-table">
                     <tr>
                         <td style="width:45%"><strong>Total Panel</strong></td>
-                        <td class="text-right">Rp {{ number_format($panelTotal + $baseLaborTotal, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($discountedPanelTotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($extraLaborTotal > 0)
                         <tr>
                             <td><strong>Total Extra Labor</strong></td>
-                            <td class="text-right">Rp {{ number_format($extraLaborTotal, 0, ',', '.') }}</td>
+                            <td class="text-right">Rp {{ number_format($discountedExtraLaborTotal, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     <tr>
                         <td><strong>Subtotal</strong></td>
-                        <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($discountedSubtotal, 0, ',', '.') }}</td>
                     </tr>
                     @if ($discountAmount > 0 && !$wo->usesEstimasiDiscount())
                         @if ($lineDiscAmt > 0)
