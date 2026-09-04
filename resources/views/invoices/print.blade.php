@@ -439,7 +439,7 @@
                         <td>Address</td>
                         <td>:</td>
                         <td class="val">
-                            @if ($wo->account_code === 'ASURANSI')
+                            @if ($wo->account_code === 'ASURANSI' && $wo->insurance)
                                 {{ $wo->insurance?->address ?? $invoice->customer->address ?? '-' }}
                             @else
                                 {{ $invoice->customer->address ?? '-' }}
@@ -449,12 +449,24 @@
                     <tr>
                         <td>Phone</td>
                         <td>:</td>
-                        <td class="val">{{ $invoice->customer->phone ?? '-' }}</td>
+                        <td class="val">
+                            @if ($wo->account_code === 'ASURANSI' && $wo->insurance)
+                                {{ $wo->insurance?->phone ?? $invoice->customer->phone ?? '-' }}
+                            @else
+                                {{ $invoice->customer->phone ?? '-' }}
+                            @endif
+                        </td>
                     </tr>
                     <tr>
                         <td>NPWP</td>
                         <td>:</td>
-                        <td class="val">{{ $invoice->customer->npwp ?? '-' }}</td>
+                        <td class="val">
+                            @if ($wo->account_code === 'ASURANSI' && $wo->insurance)
+                                {{ $wo->insurance?->npwp ?? $invoice->customer->npwp ?? '-' }}
+                            @else
+                                {{ $invoice->customer->npwp ?? '-' }}
+                            @endif
+                        </td>
                     </tr>
                     <tr>
                         <td>Invoice Date</td>
