@@ -438,7 +438,13 @@
                     <tr>
                         <td>Address</td>
                         <td>:</td>
-                        <td class="val">{{ $invoice->customer->address ?? '-' }}</td>
+                        <td class="val">
+                            @if ($wo->account_code === 'ASURANSI')
+                                {{ $wo->insurance?->address ?? $invoice->customer->address ?? '-' }}
+                            @else
+                                {{ $invoice->customer->address ?? '-' }}
+                            @endif
+                        </td>
                     </tr>
                     <tr>
                         <td>Phone</td>
