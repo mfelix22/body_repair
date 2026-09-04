@@ -462,7 +462,7 @@
                         <td>:</td>
                         <td class="val">
                             @if ($wo->account_code === 'ASURANSI' && $wo->insurance)
-                                {{ $wo->insurance?->npwp ?? $invoice->customer->npwp ?? '-' }}
+                                {{ $wo->insurance?->npwp ?? '-' }}
                             @else
                                 {{ $invoice->customer->npwp ?? '-' }}
                             @endif
