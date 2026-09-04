@@ -499,7 +499,13 @@
                     <td>{{ $labor->description }}</td>
                     <td class="text-center">{{ number_format($labor->qty, 0) }}</td>
                     <td class="text-right">Rp {{ number_format($labor->rate ?? 0, 0, ',', '.') }}</td>
-                    <td class="text-center">-</td>
+                    <td class="text-center">
+                        @if ($wo->usesEstimasiDiscount() && $wo->estimasi_discount_percentage_panel > 0)
+                            {{ number_format($wo->estimasi_discount_percentage_panel, 2) }}%
+                        @else
+                            -
+                        @endif
+                    </td>
                     <td class="text-right">Rp {{ number_format($labor->total_price ?? 0, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
@@ -574,7 +580,13 @@
                     <td>{{ $woItem->item?->name ?? '-' }}</td>
                     <td class="text-center">{{ number_format($woItem->actual_quantity ?? $woItem->demand_quantity, 0) }}</td>
                     <td class="text-center">{{ $woItem->uom?->code ?? optional($woItem->item?->smallestUom)->code ?? '-' }}</td>
-                    <td class="text-center">-</td>
+                    <td class="text-center">
+                        @if ($wo->usesEstimasiDiscount() && $wo->estimasi_discount_percentage_sparepart > 0)
+                            {{ number_format($wo->estimasi_discount_percentage_sparepart, 2) }}%
+                        @else
+                            -
+                        @endif
+                    </td>
                     <td class="text-right">Rp {{ number_format($woItem->total_price ?? 0, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
@@ -622,7 +634,7 @@
                         <td><strong>Subtotal</strong></td>
                         <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
-                    @if ($discountAmount > 0)
+                    @if ($discountAmount > 0 && !$wo->usesEstimasiDiscount())
                         @if ($lineDiscAmt > 0)
                             <tr>
                                 <td>
@@ -644,12 +656,6 @@
                                     {{ number_format($voucherAmt, 0, ',', '.') }}</td>
                             </tr>
                         @endif
-                    @endif
-                    @if ($orAmount > 0)
-                        <tr>
-                            <td><strong>OR (Own Risk)</strong></td>
-                            <td class="text-right" style="color:#c00;">— Rp {{ number_format($orAmount, 0, ',', '.') }}</td>
-                        </tr>
                     @endif
                     @if ($materai > 0)
                         <tr>

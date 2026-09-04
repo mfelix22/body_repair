@@ -157,7 +157,7 @@ class InvoiceController extends Controller
             $discountAmount = $proforma ? ((float) $proforma->discount_amount + $voucherAmount) : 0;
         }
         $discountPercentage = $subtotal > 0 ? round($discountAmount / $subtotal * 100, 4) : 0;
-        $baseTotal = $subtotal - $discountAmount - $orAmount;
+        $baseTotal = $subtotal - $discountAmount;
         $materai   = $baseTotal > 5000000 ? 10000 : 0;
         $grandTotal = $baseTotal + $materai;
 
@@ -324,7 +324,7 @@ class InvoiceController extends Controller
             $kwitansiNumber = $this->generateKwitansiOrNumber(\Carbon\Carbon::parse($validated['invoice_date']));
         }
 
-        $baseTotal = $invoice->subtotal - $discountAmount - $orAmount;
+        $baseTotal = $invoice->subtotal - $discountAmount;
         $materai   = $baseTotal > 5000000 ? 10000 : 0;
         $grandTotal = $baseTotal + $materai;
 

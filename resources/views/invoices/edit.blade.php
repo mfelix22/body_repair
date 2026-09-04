@@ -120,9 +120,7 @@
             // Calculate discount amount from percentage
             const discountAmount = (subtotal * discountPercentage) / 100;
 
-            const orInput = document.getElementById('or_amount');
-            const orAmount = orInput ? (parseFloat(orInput.value) || 0) : 0;
-            const total = subtotal - discountAmount - orAmount;
+            const total = subtotal - discountAmount;
 
             // Update hidden field with discount amount for form submission
             document.getElementById('discount_amount').value = discountAmount.toFixed(2);

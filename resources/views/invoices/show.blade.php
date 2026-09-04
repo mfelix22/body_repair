@@ -256,13 +256,6 @@
                                             {{ number_format($invoice->discount_amount, 0, ',', '.') }})</strong>
                                     </td>
                                 </tr>
-                                @if ((float) ($invoice->or_amount ?? 0) > 0)
-                                    <tr>
-                                        <th>OR (Own Risk):</th>
-                                        <td><strong class="text-danger">— Rp
-                                                {{ number_format($invoice->or_amount, 0, ',', '.') }}</strong></td>
-                                    </tr>
-                                @endif
                                 @if ((float) ($invoice->materai ?? 0) > 0)
                                     <tr>
                                         <th>Materai:</th>

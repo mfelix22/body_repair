@@ -193,10 +193,7 @@
             const panelPct = parseFloat(opt.dataset.panelPct) || 0;
             const sparepartPct = parseFloat(opt.dataset.sparepartPct) || 0;
             const estimasiNumber = opt.dataset.estimasiNumber || '';
-            const orAmount = (accountCode === 'ASURANSI')
-                ? (parseFloat(document.getElementById('or_amount')?.value) || 0)
-                : 0;
-            const baseTotal = subtotal - discountAmt - orAmount;
+            const baseTotal = subtotal - discountAmt;
             const materai = baseTotal > 5000000 ? 10000 : 0;
             const total = baseTotal + materai;
 
