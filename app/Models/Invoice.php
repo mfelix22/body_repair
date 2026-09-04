@@ -70,7 +70,22 @@ class Invoice extends Model
      */
     public function calculateTotal(): void
     {
-        $this->grand_total = $this->subtotal + $this->tax_amount - $this->discount_amount;
+        $this->grand_total = $this->getGrandTotalAttribute($this->grand_total);
         $this->save();
+    }
+
+    /**
+     * Always compute grand_total as subtotal - discount + materai.
+     * The stored value is ignored so old invoices that had an OR deduction
+     * will still display the correct amount.
+     */
+    public function getGrandTotalAttribute($value)
+    {
+        return round(
+            (float) ($this->subtotal ?? 0)
+            - (float) ($this->discount_amount ?? 0)
+            + (float) ($this->materai ?? 0),
+            2
+        );
     }
 }
