@@ -32,15 +32,6 @@
                                 </option>
                             </select>
                             <div class="input-group input-group-sm mr-2" style="width: 220px;">
-                                <input type="text" name="search" class="form-control"
-                                    placeholder="Search number / requestor..." value="{{ request('search') }}">
-                                <div class="input-group-append">
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="input-group input-group-sm mr-2" style="width: 220px;">
                                 <input type="text" name="item_search" class="form-control"
                                     placeholder="Search by item name..." value="{{ request('item_search') }}">
                                 <div class="input-group-append">
@@ -49,7 +40,7 @@
                                     </button>
                                 </div>
                             </div>
-                            @if (request('type') || request('item_search') || request('search'))
+                            @if (request('type') || request('item_search'))
                                 <a href="{{ route('purchase_requests.index') }}" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-times"></i> Clear
                                 </a>
@@ -57,22 +48,12 @@
                         </form>
                     </div>
 
-                    <table class="table table-bordered table-striped">
+                    <table id="pr-table" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>Number</th>
                                 <th>Type</th>
-                                <th>
-                                    <a href="{{ route('purchase_requests.index', array_merge(request()->query(), ['sort_dir' => request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}"
-                                        class="text-dark">
-                                        Request Date
-                                        @if (request('sort_dir') === 'asc')
-                                            <i class="fas fa-sort-up"></i>
-                                        @else
-                                            <i class="fas fa-sort-down"></i>
-                                        @endif
-                                    </a>
-                                </th>
+                                <th>Request Date</th>
                                 <th>Requested By</th>
                                 <th>Items</th>
                                 <th>Status</th>
@@ -80,7 +61,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($prs as $pr)
+                            @foreach ($prs as $pr)
                                 @php
                                     $canCancelPr = false;
                                 @endphp
@@ -209,11 +190,7 @@
                                         @endif
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No PPB/PPJ found.</td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -221,3 +198,26 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            $('#pr-table').DataTable({
+                pageLength: 25,
+                order: [
+                    [2, 'desc']
+                ],
+                dom: 'frtip',
+                columnDefs: [{
+                        type: 'date',
+                        targets: 2
+                    },
+                    {
+                        orderable: false,
+                        targets: [1, 4, 5, 6]
+                    }
+                ]
+            });
+        });
+    </script>
+@endpush
