@@ -372,12 +372,12 @@
                                         <td>{{ $detail->notes ?? '-' }}</td>
                                         <td>
                                             @if ($detail->isFullyOrdered())
-                                                <span class="badge badge-success" title="Fully ordered">
-                                                    <i class="fas fa-check-circle"></i> Complete
+                                                <span class="badge badge-success" title="Fully ordered" style="display: inline-flex !important; align-items: center; white-space: nowrap !important; padding: 0.5em 0.75em; font-size: 0.85em; border-radius: 0.5rem;">
+                                                    <i class="fas fa-check-circle" style="margin-right: 0.35em; line-height: 1;"></i> Complete
                                                 </span>
                                             @elseif ($detail->isPartiallyOrdered())
-                                                <span class="badge badge-warning" title="Partially ordered">
-                                                    <i class="fas fa-exclamation-circle"></i> Partial
+                                                <span class="badge badge-warning" title="Partially ordered" style="display: inline-flex !important; align-items: center; white-space: nowrap !important; padding: 0.5em 0.75em; font-size: 0.85em; border-radius: 0.5rem;">
+                                                    <i class="fas fa-exclamation-circle" style="margin-right: 0.35em; line-height: 1;"></i> Partial
                                                 </span>
                                             @else
                                                 <span class="badge" title="Not ordered yet" style="display: inline-flex !important; align-items: center; flex-wrap: nowrap; white-space: nowrap !important; background-color: #e9ecef; color: #6c757d; padding: 0.5em 0.75em; font-size: 0.85em; border-radius: 0.5rem; border: 1px solid #dee2e6;">

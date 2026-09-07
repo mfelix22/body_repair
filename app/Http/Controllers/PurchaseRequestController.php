@@ -27,6 +27,17 @@ class PurchaseRequestController extends Controller
             $query->where('type', request('type'));
         }
 
+        // General search: PR number or requestor name
+        if (request('search')) {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('pr_number', 'like', "%{$search}%")
+                    ->orWhereHas('requestor', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         // Filter by item name (searches item name, custom item name, and service description)
         if (request('item_search')) {
             $search = request('item_search');
@@ -39,7 +50,9 @@ class PurchaseRequestController extends Controller
             });
         }
 
-        $prs = $query->orderBy('created_at', 'desc')->get();
+        // Sort by request date (default: newest first)
+        $sortDir = request('sort_dir') === 'asc' ? 'asc' : 'desc';
+        $prs = $query->orderBy('request_date', $sortDir)->get();
         return view('purchase_requests.index', compact('prs'));
     }
 

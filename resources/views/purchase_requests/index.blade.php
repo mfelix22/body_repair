@@ -31,7 +31,16 @@
                                 <option value="Barang" {{ request('type') === 'Barang' ? 'selected' : '' }}>PPB (Items)
                                 </option>
                             </select>
-                            <div class="input-group input-group-sm mr-2" style="width: 260px;">
+                            <div class="input-group input-group-sm mr-2" style="width: 220px;">
+                                <input type="text" name="search" class="form-control"
+                                    placeholder="Search number / requestor..." value="{{ request('search') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="input-group input-group-sm mr-2" style="width: 220px;">
                                 <input type="text" name="item_search" class="form-control"
                                     placeholder="Search by item name..." value="{{ request('item_search') }}">
                                 <div class="input-group-append">
@@ -40,7 +49,7 @@
                                     </button>
                                 </div>
                             </div>
-                            @if (request('type') || request('item_search'))
+                            @if (request('type') || request('item_search') || request('search'))
                                 <a href="{{ route('purchase_requests.index') }}" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-times"></i> Clear
                                 </a>
@@ -53,7 +62,17 @@
                             <tr>
                                 <th>Number</th>
                                 <th>Type</th>
-                                <th>Request Date</th>
+                                <th>
+                                    <a href="{{ route('purchase_requests.index', array_merge(request()->query(), ['sort_dir' => request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}"
+                                        class="text-dark">
+                                        Request Date
+                                        @if (request('sort_dir') === 'asc')
+                                            <i class="fas fa-sort-up"></i>
+                                        @else
+                                            <i class="fas fa-sort-down"></i>
+                                        @endif
+                                    </a>
+                                </th>
                                 <th>Requested By</th>
                                 <th>Items</th>
                                 <th>Status</th>
