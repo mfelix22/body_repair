@@ -173,24 +173,9 @@ class PurchaseRequestController extends Controller
                     $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
                     $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
 
-                    // Generate proper sequential code matching ItemController logic
-                    $lastItem = Item::where('item_type', $customType)->orderBy('id', 'desc')->first();
-
-                    $pattern = '/' . $customType . '(\d+)/';
-                    $codePrefix = $customType;
-
-                    if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
-                        $nextNumber = intval($matches[1]) + 1;
-                    } else {
-                        $nextNumber = 1;
-                    }
-                    $itemCode = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-
                     // Create incomplete item that needs to be completed before Bon In
-                    $placeholderItem = Item::create([
-                        'code' => $itemCode,
+                    $placeholderItem = Item::createWithAutoCode($customType, [
                         'name' => $customName,
-                        'item_type' => $customType,
                         'smallest_uom_id' => 1, // Placeholder - must be updated
                         'is_active' => true,
                         'is_complete' => false, // Mark as incomplete
@@ -613,24 +598,9 @@ class PurchaseRequestController extends Controller
                     $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
                     $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
 
-                    // Generate proper sequential code matching ItemController logic
-                    $lastItem = Item::where('item_type', $customType)->orderBy('id', 'desc')->first();
-
-                    $pattern = '/' . $customType . '(\d+)/';
-                    $codePrefix = $customType;
-
-                    if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
-                        $nextNumber = intval($matches[1]) + 1;
-                    } else {
-                        $nextNumber = 1;
-                    }
-                    $itemCode = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-
                     // Create incomplete item that needs to be completed before Bon In
-                    $placeholderItem = Item::create([
-                        'code' => $itemCode,
+                    $placeholderItem = Item::createWithAutoCode($customType, [
                         'name' => $customName,
-                        'item_type' => $customType,
                         'smallest_uom_id' => 1, // Placeholder - must be updated
                         'is_active' => true,
                         'is_complete' => false, // Mark as incomplete

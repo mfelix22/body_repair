@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\QueryException;
 
 class Item extends Model
 {
@@ -58,6 +59,44 @@ class Item extends Model
     public function getItemTypeNameAttribute(): string
     {
         return self::getItemTypes()[$this->item_type] ?? $this->item_type;
+    }
+
+    /**
+     * Generate the next sequential code for an item type (e.g. B0028).
+     * Based on the highest numeric suffix already in use for the prefix,
+     * not the latest row id, so recoded/imported rows can't cause collisions.
+     */
+    public static function generateCode(string $itemType): string
+    {
+        $prefixLength = strlen($itemType) + 1;
+
+        $row = static::whereRaw('code REGEXP ?', ['^' . $itemType . '[0-9]+$'])
+            ->selectRaw("MAX(CAST(SUBSTRING(code, {$prefixLength}) AS UNSIGNED)) AS max_num")
+            ->first();
+
+        $nextNumber = ((int) ($row?->max_num ?? 0)) + 1;
+
+        return $itemType . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Create an item with an auto-generated code, retrying if a concurrent
+     * request claims the same code first (relies on the unique index on `code`).
+     */
+    public static function createWithAutoCode(string $itemType, array $attributes): self
+    {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                return static::create(array_merge($attributes, [
+                    'item_type' => $itemType,
+                    'code'      => static::generateCode($itemType),
+                ]));
+            } catch (QueryException $e) {
+                if (($e->errorInfo[1] ?? null) !== 1062 || $attempt === 2) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     public function smallestUom(): BelongsTo

@@ -59,31 +59,12 @@ class ItemController extends Controller
 
         $validated['is_active'] = $request->has('is_active');
 
-        // Auto-generate code based on item type
-        $prefix = $validated['item_type'];
-        $lastItem = Item::where('item_type', $prefix)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $pattern = '/' . $prefix . '(\d+)/';
-        $codePrefix = $prefix;
-
-        if ($lastItem && preg_match($pattern, $lastItem->code, $matches)) {
-            $nextNumber = intval($matches[1]) + 1;
-        } else {
-            $nextNumber = 1;
-        }
-
-        $code = $codePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-
         $sellingPrice = null;
         if (Auth::user()->hasAnyRole(['super_admin', 'admin', 'accounting'])) {
             $sellingPrice = isset($validated['selling_price']) ? (float) $validated['selling_price'] : null;
         }
 
-        $item = Item::create([
-            'item_type'      => $validated['item_type'],
-            'code'           => $code,
+        $item = Item::createWithAutoCode($validated['item_type'], [
             'name'           => $validated['name'],
             'description'    => $validated['description'],
             'category'       => $validated['category'],
