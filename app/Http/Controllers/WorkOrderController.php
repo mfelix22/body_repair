@@ -263,6 +263,7 @@ class WorkOrderController extends Controller
             'billing_customer_id'  => 'nullable|exists:customers,id',
             'vehicle_id'           => 'nullable|exists:vehicles,id',
             'account_code'         => 'required|in:C,INT_WS,INT_W3,ASURANSI',
+            'insurance_id'         => 'required_if:account_code,ASURANSI|nullable|exists:insurances,id',
             'work_date'            => 'required|date',
             'deadline'             => 'nullable|date',
             'vehicle_info'         => 'nullable|string|max:200',

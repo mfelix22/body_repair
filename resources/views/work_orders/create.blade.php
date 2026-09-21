@@ -64,6 +64,8 @@
                                                 </option>
                                             @endforeach
                                         </select>
+                                        <span class="invalid-feedback" id="insurance_id_error" style="display:none;">Nama
+                                            asuransi wajib dipilih.</span>
                                         @error('insurance_id')
                                             <span class="invalid-feedback">{{ $message }}</span>
                                         @enderror
@@ -639,7 +641,15 @@
             attachLaborListeners();
 
             // ===== STRIP BLANK ROWS BEFORE SUBMIT =====
-            document.querySelector('form').addEventListener('submit', function() {
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const insuranceSel = document.getElementById('insurance_id');
+                if (document.getElementById('account_code').value === 'ASURANSI' && !insuranceSel.value) {
+                    e.preventDefault();
+                    insuranceSel.classList.add('is-invalid');
+                    document.getElementById('insurance_id_error').style.display = 'block';
+                    document.getElementById('insurance_group').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
                 document.querySelectorAll('.labor-row').forEach(function(row) {
                     const sel = row.querySelector('.labor-select');
                     if (!sel || !sel.value) row.remove();
@@ -729,7 +739,8 @@
                     $('#insurance_group').show();
                 } else {
                     $('#insurance_group').hide();
-                    $('#insurance_id').val('');
+                    $('#insurance_id').val('').removeClass('is-invalid');
+                    $('#insurance_id_error').hide();
                 }
             }
 
@@ -745,6 +756,10 @@
             $(document).ready(function() {
                 updateVehiclePicker();
                 toggleRefWo();
+                $('#insurance_id').on('change', function() {
+                    $(this).removeClass('is-invalid');
+                    $('#insurance_id_error').hide();
+                });
                 $('#reference_wo_id').select2({
                     placeholder: '-- Select Reference WO --',
                     allowClear: true,

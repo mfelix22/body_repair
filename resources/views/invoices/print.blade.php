@@ -724,7 +724,7 @@
                 <div class="sig-box">
                     <div class="sig-label">Signature &amp; Company Stamp</div>
                     <div class="sig-underline"></div>
-                    <div class="sig-name">( ___________________ )</div>
+                    <div class="sig-name">( Finance Dept. )</div>
                 </div>
             </td>
         </tr>
