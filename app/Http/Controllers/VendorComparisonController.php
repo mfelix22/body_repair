@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Models\VendorComparison;
 use App\Models\VendorComparisonVendor;
 use App\Models\PurchaseRequest;
@@ -20,14 +21,82 @@ class VendorComparisonController extends Controller
         return 'FK-PCH-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
     }
 
-    public function index()
-    {
-        $comparisons = VendorComparison::with(['creator', 'selectedVendor'])
-            ->withCount('vendors')
-            ->orderBy('created_at', 'desc')
-            ->get();
+    private const STATUSES = [
+        'draft'     => 'Draft',
+        'submitted' => 'Menunggu Persetujuan',
+        'approved'  => 'Disetujui',
+    ];
 
-        return view('vendor_comparisons.index', compact('comparisons'));
+    public function index(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = VendorComparison::with(['creator', 'selectedVendor'])
+            ->withCount('vendors');
+
+        if ($month) {
+            $query->whereMonth('tanggal', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('tanggal', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $comparisons = $query->orderBy('created_at', 'desc')->get();
+
+        $allYears = VendorComparison::selectRaw('YEAR(tanggal) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('vendor_comparisons.index', compact('comparisons', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = VendorComparison::with(['creator', 'selectedVendor', 'purchaseRequest'])
+            ->withCount('vendors');
+
+        if ($month) {
+            $query->whereMonth('tanggal', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('tanggal', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $comparisons = $query->orderBy('tanggal', 'desc')->get();
+
+        $rows = [];
+        foreach ($comparisons as $vc) {
+            $rows[] = [
+                $vc->comparison_number,
+                $vc->nomor_permintaan ?? ($vc->purchaseRequest->pr_number ?? '-'),
+                $vc->tanggal->format('Y-m-d'),
+                $vc->detail_barang_jasa,
+                $vc->vendors_count,
+                $vc->selectedVendor->nama_calon_vendor ?? '-',
+                self::STATUSES[$vc->status] ?? ucwords(str_replace('_', ' ', $vc->status)),
+                $vc->creator->name ?? '-',
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Perbandingan Vendor',
+            ['No. Perbandingan', 'No. Permintaan', 'Tanggal', 'Detail Barang/Jasa', 'Jumlah Vendor', 'Vendor Terpilih', 'Status', 'Dibuat Oleh'],
+            $rows,
+            ['A' => 18, 'B' => 18, 'C' => 12, 'D' => 40, 'E' => 14, 'F' => 26, 'G' => 22, 'H' => 18],
+            'Perbandingan-Vendor-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create(Request $request)
@@ -155,9 +224,9 @@ class VendorComparisonController extends Controller
         $prs = PurchaseRequest::whereIn('status', ['on_progress', 'completed', 'printed'])
             ->where(function ($q) use ($currentPrId) {
                 $q->whereDoesntHave('details', function ($q2) {
-                      $q2->where('ordered_quantity', '>', 0);
-                  })
-                  ->orWhere('id', $currentPrId);
+                    $q2->where('ordered_quantity', '>', 0);
+                })
+                    ->orWhere('id', $currentPrId);
             })
             ->with(['details.item', 'details.uom'])
             ->orderBy('created_at', 'desc')

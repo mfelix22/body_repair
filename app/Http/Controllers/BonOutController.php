@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Models\BonOut;
 use App\Models\BonOutItem;
@@ -19,6 +20,12 @@ use Illuminate\Support\Facades\DB;
 
 class BonOutController extends Controller
 {
+    private const STATUSES = [
+        'on_progress' => 'On Progress',
+        'completed'   => 'Completed',
+        'cancelled'   => 'Cancelled',
+    ];
+
     public function index(Request $request)
     {
         if (!PermissionHelper::canView('bon_outs')) {
@@ -28,6 +35,7 @@ class BonOutController extends Controller
         $month    = $request->input('month');
         $year     = $request->input('year', date('Y'));
         $category = $request->input('category');
+        $status   = $request->input('status');
 
         $query = BonOut::with(['creator', 'workOrder.customer'])
             ->orderBy('issued_date', 'desc')
@@ -44,6 +52,9 @@ class BonOutController extends Controller
                 $q->where('item_type', $category);
             });
         }
+        if ($status) {
+            $query->where('status', $status);
+        }
 
         $bonOuts = $query->get();
 
@@ -51,8 +62,66 @@ class BonOutController extends Controller
             ->distinct()->orderBy('year', 'desc')->pluck('year');
         $categories = DB::table('items')->select('item_type')
             ->distinct()->orderBy('item_type')->pluck('item_type');
+        $statuses = self::STATUSES;
 
-        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'category', 'allYears', 'categories'));
+        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'category', 'status', 'allYears', 'categories', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        if (!PermissionHelper::canView('bon_outs')) {
+            return PermissionHelper::denyAccess('bon_outs', 'view');
+        }
+
+        $month    = $request->input('month');
+        $year     = $request->input('year', date('Y'));
+        $category = $request->input('category');
+        $status   = $request->input('status');
+
+        $query = BonOut::with(['creator', 'workOrder.customer'])
+            ->orderBy('issued_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($month) {
+            $query->whereMonth('issued_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('issued_date', (int) $year);
+        }
+        if ($category) {
+            $query->whereHas('items.item', function ($q) use ($category) {
+                $q->where('item_type', $category);
+            });
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $bonOuts = $query->get();
+
+        $typeLabels = [1 => 'Workshop', 2 => 'Regular', 3 => 'Adjustment'];
+
+        $rows = [];
+        foreach ($bonOuts as $bonOut) {
+            $rows[] = [
+                $bonOut->bon_out_number,
+                $typeLabels[$bonOut->bon_out_type] ?? '-',
+                $bonOut->issued_date->format('Y-m-d'),
+                $bonOut->workOrder->wo_number ?? '-',
+                $bonOut->workOrder->customer->name ?? '-',
+                $bonOut->workOrder->vehicle_plate ?? '-',
+                self::STATUSES[$bonOut->status] ?? ucwords(str_replace('_', ' ', $bonOut->status)),
+                $bonOut->creator->name ?? '-',
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Bon Out',
+            ['Bon Out #', 'Type', 'Date', 'Work Order', 'Customer', 'Vehicle', 'Status', 'Created By'],
+            $rows,
+            ['A' => 20, 'B' => 12, 'C' => 12, 'D' => 16, 'E' => 28, 'F' => 12, 'G' => 14, 'H' => 18],
+            'Bon-Out-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     /**

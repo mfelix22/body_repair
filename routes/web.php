@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Requests
     Route::middleware('role.permission:purchase_requests,view')->group(function () {
+        Route::get('purchase-requests/export-excel', [PurchaseRequestController::class, 'exportExcel'])->name('purchase_requests.export_excel');
         Route::resource('purchase-requests', PurchaseRequestController::class)->names('purchase_requests');
         Route::get('purchase-requests/{purchaseRequest}/json', [PurchaseRequestController::class, 'getJson'])->name('purchase_requests.json');
         Route::post('purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->name('purchase_requests.approve');
@@ -162,6 +163,7 @@ Route::middleware('auth')->group(function () {
     Route::get('purchase-orders/{purchaseOrder}/print-preview', [PurchaseOrderController::class, 'printPreview'])->name('purchase_orders.print_preview');
 
     // Vendor Comparisons (FK-PCH)
+    Route::get('vendor-comparisons/export-excel', [VendorComparisonController::class, 'exportExcel'])->name('vendor_comparisons.export_excel');
     Route::resource('vendor-comparisons', VendorComparisonController::class)->names('vendor_comparisons');
     Route::post('vendor-comparisons/{vendorComparison}/submit', [VendorComparisonController::class, 'submit'])->name('vendor_comparisons.submit');
     Route::post('vendor-comparisons/{vendorComparison}/select-vendor', [VendorComparisonController::class, 'selectVendor'])->name('vendor_comparisons.select_vendor');
@@ -170,6 +172,7 @@ Route::middleware('auth')->group(function () {
     // Receivables (Goods Receipt)
     Route::get('receivables/create-standalone', [ReceivableController::class, 'createStandalone'])->name('receivables.create_standalone');
     Route::post('receivables/store-standalone', [ReceivableController::class, 'storeStandalone'])->name('receivables.store_standalone');
+    Route::get('receivables/export-excel', [ReceivableController::class, 'exportExcel'])->name('receivables.export_excel');
     Route::resource('receivables', ReceivableController::class);
     Route::get('receivables/{receivable}/print', [ReceivableController::class, 'print'])->name('receivables.print')->middleware('signed');
     Route::post('receivables/{receivable}/complete', [ReceivableController::class, 'complete'])->name('receivables.complete');
@@ -178,6 +181,7 @@ Route::middleware('auth')->group(function () {
     // Bon Out (Stock Issue — WO-linked & Standalone)
     Route::get('bon-outs/create-from-wo/{workOrder}', [BonOutController::class, 'createFromWO'])->name('bon_outs.createFromWO');
     Route::get('bon-outs/create-standalone', [BonOutController::class, 'createStandalone'])->name('bon_outs.createStandalone');
+    Route::get('bon-outs/export-excel', [BonOutController::class, 'exportExcel'])->name('bon_outs.export_excel');
     Route::resource('bon-outs', BonOutController::class)->names('bon_outs')->except(['edit', 'update']);
     Route::get('bon-outs/{bonOut}/edit', [BonOutController::class, 'edit'])->name('bon_outs.edit');
     Route::put('bon-outs/{bonOut}', [BonOutController::class, 'update'])->name('bon_outs.update');
@@ -186,6 +190,7 @@ Route::middleware('auth')->group(function () {
     Route::get('bon-outs/{bonOut}/print', [BonOutController::class, 'print'])->name('bon_outs.print')->middleware('signed');
 
     // Work Orders
+    Route::get('work-orders/export-excel', [WorkOrderController::class, 'exportExcel'])->name('work_orders.export_excel');
     Route::resource('work-orders', WorkOrderController::class)->names('work_orders');
     Route::post('work-orders/{workOrder}/start', [WorkOrderController::class, 'start'])->name('work_orders.start');
     Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete'])->name('work_orders.complete');
@@ -204,6 +209,7 @@ Route::middleware('auth')->group(function () {
 
 
     // Invoices
+    Route::get('invoices/export-excel', [InvoiceController::class, 'exportExcel'])->name('invoices.export_excel');
     Route::resource('invoices', InvoiceController::class);
     Route::post('invoices/{invoice}/mark-as-paid', [InvoiceController::class, 'markAsPaid'])->name('invoices.markAsPaid');
     Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
@@ -222,12 +228,14 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/sparepart/export', [SparepartReportController::class, 'export'])->name('reports.sparepart.export');
 
     // Sales Orders
+    Route::get('sales-orders/export-excel', [SalesOrderController::class, 'exportExcel'])->name('sales_orders.export_excel');
     Route::resource('sales-orders', SalesOrderController::class)->names('sales_orders');
     Route::post('sales-orders/{salesOrder}/confirm', [SalesOrderController::class, 'confirm'])->name('sales_orders.confirm');
     Route::post('sales-orders/{salesOrder}/cancel', [SalesOrderController::class, 'cancel'])->name('sales_orders.cancel');
     Route::get('sales-orders/{salesOrder}/print', [SalesOrderController::class, 'print'])->name('sales_orders.print')->middleware('signed');
 
     // Proforma Invoices
+    Route::get('proforma-invoices/export-excel', [ProformaInvoiceController::class, 'exportExcel'])->name('proforma_invoices.export_excel');
     Route::resource('proforma-invoices', ProformaInvoiceController::class)->names('proforma_invoices');
     Route::post('proforma-invoices/{proformaInvoice}/approve', [ProformaInvoiceController::class, 'approve'])->name('proforma_invoices.approve');
     Route::post('proforma-invoices/{proformaInvoice}/reject', [ProformaInvoiceController::class, 'reject'])->name('proforma_invoices.reject');
@@ -236,6 +244,7 @@ Route::middleware('auth')->group(function () {
     Route::post('proforma-invoices/{proformaInvoice}/lines/{line}/reject', [ProformaInvoiceController::class, 'rejectLine'])->name('proforma_invoices.reject_line');
 
     // Estimasi
+    Route::get('estimasis/export-excel', [EstimasiController::class, 'exportExcel'])->name('estimasis.export_excel');
     Route::resource('estimasis', EstimasiController::class)->except(['edit', 'update', 'destroy']);
     Route::post('estimasis/{estimasi}/approve', [EstimasiController::class, 'approve'])->name('estimasis.approve');
     Route::post('estimasis/{estimasi}/reject', [EstimasiController::class, 'reject'])->name('estimasis.reject');

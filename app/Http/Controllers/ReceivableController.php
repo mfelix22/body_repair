@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Models\Receivable;
 use App\Models\ReceivableItem;
@@ -17,6 +18,13 @@ use Illuminate\Support\Facades\DB;
 
 class ReceivableController extends Controller
 {
+    private const STATUSES = [
+        'on_progress'      => 'On Progress',
+        'partial_received' => 'Partial Received',
+        'completed'        => 'Completed',
+        'cancelled'        => 'Cancelled',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -29,6 +37,7 @@ class ReceivableController extends Controller
         $month    = $request->input('month');
         $year     = $request->input('year', date('Y'));
         $category = $request->input('category');
+        $status   = $request->input('status');
 
         $query = Receivable::with(['purchaseOrder.supplier', 'supplier'])
             ->orderBy('received_date', 'desc')
@@ -45,6 +54,9 @@ class ReceivableController extends Controller
                 $q->where('item_type', $category);
             });
         }
+        if ($status) {
+            $query->where('status', $status);
+        }
 
         $receivables = $query->paginate(25)->appends($request->query());
 
@@ -52,8 +64,70 @@ class ReceivableController extends Controller
             ->distinct()->orderBy('year', 'desc')->pluck('year');
         $categories = DB::table('items')->select('item_type')
             ->distinct()->orderBy('item_type')->pluck('item_type');
+        $statuses = self::STATUSES;
 
-        return view('receivables.index', compact('receivables', 'month', 'year', 'category', 'allYears', 'categories'));
+        return view('receivables.index', compact('receivables', 'month', 'year', 'category', 'status', 'allYears', 'categories', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        if (!PermissionHelper::canView('receivables')) {
+            return PermissionHelper::denyAccess('receivables', 'view');
+        }
+
+        $month    = $request->input('month');
+        $year     = $request->input('year', date('Y'));
+        $category = $request->input('category');
+        $status   = $request->input('status');
+
+        $query = Receivable::with(['purchaseOrder.supplier', 'supplier'])
+            ->orderBy('received_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($month) {
+            $query->whereMonth('received_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('received_date', (int) $year);
+        }
+        if ($category) {
+            $query->whereHas('items.item', function ($q) use ($category) {
+                $q->where('item_type', $category);
+            });
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $receivables = $query->get();
+
+        $rows = [];
+        foreach ($receivables as $receivable) {
+            $supplier = '-';
+            if ($receivable->purchaseOrder && $receivable->purchaseOrder->id) {
+                $supplier = $receivable->purchaseOrder->supplier->name ?? ($receivable->purchaseOrder->supplier_name ?? '-');
+            } elseif ($receivable->supplier) {
+                $supplier = $receivable->supplier->name;
+            } elseif ($receivable->supplier_name) {
+                $supplier = $receivable->supplier_name;
+            }
+
+            $rows[] = [
+                $receivable->receive_number,
+                ($receivable->purchaseOrder && $receivable->purchaseOrder->id) ? $receivable->purchaseOrder->po_number : '-',
+                $supplier,
+                $receivable->received_date->format('Y-m-d'),
+                self::STATUSES[$receivable->status] ?? ucwords(str_replace('_', ' ', $receivable->status)),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Bon In',
+            ['Bon In #', 'PO Number', 'Supplier', 'Received Date', 'Status'],
+            $rows,
+            ['A' => 20, 'B' => 20, 'C' => 30, 'D' => 14, 'E' => 18],
+            'Bon-In-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     /**

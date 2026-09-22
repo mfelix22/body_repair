@@ -7,6 +7,7 @@ use App\Models\ProformaInvoice;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\AuditLog;
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -14,6 +15,13 @@ use Illuminate\Support\Facades\DB;
 
 class ProformaInvoiceController extends Controller
 {
+    private const STATUSES = [
+        'pending_approval' => 'Pending Approval',
+        'approved'         => 'Approved',
+        'rejected'         => 'Rejected',
+        'no_discount'      => 'No Discount',
+    ];
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -122,19 +130,81 @@ class ProformaInvoiceController extends Controller
         }
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
-        $proformas = ProformaInvoice::with(['workOrder.customer', 'creator', 'discountLines'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = ProformaInvoice::with(['workOrder.customer', 'creator', 'discountLines']);
+
+        if ($month) {
+            $query->whereMonth('created_at', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('created_at', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $proformas = $query->orderBy('created_at', 'desc')->get();
 
         foreach ($proformas as $pf) {
             $pf->pendingMyApproval = $pf->isPendingMyApproval($user->id);
         }
 
-        return view('proforma_invoices.index', compact('proformas'));
+        $allYears = ProformaInvoice::selectRaw('YEAR(created_at) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('proforma_invoices.index', compact('proformas', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = ProformaInvoice::with(['workOrder.customer', 'creator']);
+
+        if ($month) {
+            $query->whereMonth('created_at', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('created_at', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $proformas = $query->orderBy('created_at', 'desc')->get();
+
+        $rows = [];
+        foreach ($proformas as $pf) {
+            $rows[] = [
+                $pf->proforma_number,
+                $pf->workOrder->wo_number ?? '-',
+                optional($pf->workOrder->customer)->name ?? '-',
+                $pf->subtotal,
+                $pf->discount_amount,
+                $pf->total,
+                self::STATUSES[$pf->status] ?? ucwords(str_replace('_', ' ', $pf->status)),
+                optional($pf->creator)->name ?? '-',
+                $pf->created_at->format('Y-m-d'),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Proforma Invoices',
+            ['Proforma #', 'Work Order', 'Customer', 'Subtotal (Rp)', 'Discount (Rp)', 'Total (Rp)', 'Status', 'Created By', 'Date'],
+            $rows,
+            ['A' => 20, 'B' => 16, 'C' => 30, 'D' => 16, 'E' => 16, 'F' => 16, 'G' => 18, 'H' => 18, 'I' => 12],
+            'Proforma-Invoices-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create(Request $request)

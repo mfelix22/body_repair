@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Models\Customer;
 use App\Models\Item;
@@ -12,17 +13,86 @@ use Illuminate\Http\Request;
 
 class SalesOrderController extends Controller
 {
-    public function index()
+    private const STATUSES = [
+        'draft'     => 'Draft',
+        'confirmed' => 'Confirmed',
+        'cancelled' => 'Cancelled',
+    ];
+
+    public function index(Request $request)
     {
         if (!PermissionHelper::canView('sales_orders')) {
             return PermissionHelper::denyAccess('sales_orders', 'view');
         }
 
-        $salesOrders = SalesOrder::with(['customer', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
 
-        return view('sales_orders.index', compact('salesOrders'));
+        $query = SalesOrder::with(['customer', 'creator']);
+
+        if ($month) {
+            $query->whereMonth('order_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('order_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $salesOrders = $query->orderBy('created_at', 'desc')->get();
+
+        $allYears = SalesOrder::selectRaw('YEAR(order_date) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('sales_orders.index', compact('salesOrders', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        if (!PermissionHelper::canView('sales_orders')) {
+            return PermissionHelper::denyAccess('sales_orders', 'view');
+        }
+
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = SalesOrder::with(['customer', 'creator']);
+
+        if ($month) {
+            $query->whereMonth('order_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('order_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $salesOrders = $query->orderBy('order_date', 'desc')->get();
+
+        $rows = [];
+        foreach ($salesOrders as $so) {
+            $rows[] = [
+                $so->so_number,
+                $so->customer->name ?? '-',
+                $so->order_date->format('Y-m-d'),
+                $so->material_total,
+                self::STATUSES[$so->status] ?? ucwords(str_replace('_', ' ', $so->status)),
+                $so->creator->name ?? '-',
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Sales Orders',
+            ['SO Number', 'Customer', 'Order Date', 'Total (Rp)', 'Status', 'Created By'],
+            $rows,
+            ['A' => 18, 'B' => 30, 'C' => 12, 'D' => 16, 'E' => 12, 'F' => 18],
+            'Sales-Orders-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create()

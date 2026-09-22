@@ -40,11 +40,38 @@
                                     </button>
                                 </div>
                             </div>
-                            @if (request('type') || request('item_search'))
+                            <select name="month" class="form-control form-control-sm mr-2">
+                                <option value="">All Months</option>
+                                @for ($m = 1; $m <= 12; $m++)
+                                    <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>
+                                        {{ DateTime::createFromFormat('!m', $m)->format('F') }}
+                                    </option>
+                                @endfor
+                            </select>
+                            <select name="year" class="form-control form-control-sm mr-2">
+                                <option value="">All Years</option>
+                                @foreach ($allYears as $y)
+                                    <option value="{{ $y }}" {{ (int) $year === (int) $y ? 'selected' : '' }}>
+                                        {{ $y }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <select name="status" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+                                <option value="">All Statuses</option>
+                                @foreach ($statuses as $value => $label)
+                                    <option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if (request('type') || request('item_search') || request('month') || request('year') || request('status'))
                                 <a href="{{ route('purchase_requests.index') }}" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-times"></i> Clear
                                 </a>
                             @endif
+                            <a href="{{ route('purchase_requests.export_excel', request()->query()) }}" class="btn btn-sm btn-success ml-auto">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </a>
                         </form>
                     </div>
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Models\CreditNote;
 use App\Models\Invoice;
@@ -15,6 +16,15 @@ use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
+    private const STATUSES = [
+        'on_progress' => 'On Progress',
+        'sent'        => 'Sent',
+        'partial'     => 'Partial',
+        'paid'        => 'Paid',
+        'overdue'     => 'Overdue',
+        'cancelled'   => 'Cancelled',
+    ];
+
     /**
      * @return User|null
      */
@@ -34,8 +44,9 @@ class InvoiceController extends Controller
         $canModify = PermissionHelper::canUpdate('invoices');
         $canEdit = $user->hasAnyRole(['admin', 'super_admin']);
 
-        $month = request('month');
-        $year  = request('year');
+        $month  = request('month');
+        $year   = request('year');
+        $status = request('status');
         $query = Invoice::with(['customer', 'workOrder', 'creator']);
         if ($month) {
             $query->whereMonth('invoice_date', (int) $month);
@@ -43,10 +54,58 @@ class InvoiceController extends Controller
         if ($year) {
             $query->whereYear('invoice_date', (int) $year);
         }
+        if ($status) {
+            $query->where('status', $status);
+        }
         $invoices = $query->orderBy('invoice_date', 'desc')->get();
         // For filter dropdowns
         $allYears = Invoice::selectRaw('YEAR(invoice_date) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
-        return view('invoices.index', compact('invoices', 'canChangeStatus', 'canModify', 'canEdit', 'month', 'year', 'allYears'));
+        $statuses = self::STATUSES;
+        return view('invoices.index', compact('invoices', 'canChangeStatus', 'canModify', 'canEdit', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        if (!PermissionHelper::canView('invoices')) {
+            return PermissionHelper::denyAccess('invoices', 'view');
+        }
+
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = Invoice::with(['customer']);
+        if ($month) {
+            $query->whereMonth('invoice_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('invoice_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $invoices = $query->orderBy('invoice_date', 'desc')->get();
+
+        $rows = [];
+        foreach ($invoices as $invoice) {
+            $rows[] = [
+                $invoice->invoice_number,
+                $invoice->customer->name ?? '-',
+                $invoice->invoice_date->format('Y-m-d'),
+                $invoice->due_date?->format('Y-m-d') ?? '-',
+                $invoice->grand_total,
+                self::STATUSES[$invoice->status] ?? ucwords(str_replace('_', ' ', $invoice->status)),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Invoices',
+            ['Invoice #', 'Customer', 'Invoice Date', 'Due Date', 'Amount (Rp)', 'Status'],
+            $rows,
+            ['A' => 20, 'B' => 30, 'C' => 14, 'D' => 14, 'E' => 18, 'F' => 14],
+            'Invoices-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create(Request $request)

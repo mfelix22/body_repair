@@ -48,15 +48,29 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="form-group mr-2">
+                            <label for="status" class="mr-1 font-weight-bold">Status</label>
+                            <select name="status" id="status" class="form-control form-control-sm">
+                                <option value="">-- All Statuses --</option>
+                                @foreach ($statuses as $value => $label)
+                                    <option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                         <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
                             <i class="fas fa-filter mr-1"></i>Filter
                         </button>
-                        @if (request('month') || request('year'))
+                        @if (request('month') || request('year') || request('status'))
                             <a href="{{ route('invoices.index') }}" class="btn btn-secondary btn-sm d-inline-flex align-items-center">
                                 <i class="fas fa-times mr-1"></i>Clear
                             </a>
                         @endif
-                        @if (request('month') || request('year'))
+                        <a href="{{ route('invoices.export_excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center">
+                            <i class="fas fa-file-excel mr-1"></i>Export Excel
+                        </a>
+                        @if (request('month') || request('year') || request('status'))
                             <span class="ml-3 text-muted small">
                                 Showing {{ $invoices->count() }} invoice(s)
                             </span>

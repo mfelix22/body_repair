@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\UOM;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,19 +18,34 @@ use Illuminate\Support\Facades\Storage;
 
 class PurchaseRequestController extends Controller
 {
-    public function index()
+    private const STATUSES = [
+        'on_progress'        => 'On Progress',
+        'dept_head_approved' => 'Dept Head Approved',
+        'gm_approved'        => 'GM Approved',
+        'completed'          => 'Completed',
+        'printed'            => 'Printed',
+        'closed'             => 'Closed',
+        'rejected'           => 'Rejected',
+        'cancelled'          => 'Cancelled',
+    ];
+
+    public function index(Request $request)
     {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
         $query = PurchaseRequest::with(['requestor', 'deptHeadApprover', 'gmApprover', 'details'])
             ->withCount('details');
 
         // Filter by type if requested
-        if (request('type')) {
-            $query->where('type', request('type'));
+        if ($request->input('type')) {
+            $query->where('type', $request->input('type'));
         }
 
         // Filter by item name (searches item name, custom item name, and service description)
-        if (request('item_search')) {
-            $search = request('item_search');
+        if ($request->input('item_search')) {
+            $search = $request->input('item_search');
             $query->whereHas('details', function ($q) use ($search) {
                 $q->where('custom_item_name', 'like', "%{$search}%")
                     ->orWhere('service_description', 'like', "%{$search}%")
@@ -39,8 +55,77 @@ class PurchaseRequestController extends Controller
             });
         }
 
+        if ($month) {
+            $query->whereMonth('request_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('request_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
         $prs = $query->orderBy('request_date', 'desc')->get();
-        return view('purchase_requests.index', compact('prs'));
+
+        $allYears = PurchaseRequest::selectRaw('YEAR(request_date) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('purchase_requests.index', compact('prs', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = PurchaseRequest::with(['requestor'])->withCount('details');
+
+        if ($request->input('type')) {
+            $query->where('type', $request->input('type'));
+        }
+        if ($request->input('item_search')) {
+            $search = $request->input('item_search');
+            $query->whereHas('details', function ($q) use ($search) {
+                $q->where('custom_item_name', 'like', "%{$search}%")
+                    ->orWhere('service_description', 'like', "%{$search}%")
+                    ->orWhereHas('item', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+        if ($month) {
+            $query->whereMonth('request_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('request_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $prs = $query->orderBy('request_date', 'desc')->get();
+
+        $rows = [];
+        foreach ($prs as $pr) {
+            $rows[] = [
+                $pr->pr_number,
+                $pr->type === 'Jasa' ? 'PPJ (Service)' : 'PPB (Items)',
+                $pr->request_date->format('Y-m-d'),
+                $pr->requestor->name ?? '-',
+                $pr->details_count,
+                self::STATUSES[$pr->status] ?? ucwords(str_replace('_', ' ', $pr->status)),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Purchase Requests',
+            ['Number', 'Type', 'Request Date', 'Requested By', 'Items', 'Status'],
+            $rows,
+            ['A' => 20, 'B' => 14, 'C' => 14, 'D' => 24, 'E' => 8, 'F' => 20],
+            'Purchase-Requests-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create()

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
@@ -20,16 +21,89 @@ use Illuminate\Support\Facades\DB;
 
 class WorkOrderController extends Controller
 {
-    public function index()
+    private const STATUSES = [
+        'on_progress'          => 'Pending',
+        'in_progress'          => 'Working',
+        'completed'            => 'Completed',
+        'invoiced'             => 'Invoiced',
+        'pending_cancellation' => 'Pending Cancellation',
+        'cancelled'            => 'Cancelled',
+    ];
+
+    public function index(Request $request)
     {
-        $wos = WorkOrder::with(['customer', 'creator', 'proformaInvoice'])
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = WorkOrder::with(['customer', 'creator', 'proformaInvoice'])
             ->withCount(['items', 'labors' => function ($query) {
                 $query->whereNotNull('labor_id');
-            }])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            }]);
 
-        return view('work_orders.index', compact('wos'));
+        if ($month) {
+            $query->whereMonth('work_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('work_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $wos = $query->orderBy('created_at', 'desc')->get();
+
+        $allYears = WorkOrder::selectRaw('YEAR(work_date) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('work_orders.index', compact('wos', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = WorkOrder::with(['customer'])
+            ->withCount(['items', 'labors' => function ($query) {
+                $query->whereNotNull('labor_id');
+            }]);
+
+        if ($month) {
+            $query->whereMonth('work_date', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('work_date', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $wos = $query->orderBy('work_date', 'desc')->get();
+
+        $rows = [];
+        foreach ($wos as $wo) {
+            $rows[] = [
+                $wo->wo_number,
+                $wo->customer->name ?? '-',
+                $wo->vehicle_plate ?? '-',
+                $wo->work_date->format('Y-m-d'),
+                $wo->items_count,
+                $wo->labors_count,
+                $wo->grand_total,
+                self::STATUSES[$wo->status] ?? ucwords(str_replace('_', ' ', $wo->status)),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Work Orders',
+            ['WO Number', 'Customer', 'Nomor Polisi', 'Work Date', 'Items', 'Panel', 'Total (Rp)', 'Status'],
+            $rows,
+            ['A' => 18, 'B' => 30, 'C' => 14, 'D' => 12, 'E' => 8, 'F' => 8, 'G' => 16, 'H' => 22],
+            'Work-Orders-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create()

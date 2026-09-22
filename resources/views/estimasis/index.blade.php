@@ -11,6 +11,54 @@
                     <h3 class="card-title">Estimasi List</h3>
                 </div>
                 <div class="card-body">
+                    <form method="GET" action="{{ route('estimasis.index') }}" class="form-inline mb-3">
+                        <div class="form-group mr-2 mb-2">
+                            <label for="month" class="mr-1 font-weight-bold">Month</label>
+                            <select name="month" id="month" class="form-control form-control-sm">
+                                <option value="">-- All Months --</option>
+                                @for ($m = 1; $m <= 12; $m++)
+                                    <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>
+                                        {{ DateTime::createFromFormat('!m', $m)->format('F') }}
+                                    </option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div class="form-group mr-2 mb-2">
+                            <label for="year" class="mr-1 font-weight-bold">Year</label>
+                            <select name="year" id="year" class="form-control form-control-sm">
+                                <option value="">-- All Years --</option>
+                                @foreach ($allYears as $y)
+                                    <option value="{{ $y }}" {{ (int) $year === (int) $y ? 'selected' : '' }}>
+                                        {{ $y }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group mr-2 mb-2">
+                            <label for="status" class="mr-1 font-weight-bold">Status</label>
+                            <select name="status" id="status" class="form-control form-control-sm">
+                                <option value="">-- All Statuses --</option>
+                                @foreach ($statuses as $value => $label)
+                                    <option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
+                                <i class="fas fa-filter mr-1"></i>Filter
+                            </button>
+                            @if ($month || $year || $status)
+                                <a href="{{ route('estimasis.index') }}" class="btn btn-secondary btn-sm mr-1 d-inline-flex align-items-center">
+                                    <i class="fas fa-times mr-1"></i>Clear
+                                </a>
+                            @endif
+                            <a href="{{ route('estimasis.export_excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center">
+                                <i class="fas fa-file-excel mr-1"></i>Export Excel
+                            </a>
+                        </div>
+                    </form>
 
                     <table class="table table-bordered table-striped table-hover" id="estimasiTable">
                         <thead>

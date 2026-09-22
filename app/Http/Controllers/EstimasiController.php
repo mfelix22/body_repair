@@ -6,6 +6,7 @@ use App\Models\Estimasi;
 use App\Models\Item;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Helpers\ExcelExporter;
 use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -15,6 +16,13 @@ use Illuminate\Support\Facades\Storage;
 
 class EstimasiController extends Controller
 {
+    private const STATUSES = [
+        'pending_approval' => 'Pending Approval',
+        'approved'         => 'Approved',
+        'rejected'         => 'Rejected',
+        'no_discount'      => 'No Discount',
+    ];
+
     /** Returns the Sigit user and a Director user used for auto-assignment. */
     private function getApprovers(): array
     {
@@ -53,20 +61,82 @@ class EstimasiController extends Controller
         );
     }
 
-    public function index()
+    public function index(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $estimasis = Estimasi::with(['workOrder.customer', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = Estimasi::with(['workOrder.customer', 'creator']);
+
+        if ($month) {
+            $query->whereMonth('created_at', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('created_at', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $estimasis = $query->orderBy('created_at', 'desc')->get();
 
         foreach ($estimasis as $est) {
             $est->pendingMyApproval = $est->isPendingMyApproval($user->id);
         }
 
-        return view('estimasis.index', compact('estimasis'));
+        $allYears = Estimasi::selectRaw('YEAR(created_at) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $statuses = self::STATUSES;
+
+        return view('estimasis.index', compact('estimasis', 'month', 'year', 'status', 'allYears', 'statuses'));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $month  = $request->input('month');
+        $year   = $request->input('year');
+        $status = $request->input('status');
+
+        $query = Estimasi::with(['workOrder.customer', 'creator']);
+
+        if ($month) {
+            $query->whereMonth('created_at', (int) $month);
+        }
+        if ($year) {
+            $query->whereYear('created_at', (int) $year);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $estimasis = $query->orderBy('created_at', 'desc')->get();
+
+        $rows = [];
+        foreach ($estimasis as $est) {
+            $rows[] = [
+                $est->estimasi_number,
+                $est->workOrder->wo_number ?? '-',
+                optional($est->workOrder->customer)->name ?? '-',
+                $est->subtotal,
+                $est->discount_amount,
+                $est->total,
+                self::STATUSES[$est->status] ?? ucwords(str_replace('_', ' ', $est->status)),
+                optional($est->creator)->name ?? '-',
+                $est->created_at->format('Y-m-d'),
+            ];
+        }
+
+        return ExcelExporter::download(
+            'Estimasi',
+            ['Estimasi #', 'Work Order', 'Customer', 'Subtotal (Rp)', 'Discount (Rp)', 'Total (Rp)', 'Status', 'Created By', 'Date'],
+            $rows,
+            ['A' => 20, 'B' => 16, 'C' => 30, 'D' => 16, 'E' => 16, 'F' => 16, 'G' => 18, 'H' => 18, 'I' => 12],
+            'Estimasi-' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function create(Request $request)
