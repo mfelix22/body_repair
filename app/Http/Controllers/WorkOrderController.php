@@ -99,7 +99,7 @@ class WorkOrderController extends Controller
 
         return ExcelExporter::download(
             'Work Orders',
-            ['WO Number', 'Customer', 'Nomor Polisi', 'Work Date', 'Items', 'Panel', 'Total (Rp)', 'Status'],
+            ['WO Number', 'Customer', 'Nomor Polisi', 'Work Date', 'Sparepart', 'Panel', 'Total (Rp)', 'Status'],
             $rows,
             ['A' => 18, 'B' => 30, 'C' => 14, 'D' => 12, 'E' => 8, 'F' => 8, 'G' => 16, 'H' => 22],
             'Work-Orders-' . now()->format('Ymd') . '.xlsx'

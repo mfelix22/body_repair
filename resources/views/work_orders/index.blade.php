@@ -75,7 +75,7 @@
                                 <th>Customer</th>
                                 <th>Nomor Polisi</th>
                                 <th>Work Date</th>
-                                <th>Items</th>
+                                <th>Sparepart</th>
                                 <th>Panel</th>
                                 <th>Total</th>
                                 <th>Status</th>
