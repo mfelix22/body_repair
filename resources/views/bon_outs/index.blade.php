@@ -44,17 +44,6 @@
                             </select>
                         </div>
                         <div class="form-group mr-2 mb-2">
-                            <label class="mr-1 font-weight-bold">Category</label>
-                            <select name="category" class="form-control form-control-sm">
-                                <option value="">All Categories</option>
-                                @foreach ($categories as $cat)
-                                    <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>
-                                        {{ $cat }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group mr-2 mb-2">
                             <label class="mr-1 font-weight-bold">Status</label>
                             <select name="status" class="form-control form-control-sm">
                                 <option value="">All Statuses</option>
@@ -69,7 +58,7 @@
                             <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
                                 <i class="fas fa-filter mr-1"></i>Filter
                             </button>
-                            @if ($month || $year || $category || $status)
+                            @if ($month || $year || $status)
                                 <a href="{{ route('bon_outs.index') }}" class="btn btn-secondary btn-sm mr-2 d-inline-flex align-items-center">
                                     <i class="fas fa-times mr-1"></i>Clear
                                 </a>

@@ -32,10 +32,9 @@ class BonOutController extends Controller
             return PermissionHelper::denyAccess('bon_outs', 'view');
         }
 
-        $month    = $request->input('month');
-        $year     = $request->input('year', date('Y'));
-        $category = $request->input('category');
-        $status   = $request->input('status');
+        $month  = $request->input('month');
+        $year   = $request->input('year', date('Y'));
+        $status = $request->input('status');
 
         $query = BonOut::with(['creator', 'workOrder.customer'])
             ->orderBy('issued_date', 'desc')
@@ -46,11 +45,6 @@ class BonOutController extends Controller
         }
         if ($year) {
             $query->whereYear('issued_date', (int) $year);
-        }
-        if ($category) {
-            $query->whereHas('items.item', function ($q) use ($category) {
-                $q->where('item_type', $category);
-            });
         }
         if ($status) {
             $query->where('status', $status);
@@ -60,11 +54,9 @@ class BonOutController extends Controller
 
         $allYears  = BonOut::selectRaw('YEAR(issued_date) as year')
             ->distinct()->orderBy('year', 'desc')->pluck('year');
-        $categories = DB::table('items')->select('item_type')
-            ->distinct()->orderBy('item_type')->pluck('item_type');
         $statuses = self::STATUSES;
 
-        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'category', 'status', 'allYears', 'categories', 'statuses'));
+        return view('bon_outs.index', compact('bonOuts', 'month', 'year', 'status', 'allYears', 'statuses'));
     }
 
     public function exportExcel(Request $request)
@@ -73,10 +65,9 @@ class BonOutController extends Controller
             return PermissionHelper::denyAccess('bon_outs', 'view');
         }
 
-        $month    = $request->input('month');
-        $year     = $request->input('year', date('Y'));
-        $category = $request->input('category');
-        $status   = $request->input('status');
+        $month  = $request->input('month');
+        $year   = $request->input('year', date('Y'));
+        $status = $request->input('status');
 
         $query = BonOut::with(['creator', 'workOrder.customer'])
             ->orderBy('issued_date', 'desc')
@@ -87,11 +78,6 @@ class BonOutController extends Controller
         }
         if ($year) {
             $query->whereYear('issued_date', (int) $year);
-        }
-        if ($category) {
-            $query->whereHas('items.item', function ($q) use ($category) {
-                $q->where('item_type', $category);
-            });
         }
         if ($status) {
             $query->where('status', $status);

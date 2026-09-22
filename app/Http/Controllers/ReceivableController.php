@@ -34,10 +34,9 @@ class ReceivableController extends Controller
             return PermissionHelper::denyAccess('receivables', 'view');
         }
 
-        $month    = $request->input('month');
-        $year     = $request->input('year', date('Y'));
-        $category = $request->input('category');
-        $status   = $request->input('status');
+        $month  = $request->input('month');
+        $year   = $request->input('year', date('Y'));
+        $status = $request->input('status');
 
         $query = Receivable::with(['purchaseOrder.supplier', 'supplier'])
             ->orderBy('received_date', 'desc')
@@ -48,11 +47,6 @@ class ReceivableController extends Controller
         }
         if ($year) {
             $query->whereYear('received_date', (int) $year);
-        }
-        if ($category) {
-            $query->whereHas('items.item', function ($q) use ($category) {
-                $q->where('item_type', $category);
-            });
         }
         if ($status) {
             $query->where('status', $status);
@@ -62,11 +56,9 @@ class ReceivableController extends Controller
 
         $allYears = Receivable::selectRaw('YEAR(received_date) as year')
             ->distinct()->orderBy('year', 'desc')->pluck('year');
-        $categories = DB::table('items')->select('item_type')
-            ->distinct()->orderBy('item_type')->pluck('item_type');
         $statuses = self::STATUSES;
 
-        return view('receivables.index', compact('receivables', 'month', 'year', 'category', 'status', 'allYears', 'categories', 'statuses'));
+        return view('receivables.index', compact('receivables', 'month', 'year', 'status', 'allYears', 'statuses'));
     }
 
     public function exportExcel(Request $request)
@@ -75,10 +67,9 @@ class ReceivableController extends Controller
             return PermissionHelper::denyAccess('receivables', 'view');
         }
 
-        $month    = $request->input('month');
-        $year     = $request->input('year', date('Y'));
-        $category = $request->input('category');
-        $status   = $request->input('status');
+        $month  = $request->input('month');
+        $year   = $request->input('year', date('Y'));
+        $status = $request->input('status');
 
         $query = Receivable::with(['purchaseOrder.supplier', 'supplier'])
             ->orderBy('received_date', 'desc')
@@ -89,11 +80,6 @@ class ReceivableController extends Controller
         }
         if ($year) {
             $query->whereYear('received_date', (int) $year);
-        }
-        if ($category) {
-            $query->whereHas('items.item', function ($q) use ($category) {
-                $q->where('item_type', $category);
-            });
         }
         if ($status) {
             $query->where('status', $status);
