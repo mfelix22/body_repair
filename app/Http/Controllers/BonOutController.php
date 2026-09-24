@@ -368,7 +368,9 @@ class BonOutController extends Controller
         $bonOut->load([
             'creator',
             'completer',
+            'canceller',
             'workOrder.customer',
+            'workOrder.activeInvoice',
             'items.item.smallestUom',
             'items.item.itemUoms.uom',
         ]);
@@ -451,6 +453,18 @@ class BonOutController extends Controller
             foreach ($itemsToProcess as $itemData) {
                 if (!empty($itemData['bon_out_item_id'])) {
                     $bonOutItem = BonOutItem::findOrFail($itemData['bon_out_item_id']);
+
+                    // Keep the linked WO line's actual_quantity in sync with the delta
+                    if ($bonOutItem->work_order_item_id) {
+                        $delta  = (float) $itemData['actual_quantity'] - (float) $bonOutItem->actual_quantity;
+                        $woItem = WorkOrderItem::find($bonOutItem->work_order_item_id);
+                        if ($woItem && $delta != 0) {
+                            $woItem->update([
+                                'actual_quantity' => max(0, (float) $woItem->actual_quantity + $delta),
+                            ]);
+                        }
+                    }
+
                     $bonOutItem->update([
                         'actual_quantity' => $itemData['actual_quantity'],
                         'unit_price'      => $itemData['unit_price'] ?? $bonOutItem->unit_price,
@@ -487,6 +501,13 @@ class BonOutController extends Controller
                         'bon_out_section'    => $itemData['bon_out_section'] ?? null,
                         'remark'             => $itemData['remark'] ?? null,
                     ]);
+
+                    // New WO-linked lines also consume demand — accumulate like storeFromWO
+                    if ($woItem) {
+                        $woItem->update([
+                            'actual_quantity' => (float) $woItem->actual_quantity + (float) $itemData['actual_quantity'],
+                        ]);
+                    }
                 }
             }
 
@@ -591,6 +612,7 @@ class BonOutController extends Controller
                         // Extra material not originally on WO — create a new billed line
                         WorkOrderItem::create([
                             'work_order_id'   => $bonOut->work_order_id,
+                            'bon_out_item_id' => $bonOutItem->id,
                             'item_id'         => $bonOutItem->item_id,
                             'uom_id'          => $bonOutItem->uom_id,
                             'demand_quantity' => $bonOutItem->actual_quantity,
@@ -637,20 +659,154 @@ class BonOutController extends Controller
         return view('bon_outs.print', compact('bonOut'));
     }
 
+    /**
+     * Cancel a Bon Out:
+     *  - On-progress: release the WO demand quantities accumulated at creation
+     *  - Completed: additionally return issued quantities to stock and revert
+     *    any billed material lines pushed into the Work Order
+     */
     public function cancel(BonOut $bonOut)
     {
         if (!PermissionHelper::canUpdate('bon_outs')) {
             return PermissionHelper::denyAccess('bon_outs', 'update');
         }
 
-        if ($bonOut->status !== 'on_progress') {
-            return back()->with('error', 'Only on-progress Bon Out can be cancelled.');
+        if (!in_array($bonOut->status, ['on_progress', 'completed'])) {
+            return back()->with('error', 'This Bon Out is already cancelled.');
         }
 
-        $bonOut->update(['status' => 'cancelled']);
+        $wasCompleted = $bonOut->status === 'completed';
 
-        return redirect()->route('bon_outs.show', $bonOut)
-            ->with('success', 'Bon Out cancelled.');
+        $bonOut->load(['items', 'workOrder']);
+
+        // Billed material lines are locked in once the WO has a live invoice
+        if (
+            $wasCompleted && $bonOut->workOrder
+            && $bonOut->workOrder->invoice()->where('status', '!=', 'cancelled')->exists()
+        ) {
+            return back()->with('error', 'Cannot cancel this Bon Out: the linked Work Order already has an Invoice. Cancel the invoice first.');
+        }
+
+        DB::beginTransaction();
+        try {
+            if ($wasCompleted) {
+                // Return issued quantities to stock at the same cost they left with
+                foreach ($bonOut->items as $bonOutItem) {
+                    $qty = (float) $bonOutItem->actual_quantity;
+                    if ($qty <= 0) {
+                        continue;
+                    }
+
+                    $stock = Stock::firstOrCreate(
+                        ['item_id' => $bonOutItem->item_id, 'location' => 'default'],
+                        ['quantity' => 0, 'avg_cost' => 0]
+                    );
+
+                    $unitCost = (float) ($bonOutItem->unit_cost ?? 0);
+                    $stock->addQuantity($qty, $unitCost > 0 ? $unitCost : null);
+
+                    StockTransaction::create([
+                        'item_id'          => $bonOutItem->item_id,
+                        'transaction_type' => 'in',
+                        'quantity'         => $qty,
+                        'unit_cost'        => $unitCost > 0 ? $unitCost : null,
+                        'balance_after'    => $stock->quantity,
+                        'location'         => 'default',
+                        'reference_type'   => 'BON_OUT_CANCEL',
+                        'reference_id'     => $bonOut->id,
+                        'notes'            => "Returned via cancellation of Bon Out #{$bonOut->bon_out_number}",
+                        'created_by'       => Auth::id(),
+                    ]);
+                }
+
+                // Reverse billed material amounts pushed into WO billing at completion
+                if ($bonOut->bon_out_type != 3 && $bonOut->work_order_id) {
+                    $woNeedsRecalc = false;
+                    foreach ($bonOut->items as $bonOutItem) {
+                        $qty   = (float) $bonOutItem->actual_quantity;
+                        $price = (float) ($bonOutItem->unit_price ?? 0);
+                        if ($qty <= 0 || $price <= 0) {
+                            continue;
+                        }
+
+                        if ($bonOutItem->work_order_item_id) {
+                            // Original WO demand line — subtract this Bon Out's contribution
+                            $woItem = WorkOrderItem::find($bonOutItem->work_order_item_id);
+                            if ($woItem) {
+                                $remaining = (float) ($woItem->total_price ?? 0) - ($qty * $price);
+                                $woItem->update($remaining > 0
+                                    ? ['total_price' => $remaining]
+                                    : ['unit_price' => null, 'total_price' => null]);
+                                $woNeedsRecalc = true;
+                            }
+                        } else {
+                            // Extra billed line created by this Bon Out — remove it
+                            $extraLine = WorkOrderItem::where('bon_out_item_id', $bonOutItem->id)->first()
+                                ?? WorkOrderItem::where('work_order_id', $bonOut->work_order_id)
+                                ->whereNull('bon_out_item_id')
+                                ->where('item_id', $bonOutItem->item_id)
+                                ->where('actual_quantity', $bonOutItem->actual_quantity)
+                                ->where('unit_price', $bonOutItem->unit_price)
+                                ->orderByDesc('id')
+                                ->first();
+                            if ($extraLine) {
+                                $extraLine->delete();
+                                $woNeedsRecalc = true;
+                            }
+                        }
+                    }
+                    if ($woNeedsRecalc) {
+                        $bonOut->workOrder->calculateTotals();
+                    }
+                }
+            }
+
+            // WO demand lines accumulate actual_quantity at creation — release it
+            $this->releaseWorkOrderUsage($bonOut);
+
+            $bonOut->update([
+                'status'       => 'cancelled',
+                'cancelled_by' => Auth::id(),
+                'cancelled_at' => now(),
+            ]);
+
+            DB::commit();
+
+            $msg = $wasCompleted
+                ? 'Bon Out cancelled. Issued quantities have been returned to stock.'
+                : 'Bon Out cancelled.';
+
+            return redirect()->route('bon_outs.show', $bonOut)->with('success', $msg);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to cancel Bon Out: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Subtract this Bon Out's quantities from the linked WO demand lines.
+     * Creation accumulates actual_quantity on work_order_items, so cancelling
+     * or deleting must give it back.
+     */
+    private function releaseWorkOrderUsage(BonOut $bonOut): void
+    {
+        if (!$bonOut->work_order_id) {
+            return;
+        }
+
+        $bonOut->loadMissing('items');
+        foreach ($bonOut->items as $bonOutItem) {
+            if (!$bonOutItem->work_order_item_id) {
+                continue;
+            }
+
+            $woItem = WorkOrderItem::find($bonOutItem->work_order_item_id);
+            if ($woItem) {
+                $woItem->update([
+                    'actual_quantity' => max(0, (float) $woItem->actual_quantity - (float) $bonOutItem->actual_quantity),
+                ]);
+            }
+        }
     }
 
     public function destroy(BonOut $bonOut)
@@ -663,7 +819,21 @@ class BonOutController extends Controller
             return back()->with('error', 'Cannot delete a completed Bon Out.');
         }
 
-        $bonOut->delete();
+        DB::beginTransaction();
+        try {
+            // On-progress Bon Outs still hold WO demand quantities — release them.
+            // Cancelled Bon Outs were already released by cancel().
+            if ($bonOut->status === 'on_progress') {
+                $this->releaseWorkOrderUsage($bonOut);
+            }
+
+            $bonOut->delete();
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to delete Bon Out: ' . $e->getMessage());
+        }
 
         return redirect()->route('bon_outs.index')
             ->with('success', 'Bon Out deleted.');

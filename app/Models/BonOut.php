@@ -21,11 +21,14 @@ class BonOut extends Model
         'created_by',
         'completed_by',
         'completed_at',
+        'cancelled_by',
+        'cancelled_at',
     ];
 
     protected $casts = [
         'issued_date'  => 'date',
         'completed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'total_cogs'   => 'decimal:2',
     ];
 
@@ -37,6 +40,11 @@ class BonOut extends Model
     public function completer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     public function items(): HasMany

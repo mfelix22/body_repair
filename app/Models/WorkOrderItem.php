@@ -9,6 +9,7 @@ class WorkOrderItem extends Model
 {
     protected $fillable = [
         'work_order_id',
+        'bon_out_item_id',
         'item_id',
         'uom_id',
         'demand_quantity',
@@ -28,6 +29,11 @@ class WorkOrderItem extends Model
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class);
+    }
+
+    public function bonOutItem(): BelongsTo
+    {
+        return $this->belongsTo(BonOutItem::class);
     }
 
     public function item(): BelongsTo

@@ -46,6 +46,18 @@
                                 </button>
                             </form>
                         @endif
+                        @if (
+                            $bonOut->status === 'completed' &&
+                                !$bonOut->workOrder?->activeInvoice &&
+                                auth()->user()->hasAnyRole(['warehouse', 'admin', 'super_admin']))
+                            <form action="{{ route('bon_outs.cancel', $bonOut) }}" method="POST" class="d-inline"
+                                onsubmit="return confirm('Cancel this Bon Out? Issued quantities will be returned to stock and WO billing will be reverted.')">
+                                @csrf
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-undo"></i> Cancel &amp; Return Stock
+                                </button>
+                            </form>
+                        @endif
                         <a href="{{ route('bon_outs.index') }}" class="btn btn-secondary btn-sm">
                             <i class="fas fa-arrow-left"></i> Back
                         </a>
@@ -162,6 +174,16 @@
                                         <td>{{ $bonOut->completed_at?->format('d M Y H:i') ?? '-' }}</td>
                                     </tr>
                                 @endif
+                                @if ($bonOut->status === 'cancelled')
+                                    <tr>
+                                        <th>Cancelled By:</th>
+                                        <td>{{ $bonOut->canceller->name ?? '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Cancelled At:</th>
+                                        <td>{{ $bonOut->cancelled_at?->format('d M Y H:i') ?? '-' }}</td>
+                                    </tr>
+                                @endif
                             </table>
 
                             @if ($bonOut->status === 'on_progress')
@@ -181,6 +203,11 @@
                                     @else
                                         Leftover returned to stock. Invoice generated.
                                     @endif
+                                </div>
+                            @elseif ($bonOut->status === 'cancelled')
+                                <div class="alert alert-danger py-2">
+                                    <i class="fas fa-ban"></i>
+                                    Cancelled. Any issued stock has been returned to inventory.
                                 </div>
                             @endif
                         </div>

@@ -223,7 +223,7 @@ class InvoiceController extends Controller
         // Calculate COGM — use ALL BonOut actual quantities if available, else fallback to WO demand × avg_cost
         $cogmMaterial = 0.0;
 
-        $bonOuts = $workOrder->bonOuts;
+        $bonOuts = $workOrder->bonOuts->where('status', 'completed');
         if ($bonOuts->isNotEmpty()) {
             foreach ($bonOuts as $bonOut) {
                 foreach ($bonOut->items as $bonOutItem) {
