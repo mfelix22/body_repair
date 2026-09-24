@@ -170,6 +170,17 @@
                                     </button>
                                 @endif
                             @endif
+
+                            {{-- Reopen: SA/Manager/Admin can send a completed WO back to in_progress
+                                 (e.g. forgotten panel). Blocked once an invoice exists. --}}
+                            @if (
+                                !$inv &&
+                                    auth()->user()->hasAnyRole(['service_advisor', 'manager', 'admin', 'super_admin']))
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-toggle="modal"
+                                    data-target="#reopenModal">
+                                    <i class="fas fa-undo"></i> Reopen
+                                </button>
+                            @endif
                         @elseif($workOrder->status === 'invoiced')
                             @php $activeInv = $workOrder->activeInvoice; @endphp
                             @if ($activeInv)
@@ -408,6 +419,18 @@
                                         <td>{{ $workOrder->completed_at->format('d M Y, H:i') }}</td>
                                     </tr>
                                 @endif
+                                @if ($workOrder->reopened_at)
+                                    <tr>
+                                        <th>Reopened:</th>
+                                        <td>
+                                            {{ $workOrder->reopened_at->format('d M Y, H:i') }}
+                                            by {{ $workOrder->reopener->name ?? '-' }}
+                                            @if ($workOrder->reopen_reason)
+                                                <br><small class="text-muted">{{ $workOrder->reopen_reason }}</small>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
                             </table>
                         </div>
                     </div>
@@ -617,6 +640,57 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Reopen Modal --}}
+    @if ($workOrder->status === 'completed')
+        <div class="modal fade" id="reopenModal" tabindex="-1" role="dialog" aria-labelledby="reopenModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <form action="{{ route('work_orders.reopen', $workOrder) }}" method="POST">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="reopenModalLabel">Reopen Work Order</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>
+                                The Work Order will go back to <strong>In Progress</strong> so you can edit
+                                panels/items and issue materials via Bon Out. Complete it again when finished.
+                            </p>
+                            @if ($workOrder->activeEstimasi)
+                                <div class="alert alert-warning py-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    This WO has an approved Estimasi
+                                    ({{ $workOrder->activeEstimasi->estimasi_number }}).
+                                    Added panels/spareparts will use the approved discount rates
+                                    ({{ number_format($workOrder->estimasi_discount_percentage_panel, 2) }}% panel /
+                                    {{ number_format($workOrder->estimasi_discount_percentage_sparepart, 2) }}% sparepart).
+                                </div>
+                            @endif
+                            @if ($workOrder->proformaInvoice)
+                                <div class="alert alert-warning py-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    A Proforma Invoice exists — its discount is a fixed amount and will not
+                                    change automatically. Review the proforma after editing.
+                                </div>
+                            @endif
+                            <div class="form-group mb-0">
+                                <label for="reopen_reason">Reason for Reopening <span class="text-danger">*</span></label>
+                                <textarea name="reopen_reason" id="reopen_reason" class="form-control" rows="3"
+                                    placeholder="e.g. Forgot to add panel: Pintu Depan Kanan" required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-danger">Reopen Work Order</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

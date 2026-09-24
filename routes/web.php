@@ -195,6 +195,7 @@ Route::middleware('auth')->group(function () {
     Route::post('work-orders/{workOrder}/start', [WorkOrderController::class, 'start'])->name('work_orders.start');
     Route::post('work-orders/{workOrder}/complete', [WorkOrderController::class, 'complete'])->name('work_orders.complete');
     Route::post('work-orders/{workOrder}/cancel', [WorkOrderController::class, 'cancel'])->name('work_orders.cancel');
+    Route::post('work-orders/{workOrder}/reopen', [WorkOrderController::class, 'reopen'])->name('work_orders.reopen');
     Route::post('work-orders/{workOrder}/approve-cancel', [WorkOrderController::class, 'approveCancel'])->name('work_orders.approve_cancel');
     Route::get('work-orders/{workOrder}/print', [WorkOrderController::class, 'printView'])->name('work_orders.print')->middleware('signed');
     Route::post('work-orders/{workOrder}/add-labor', [WorkOrderController::class, 'addLabor'])->name('work_orders.add_labor');

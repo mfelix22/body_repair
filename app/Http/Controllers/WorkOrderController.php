@@ -289,7 +289,7 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
-        $workOrder->load(['customer', 'billingCustomer', 'creator', 'items.item.smallestUom', 'items.uom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis', 'activeEstimasi']);
+        $workOrder->load(['customer', 'billingCustomer', 'creator', 'reopener', 'items.item.smallestUom', 'items.uom', 'labors.labor', 'labors.panel', 'referenceWo', 'invoice', 'invoices.creditNote', 'bonOuts', 'proformaInvoice', 'estimasis', 'activeEstimasi']);
 
         return view('work_orders.show', compact('workOrder'));
     }
@@ -554,6 +554,45 @@ class WorkOrderController extends Controller
 
         return redirect()->route('work_orders.show', $workOrder)
             ->with('success', 'Cancellation request submitted. Awaiting Sigit approval.');
+    }
+
+    /**
+     * Reopen a completed Work Order back to in_progress so a forgotten
+     * panel/item can be added and its materials issued via Bon Out.
+     * Blocked once a live Invoice exists — billed amounts are locked.
+     */
+    public function reopen(Request $request, WorkOrder $workOrder)
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->hasAnyRole(['service_advisor', 'manager', 'admin', 'super_admin'])) {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'Only Service Advisor, Manager, or Admin can reopen a Work Order.');
+        }
+
+        if ($workOrder->status !== 'completed') {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'Only completed Work Orders can be reopened.');
+        }
+
+        if ($workOrder->invoice()->where('status', '!=', 'cancelled')->exists()) {
+            return redirect()->route('work_orders.show', $workOrder)
+                ->with('error', 'Cannot reopen this Work Order: an Invoice has already been created. Cancel the invoice first.');
+        }
+
+        $validated = $request->validate([
+            'reopen_reason' => 'required|string|max:1000',
+        ]);
+
+        $workOrder->update([
+            'status'        => 'in_progress',
+            'reopened_by'   => $user->id,
+            'reopened_at'   => now(),
+            'reopen_reason' => $validated['reopen_reason'],
+        ]);
+
+        return redirect()->route('work_orders.show', $workOrder)
+            ->with('success', 'Work Order reopened. You can now edit panels/items and create a Bon Out. Complete the Work Order again when finished.');
     }
 
     public function approveCancel(WorkOrder $workOrder)

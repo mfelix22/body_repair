@@ -43,6 +43,9 @@ class WorkOrder extends Model
         'created_by',
         'started_at',
         'completed_at',
+        'reopened_by',
+        'reopened_at',
+        'reopen_reason',
     ];
 
     protected $casts = [
@@ -57,6 +60,7 @@ class WorkOrder extends Model
         'estimasi_discount_amount_sparepart'     => 'decimal:2',
         'started_at'         => 'datetime',
         'completed_at'       => 'datetime',
+        'reopened_at'        => 'datetime',
         'vehicle_price_tier' => 'string',
     ];
 
@@ -100,6 +104,11 @@ class WorkOrder extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function reopener(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reopened_by');
     }
 
     public function items(): HasMany
