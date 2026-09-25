@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'role',
         'signature_path',
+        'hide_revenue',
     ];
 
     /**
@@ -46,6 +47,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'hide_revenue' => 'boolean',
         ];
     }
 

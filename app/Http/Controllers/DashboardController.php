@@ -65,6 +65,15 @@ class DashboardController extends Controller
             'overdue_work_orders'      => WorkOrder::whereIn('status', ['on_progress', 'in_progress'])
                 ->whereNotNull('deadline')->whereDate('deadline', '<', $today)->count(),
             'outstanding_invoices'     => Invoice::whereIn('status', ['on_progress', 'sent', 'partial'])->count(),
+            'outstanding_amount'       => Invoice::whereIn('status', ['on_progress', 'sent', 'partial'])->sum('grand_total'),
+            'paid_invoices_month'      => Invoice::where('status', 'paid')
+                ->whereMonth('updated_at', now()->month)
+                ->whereYear('updated_at', now()->year)
+                ->count(),
+            'revenue_this_month'       => Invoice::where('status', 'paid')
+                ->whereMonth('updated_at', now()->month)
+                ->whereYear('updated_at', now()->year)
+                ->sum('grand_total'),
             'low_stock_items'          => (clone $lowStockBaseQuery)->count(),
         ];
 
@@ -91,44 +100,6 @@ class DashboardController extends Controller
             ->orderByRaw('COALESCE(stock_totals.total_quantity, 0) - COALESCE(items.reorder_level, 0) asc')
             ->take(5)->get();
 
-        // Monthly Revenue & Material Cost (current year, non-cancelled invoices)
-        $currentYear = now()->year;
-
-        // Revenue: sum grand_total per month from non-cancelled invoices
-        $monthlyRevenueData = Invoice::selectRaw('MONTH(invoice_date) as month, SUM(grand_total) as revenue')
-            ->where('status', '!=', 'cancelled')
-            ->whereYear('invoice_date', $currentYear)
-            ->groupByRaw('MONTH(invoice_date)')
-            ->get()
-            ->keyBy('month');
-
-        // Material COGS: live from completed bon out items (actual_quantity * unit_cost)
-        // Joined through invoices → bon_outs (completed) → bon_out_items
-        $monthlyCogsByMonth = DB::table('invoices as i')
-            ->join('bon_outs as bo', function ($join) {
-                $join->on('bo.work_order_id', '=', 'i.work_order_id')
-                    ->where('bo.status', '=', 'completed');
-            })
-            ->join('bon_out_items as boi', 'boi.bon_out_id', '=', 'bo.id')
-            ->where('i.status', '!=', 'cancelled')
-            ->whereYear('i.invoice_date', $currentYear)
-            ->selectRaw('MONTH(i.invoice_date) as month, SUM(boi.actual_quantity * COALESCE(boi.unit_cost, 0)) as material_cost')
-            ->groupByRaw('MONTH(i.invoice_date)')
-            ->get()
-            ->keyBy('month');
-
-        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $monthlyRevenue     = [];
-        $monthlyMaterialCost = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $monthlyRevenue[$m]      = isset($monthlyRevenueData[$m])  ? (float) $monthlyRevenueData[$m]->revenue       : 0;
-            $monthlyMaterialCost[$m] = isset($monthlyCogsByMonth[$m])  ? (float) $monthlyCogsByMonth[$m]->material_cost : 0;
-        }
-
-        $currentMonth = now()->month;
-        $revenueThisMonth      = $monthlyRevenue[$currentMonth] ?? 0;
-        $materialCostThisMonth = $monthlyMaterialCost[$currentMonth] ?? 0;
-
         // Active WOs created this month, excluding invoiced & cancelled
         $monthStart = now()->startOfMonth();
         $monthEnd   = now()->endOfMonth();
@@ -138,7 +109,7 @@ class DashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('dashboard', compact(
+        return view('dashboard', array_merge(compact(
             'summary',
             'entityCounts',
             'statusSections',
@@ -147,14 +118,8 @@ class DashboardController extends Controller
             'recentInvoices',
             'recentStockTransactions',
             'lowStockItems',
-            'monthNames',
-            'monthlyRevenue',
-            'monthlyMaterialCost',
-            'revenueThisMonth',
-            'materialCostThisMonth',
-            'currentYear',
             'activeWorkOrdersThisMonth'
-        ));
+        ), $this->revenueAndCogsData()));
     }
 
     // -------------------------------------------------------------------------
@@ -224,6 +189,15 @@ class DashboardController extends Controller
             'overdue_work_orders'   => WorkOrder::whereIn('status', ['on_progress', 'in_progress'])
                 ->whereNotNull('deadline')->whereDate('deadline', '<', $today)->count(),
             'outstanding_invoices'  => Invoice::whereIn('status', ['on_progress', 'sent', 'partial'])->count(),
+            'outstanding_amount'    => Invoice::whereIn('status', ['on_progress', 'sent', 'partial'])->sum('grand_total'),
+            'paid_invoices_month'   => Invoice::where('status', 'paid')
+                ->whereMonth('updated_at', now()->month)
+                ->whereYear('updated_at', now()->year)
+                ->count(),
+            'revenue_this_month'    => Invoice::where('status', 'paid')
+                ->whereMonth('updated_at', now()->month)
+                ->whereYear('updated_at', now()->year)
+                ->sum('grand_total'),
             'purchase_orders_open'  => PurchaseOrder::whereIn('status', ['on_progress', 'approved', 'partial'])->count(),
         ];
 
@@ -262,14 +236,14 @@ class DashboardController extends Controller
             'cancelled'   => ['label' => 'Cancelled',   'class' => 'danger'],
         ]);
 
-        return view('dashboards.manager', compact(
+        return view('dashboards.manager', array_merge(compact(
             'summary',
             'prsPendingApproval',
             'overdueWorkOrders',
             'recentInvoices',
             'woStatusItems',
             'invoiceStatusItems'
-        ));
+        ), $this->revenueAndCogsData()));
     }
 
     // -------------------------------------------------------------------------
@@ -401,12 +375,12 @@ class DashboardController extends Controller
             ->orderBy('updated_at', 'desc')
             ->limit(5)->get();
 
-        return view('dashboards.finance', compact(
+        return view('dashboards.finance', array_merge(compact(
             'summary',
             'recentInvoices',
             'invoiceStatusItems',
             'recentWorkOrders'
-        ));
+        ), $this->revenueAndCogsData()));
     }
 
     // -------------------------------------------------------------------------
@@ -470,6 +444,54 @@ class DashboardController extends Controller
     // -------------------------------------------------------------------------
     // Shared helpers
     // -------------------------------------------------------------------------
+    // Monthly billed revenue & material cost (current year, non-cancelled invoices)
+    private function revenueAndCogsData()
+    {
+        $currentYear = now()->year;
+
+        // Revenue: sum grand_total per month from non-cancelled invoices
+        $monthlyRevenueData = Invoice::selectRaw('MONTH(invoice_date) as month, SUM(grand_total) as revenue')
+            ->where('status', '!=', 'cancelled')
+            ->whereYear('invoice_date', $currentYear)
+            ->groupByRaw('MONTH(invoice_date)')
+            ->get()
+            ->keyBy('month');
+
+        // Material COGS: live from completed bon out items (actual_quantity * unit_cost)
+        // Joined through invoices → bon_outs (completed) → bon_out_items
+        $monthlyCogsByMonth = DB::table('invoices as i')
+            ->join('bon_outs as bo', function ($join) {
+                $join->on('bo.work_order_id', '=', 'i.work_order_id')
+                    ->where('bo.status', '=', 'completed');
+            })
+            ->join('bon_out_items as boi', 'boi.bon_out_id', '=', 'bo.id')
+            ->where('i.status', '!=', 'cancelled')
+            ->whereYear('i.invoice_date', $currentYear)
+            ->selectRaw('MONTH(i.invoice_date) as month, SUM(boi.actual_quantity * COALESCE(boi.unit_cost, 0)) as material_cost')
+            ->groupByRaw('MONTH(i.invoice_date)')
+            ->get()
+            ->keyBy('month');
+
+        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $monthlyRevenue      = [];
+        $monthlyMaterialCost = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $monthlyRevenue[$m]      = isset($monthlyRevenueData[$m]) ? (float) $monthlyRevenueData[$m]->revenue : 0;
+            $monthlyMaterialCost[$m] = isset($monthlyCogsByMonth[$m]) ? (float) $monthlyCogsByMonth[$m]->material_cost : 0;
+        }
+
+        $currentMonth = now()->month;
+
+        return [
+            'monthNames'            => $monthNames,
+            'monthlyRevenue'        => $monthlyRevenue,
+            'monthlyMaterialCost'   => $monthlyMaterialCost,
+            'revenueThisMonth'      => $monthlyRevenue[$currentMonth] ?? 0,
+            'materialCostThisMonth' => $monthlyMaterialCost[$currentMonth] ?? 0,
+            'currentYear'           => $currentYear,
+        ];
+    }
+
     private function lowStockBaseQuery()
     {
         $stockTotals = Stock::query()

@@ -72,6 +72,9 @@
         </div>
     </div>
 
+    {{-- ===== REVENUE & MATERIAL COST ===== --}}
+    @include('partials.revenue_material_cost', ['showFinanceFigures' => false])
+
     <div class="row">
         {{-- Invoice Status Breakdown --}}
         <div class="col-lg-4">

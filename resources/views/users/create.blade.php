@@ -95,6 +95,18 @@
                             @enderror
                             <small class="form-text text-muted">Select at least one role</small>
                         </div>
+
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="hide_revenue" id="hide_revenue"
+                                    class="form-check-input" value="1"
+                                    {{ old('hide_revenue') ? 'checked' : '' }}>
+                                <label class="form-check-label" for="hide_revenue">
+                                    Hide revenue figures
+                                    <small class="text-muted">(dashboards show material cost / COGS only)</small>
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="card-footer">

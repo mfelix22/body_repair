@@ -70,6 +70,7 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
             'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit,viewer',
+            'hide_revenue' => 'nullable|boolean',
         ]);
 
         $user = User::create([
@@ -78,6 +79,7 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => implode('|', $validated['roles']),
+            'hide_revenue' => $request->boolean('hide_revenue'),
         ]);
 
         return redirect()->route('users.index')
@@ -129,6 +131,7 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
             'roles.*' => 'string|in:super_admin,admin,director,manager,service_advisor,purchasing,warehouse,staff,finance,accounting,audit,viewer',
+            'hide_revenue' => 'nullable|boolean',
         ]);
 
         $user->update([
@@ -136,6 +139,7 @@ class UserController extends Controller
             'username' => $validated['username'],
             'email' => $validated['email'],
             'role' => implode('|', $validated['roles']),
+            'hide_revenue' => $request->boolean('hide_revenue'),
         ]);
 
         // Only update password if provided

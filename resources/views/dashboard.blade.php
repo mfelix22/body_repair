@@ -100,53 +100,7 @@
 
     {{-- ===== REVENUE & MATERIAL COST (Director / Admin) ===== --}}
     @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin', 'viewer']))
-        <div class="row mt-2">
-            <div class="col-12">
-                <div class="card card-outline card-success mb-0">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-chart-bar mr-1"></i>
-                            Billed Revenue &amp; Material Cost — {{ $currentYear }}
-                        </h3>
-                        <div class="card-tools">
-                            <span class="text-muted small">Active invoices only (excluding cancelled)</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {{-- Summary cards for current month --}}
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="info-box bg-success">
-                                    <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Billed This Month — {{ now()->format('F') }}</span>
-                                        <span class="info-box-number">
-                                            Rp {{ number_format($revenueThisMonth, 0, ',', '.') }}
-                                        </span>
-                                        <span class="progress-description">All invoiced amounts this month (excl. cancelled)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-box bg-warning">
-                                    <span class="info-box-icon"><i class="fas fa-boxes"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Material Cost (COGS) — {{ now()->format('F') }}</span>
-                                        <span class="info-box-number">
-                                            Rp {{ number_format($materialCostThisMonth, 0, ',', '.') }}
-                                        </span>
-                                        <span class="progress-description">Total material COGS this month</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Monthly chart --}}
-                        <canvas id="revenueChart" style="height:260px; max-height:260px;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @include('partials.revenue_material_cost')
     @endif
 
     {{-- ===== ACTIVE WORK ORDERS THIS MONTH (Director / Admin) ===== --}}
@@ -647,68 +601,4 @@
         </div>
     </div>
 
-    @if (auth()->user()->hasAnyRole(['director', 'admin', 'super_admin', 'viewer']))
-        @push('scripts')
-            <script src="{{ asset('admin/plugins/chart.js/Chart.bundle.min.js') }}"></script>
-            <script>
-                (function() {
-                    var labels = @json(array_values($monthNames));
-                    var revenue = @json(array_values($monthlyRevenue));
-                    var cogs = @json(array_values($monthlyMaterialCost));
-
-                    var ctx = document.getElementById('revenueChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                    label: 'Billed (Rp)',
-                                    data: revenue,
-                                    backgroundColor: 'rgba(40,167,69,0.7)',
-                                    borderColor: 'rgba(40,167,69,1)',
-                                    borderWidth: 1,
-                                    order: 1
-                                },
-                                {
-                                    label: 'Material Cost / COGS (Rp)',
-                                    data: cogs,
-                                    backgroundColor: 'rgba(255,193,7,0.7)',
-                                    borderColor: 'rgba(255,193,7,1)',
-                                    borderWidth: 1,
-                                    order: 2
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                yAxes: [{
-                                    ticks: {
-                                        beginAtZero: true,
-                                        callback: function(value) {
-                                            if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(
-                                                1) + 'M';
-                                            if (value >= 1000) return 'Rp ' + (value / 1000).toFixed(0) +
-                                                'K';
-                                            return 'Rp ' + value;
-                                        }
-                                    }
-                                }]
-                            },
-                            tooltips: {
-                                callbacks: {
-                                    label: function(item, data) {
-                                        var label = data.datasets[item.datasetIndex].label || '';
-                                        var val = item.yLabel;
-                                        return label + ': Rp ' + val.toLocaleString('id-ID');
-                                    }
-                                }
-                            }
-                        }
-                    });
-                })();
-            </script>
-        @endpush
-    @endif
 @endsection

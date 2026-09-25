@@ -89,6 +89,9 @@
         </div>
     </div>
 
+    {{-- ===== REVENUE & MATERIAL COST ===== --}}
+    @include('partials.revenue_material_cost')
+
     <div class="row">
         {{-- PRs Pending Approval --}}
         <div class="col-lg-6">
