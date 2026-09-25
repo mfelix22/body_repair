@@ -106,7 +106,7 @@
                     <div class="card-header">
                         <h3 class="card-title">
                             <i class="fas fa-chart-bar mr-1"></i>
-                            Revenue &amp; Material Cost — {{ $currentYear }}
+                            Billed Revenue &amp; Material Cost — {{ $currentYear }}
                         </h3>
                         <div class="card-tools">
                             <span class="text-muted small">Active invoices only (excluding cancelled)</span>
@@ -119,11 +119,11 @@
                                 <div class="info-box bg-success">
                                     <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
                                     <div class="info-box-content">
-                                        <span class="info-box-text">Revenue Total — {{ now()->format('F') }}</span>
+                                        <span class="info-box-text">Billed This Month — {{ now()->format('F') }}</span>
                                         <span class="info-box-number">
                                             Rp {{ number_format($revenueThisMonth, 0, ',', '.') }}
                                         </span>
-                                        <span class="progress-description">From on-progress invoices this month</span>
+                                        <span class="progress-description">All invoiced amounts this month (excl. cancelled)</span>
                                     </div>
                                 </div>
                             </div>
@@ -662,7 +662,7 @@
                         data: {
                             labels: labels,
                             datasets: [{
-                                    label: 'Revenue Total (Rp)',
+                                    label: 'Billed (Rp)',
                                     data: revenue,
                                     backgroundColor: 'rgba(40,167,69,0.7)',
                                     borderColor: 'rgba(40,167,69,1)',
