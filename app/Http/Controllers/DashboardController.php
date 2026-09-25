@@ -12,14 +12,17 @@ use App\Models\Receivable;
 use App\Models\Stock;
 use App\Models\StockTransaction;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Models\WorkOrder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
 
         if ($user->hasAnyRole(['super_admin', 'admin', 'director', 'viewer'])) {
             return $this->adminDashboard();
@@ -127,7 +130,8 @@ class DashboardController extends Controller
     // -------------------------------------------------------------------------
     public function activeWorkOrdersJson(\Illuminate\Http\Request $request)
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
         if (!$user->hasAnyRole(['super_admin', 'admin', 'director', 'viewer'])) {
             abort(403);
         }
@@ -422,7 +426,7 @@ class DashboardController extends Controller
     // -------------------------------------------------------------------------
     private function staffDashboard()
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         $summary = [
             'my_prs_total'    => PurchaseRequest::where('requested_by', $userId)->count(),
