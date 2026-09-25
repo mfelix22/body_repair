@@ -259,6 +259,7 @@ Route::middleware('auth')->group(function () {
         Route::get('stocks/export', [StockController::class, 'export'])->name('stocks.export');
         Route::get('stocks/export-prices', [StockController::class, 'exportWithPrices'])->name('stocks.export_prices');
         Route::get('stocks/transactions', [StockController::class, 'transactions'])->name('stocks.transactions');
+        Route::get('stocks/transactions/export', [StockController::class, 'exportTransactions'])->name('stocks.transactions.export');
         Route::post('stocks/adjust', [StockController::class, 'adjust'])->middleware('role.permission:stocks,adjust')->name('stocks.adjust');
     });
 

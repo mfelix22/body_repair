@@ -10,6 +10,10 @@
                 <div class="card-header">
                     <h3 class="card-title">Stock Transactions</h3>
                     <div class="card-tools">
+                        <a href="{{ route('stocks.transactions.export', request()->only(['item_id', 'type', 'reference', 'month', 'year', 'category'])) }}"
+                            class="btn btn-tool d-inline-flex align-items-center text-success">
+                            <i class="fas fa-file-excel mr-1"></i>Export Excel
+                        </a>
                         <button type="button" class="btn btn-tool d-inline-flex align-items-center" data-toggle="collapse" data-target="#filterCollapse">
                             <i class="fas fa-filter mr-1"></i>Filter
                         </button>

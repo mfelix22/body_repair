@@ -121,6 +121,224 @@ class StockController extends Controller
         return view('stocks.transactions', compact('transactions', 'items', 'referenceTypes', 'allYears', 'categories'));
     }
 
+    public function exportTransactions(Request $request)
+    {
+        $query = StockTransaction::with(['item', 'creator'])
+            ->join('items', 'stock_transactions.item_id', '=', 'items.id')
+            ->select('stock_transactions.*');
+
+        $filterDescriptions = [];
+
+        // Filter by item_id
+        if ($request->filled('item_id')) {
+            $query->where('stock_transactions.item_id', $request->item_id);
+            $filterItem = Item::find($request->item_id);
+            if ($filterItem) {
+                $filterDescriptions[] = 'Item: ' . $filterItem->code . ' - ' . $filterItem->name;
+            }
+        }
+
+        // Filter by transaction type
+        if ($request->filled('type')) {
+            $query->where('transaction_type', $request->type);
+            $filterDescriptions[] = 'Type: ' . ucfirst($request->type);
+        }
+
+        // Filter by reference type
+        if ($request->filled('reference')) {
+            $query->where('reference_type', $request->reference);
+            $filterDescriptions[] = 'Reference: ' . $request->reference;
+        }
+
+        // Filter by month
+        if ($request->filled('month')) {
+            $query->whereMonth('stock_transactions.created_at', (int) $request->month);
+            $filterDescriptions[] = 'Month: ' . \DateTime::createFromFormat('!m', (int) $request->month)->format('F');
+        }
+
+        // Filter by year
+        if ($request->filled('year')) {
+            $query->whereYear('stock_transactions.created_at', (int) $request->year);
+            $filterDescriptions[] = 'Year: ' . $request->year;
+        }
+
+        // Filter by item category
+        if ($request->filled('category')) {
+            $query->where('items.item_type', $request->category);
+            $filterDescriptions[] = 'Category: ' . $request->category;
+        }
+
+        $transactions = $query
+            ->orderBy('stock_transactions.created_at', 'desc')
+            ->orderBy('stock_transactions.id', 'asc')
+            ->get();
+
+        $user = $request->user();
+        $canViewCost = $user && $user->hasAnyRole(['accounting', 'warehouse', 'director', 'viewer', 'super_admin']);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Stock Transactions');
+
+        // Title
+        $lastCol = $canViewCost ? 'K' : 'J';
+        $sheet->setCellValue('A1', 'STOCK TRANSACTIONS REPORT');
+        $sheet->mergeCells('A1:' . $lastCol . '1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Generated info
+        $sheet->setCellValue('A2', 'Generated: ' . now()->format('d M Y H:i') . '   —   ' . $user->name);
+        $sheet->mergeCells('A2:' . $lastCol . '2');
+        $sheet->getStyle('A2')->getFont()->setItalic(true);
+        $sheet->getStyle('A2')->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF666666'));
+
+        // Active filters
+        $row = 3;
+        if (!empty($filterDescriptions)) {
+            $sheet->setCellValue('A3', 'Filters: ' . implode('  |  ', $filterDescriptions));
+            $sheet->mergeCells('A3:' . $lastCol . '3');
+            $sheet->getStyle('A3')->getFont()->setItalic(true);
+            $sheet->getStyle('A3')->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF666666'));
+            $row = 4;
+        }
+
+        $headerRow = $row + 1;
+
+        // Headers
+        $headers = [
+            'No.',
+            'Date',
+            'Item Code',
+            'Item Name',
+            'Type',
+            'Quantity',
+        ];
+        if ($canViewCost) {
+            $headers[] = 'Unit Cost (Rp)';
+        }
+        $headers = array_merge($headers, [
+            'Balance After',
+            'Reference',
+            'Notes',
+            'Created By',
+        ]);
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $headerRow, $header);
+            $col++;
+        }
+
+        // Style header row
+        $sheet->getStyle('A' . $headerRow . ':' . $lastCol . $headerRow)->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F4E79']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+        $sheet->getRowDimension($headerRow)->setRowHeight(20);
+
+        // Fill data
+        $dataRow = $headerRow + 1;
+        $no = 1;
+
+        foreach ($transactions as $transaction) {
+            $typeColors = [
+                'in'         => 'FF155724',
+                'out'        => 'FFCC0000',
+                'opening'    => 'FF0C5460',
+                'adjustment' => 'FF856404',
+            ];
+            $typeColor = $typeColors[$transaction->transaction_type] ?? 'FF000000';
+
+            $col = 'A';
+            $sheet->setCellValue($col++ . $dataRow, $no++);
+            $sheet->setCellValue($col++ . $dataRow, $transaction->created_at->format('d M Y H:i'));
+            $sheet->setCellValue($col++ . $dataRow, $transaction->item->code);
+            $sheet->setCellValue($col++ . $dataRow, $transaction->item->name);
+            $sheet->setCellValue($col++ . $dataRow, $transaction->typeLabel());
+            $qtyCol = $col;
+            $sheet->setCellValue($col++ . $dataRow, (float) $transaction->quantity);
+            if ($canViewCost) {
+                $sheet->setCellValue($col++ . $dataRow, (float) $transaction->unit_cost);
+            }
+            $sheet->setCellValue($col++ . $dataRow, (float) $transaction->balance_after);
+            $sheet->setCellValue($col++ . $dataRow, $transaction->reference_type ?? '-');
+            $sheet->setCellValue($col++ . $dataRow, $transaction->notes ?? '-');
+            $sheet->setCellValue($col++ . $dataRow, $transaction->creator->name ?? '-');
+
+            // Number formats
+            $sheet->getStyle($qtyCol . $dataRow)->getNumberFormat()->setFormatCode('+#,##0.00;-#,##0.00;0.00');
+            $balanceCol = $canViewCost ? 'H' : 'G';
+            $sheet->getStyle($balanceCol . $dataRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            if ($canViewCost) {
+                $sheet->getStyle('G' . $dataRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+
+            // Type badge color
+            $sheet->getStyle('E' . $dataRow)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color($typeColor));
+            $sheet->getStyle('E' . $dataRow)->getFont()->setBold(true);
+
+            // Zebra striping
+            $bgColor = $no % 2 === 0 ? 'FFFFFF' : 'F2F7FC';
+            $sheet->getStyle('A' . $dataRow . ':' . $lastCol . $dataRow)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bgColor]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+            ]);
+
+            $dataRow++;
+        }
+
+        $lastRow = $dataRow - 1;
+
+        // Outer border
+        $sheet->getStyle('A' . $headerRow . ':' . $lastCol . $lastRow)->applyFromArray([
+            'borders' => [
+                'outline' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '1F4E79']],
+            ],
+        ]);
+
+        // Column widths
+        $sheet->getColumnDimension('A')->setWidth(6);
+        $sheet->getColumnDimension('B')->setWidth(16);
+        $sheet->getColumnDimension('C')->setWidth(14);
+        $sheet->getColumnDimension('D')->setWidth(35);
+        $sheet->getColumnDimension('E')->setWidth(12);
+        $sheet->getColumnDimension('F')->setWidth(12);
+        if ($canViewCost) {
+            $sheet->getColumnDimension('G')->setWidth(16);
+            $sheet->getColumnDimension('H')->setWidth(14);
+            $sheet->getColumnDimension('I')->setWidth(20);
+            $sheet->getColumnDimension('J')->setWidth(35);
+            $sheet->getColumnDimension('K')->setWidth(15);
+        } else {
+            $sheet->getColumnDimension('G')->setWidth(14);
+            $sheet->getColumnDimension('H')->setWidth(20);
+            $sheet->getColumnDimension('I')->setWidth(35);
+            $sheet->getColumnDimension('J')->setWidth(15);
+        }
+
+        // Alignments
+        $sheet->getStyle('A' . ($headerRow + 1) . ':A' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('E' . ($headerRow + 1) . ':E' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('F' . ($headerRow + 1) . ':' . ($canViewCost ? 'H' : 'G') . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        // Freeze header row
+        $sheet->freezePane('A' . ($headerRow + 1));
+
+        $filename = 'Stock_Transactions_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        $writer = new Xlsx($spreadsheet);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
     public function adjust(Request $request)
     {
         $validated = $request->validate([
@@ -161,7 +379,7 @@ class StockController extends Controller
             'reference_type' => 'Manual Adjustment',
             'reference_id' => null,
             'notes' => $validated['notes'],
-            'created_by' => auth()->id(),
+            'created_by' => $request->user()->id,
         ]);
 
         return redirect()->route('stocks.index')->with('success', 'Stock adjusted successfully!');
@@ -225,7 +443,7 @@ class StockController extends Controller
         $row = 5;
         foreach ($stocks as $stock) {
             $statusClass = $stock->quantity <= $stock->item->reorder_level ? 'warning' : 'good';
-            
+
             $sheet->setCellValue('A' . $row, $stock->item->code);
             $sheet->setCellValue('B' . $row, $stock->item->name);
             $sheet->setCellValue('C' . $row, $stock->item->item_type_name);
@@ -298,7 +516,7 @@ class StockController extends Controller
         exit;
     }
 
-    public function exportWithPrices()
+    public function exportWithPrices(Request $request)
     {
         if (!\App\Helpers\PermissionHelper::canViewPrices()) {
             abort(403, 'Access denied.');
@@ -321,7 +539,7 @@ class StockController extends Controller
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Date & generated by
-        $sheet->setCellValue('A2', 'Generated: ' . now()->format('d M Y H:i') . '   —   ' . auth()->user()->name);
+        $sheet->setCellValue('A2', 'Generated: ' . now()->format('d M Y H:i') . '   —   ' . $request->user()->name);
         $sheet->mergeCells('A2:J2');
         $sheet->getStyle('A2')->getFont()->setItalic(true);
         $sheet->getStyle('A2')->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF666666'));
