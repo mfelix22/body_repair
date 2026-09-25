@@ -224,7 +224,7 @@
                                 <p class="text-muted small mb-2">Pilih panel yang dikerjakan.</p>
 
                                 <div id="labors-container">
-                                    @foreach ($workOrder->generalLabors->where('is_extra', false) as $index => $labor)
+                                    @foreach ($baseLabors as $index => $labor)
                                         <div class="labor-row card mb-2 border-left-info">
                                             <div class="card-body py-2">
                                                 <div class="form-group mb-1">
@@ -238,7 +238,7 @@
                                                                 data-p300500="{{ $ml->price_300_500 }}"
                                                                 data-p500800="{{ $ml->price_500_800 }}"
                                                                 data-p8002000="{{ $ml->price_800_2000 }}"
-                                                                {{ $labor->labor_id == $ml->id ? 'selected' : '' }}>
+                                                                {{ $labor->effective_labor_id == $ml->id ? 'selected' : '' }}>
                                                                 {{ $ml->labor_code }} — {{ $ml->description }}
                                                             </option>
                                                         @endforeach
@@ -251,7 +251,7 @@
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="mb-1 small"><strong>Rate</strong></label>
-                                                        <input type="number" name="labors[{{ $index }}][rate]" class="form-control form-control-sm labor-rate" step="0.01" min="0" value="{{ $labor->rate ? number_format($labor->rate, 0, '', '') : '' }}" data-manual="1">
+                                                        <input type="number" name="labors[{{ $index }}][rate]" class="form-control form-control-sm labor-rate" step="0.01" min="0" value="{{ $labor->rate !== null ? number_format((float) $labor->rate, 2, '.', '') : '' }}" data-manual="1">
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="mb-1 small"><strong>Total</strong></label>
@@ -288,7 +288,10 @@
                                     <select name="vehicle_price_tier" id="vehicle_price_tier"
                                         class="form-control @error('vehicle_price_tier') is-invalid @enderror">
                                         <option value="">-- Pilih Kisaran Harga --</option>
-
+                                        <option value="0_300"   {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '0_300'   ? 'selected' : '' }}>0 – 300 juta</option>
+                                        <option value="300_500" {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '300_500' ? 'selected' : '' }}>300 – 500 juta</option>
+                                        <option value="500_800" {{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '500_800' ? 'selected' : '' }}>500 – 800 juta</option>
+                                        <option value="800_2000"{{ old('vehicle_price_tier', $workOrder->vehicle_price_tier) === '800_2000'? 'selected' : '' }}>800 juta – 2 miliar</option>
                                     </select>
                                     @error('vehicle_price_tier')
                                         <span class="invalid-feedback">{{ $message }}</span>
@@ -297,7 +300,7 @@
                                 </div>
 
                                 @php
-                                    $baseLaborTotal = $workOrder->generalLabors->where('is_extra', false)->sum('total_price');
+                                    $baseLaborTotal = $baseLabors->sum('total_price');
                                 @endphp
                                 <div id="labor_price_summary" style="{{ $baseLaborTotal > 0 ? '' : 'display:none;' }}">
                                     <table class="table table-sm table-bordered mb-0">
@@ -385,7 +388,7 @@
 
     <script>
         let itemIndex = {{ $workOrder->items->count() }};
-        let laborIndex = {{ $workOrder->generalLabors->where('is_extra', false)->count() }};
+        let laborIndex = {{ $baseLabors->count() }};
 
         // ===== LABOR PRICE SUMMARY =====
         function getPriceTierKey() {
@@ -601,26 +604,8 @@
                 </div>`;
             container.appendChild(newLaborRow);
             laborIndex++;
-            attachLaborListeners();
             if (typeof initLaborSelect2 === 'function') initLaborSelect2();
         });
-
-        // ===== ROW LISTENERS =====
-        function attachLaborListeners() {
-            document.querySelectorAll('.labor-select').forEach(select => {
-                if (select.dataset.hasListener) return;
-                select.dataset.hasListener = '1';
-                select.onchange = function() {
-                    const row = this.closest('.labor-row');
-                    const rateInput = row ? row.querySelector('.labor-rate') : null;
-                    if (rateInput) {
-                        rateInput.value = '';
-                        delete rateInput.dataset.manual;
-                    }
-                    updatePriceDisplay();
-                };
-            });
-        }
 
         // Event delegation for qty and manual rate — covers both static and dynamically added rows
         document.addEventListener('input', function(e) {
@@ -643,8 +628,6 @@
                 updatePriceDisplay();
             }
         });
-
-        attachLaborListeners();
 
         function attachItemListeners() {
             document.querySelectorAll('.item-select').forEach(select => {
@@ -761,20 +744,32 @@
             initLaborSelect2();
         });
 
+        // Clear the stored/manual rate only when the user actually changes the
+        // panel, so a newly chosen panel loads its own master price. This must
+        // be a jQuery handler: DOM0 onchange never fires for Select2-driven
+        // changes because jQuery .trigger('change') does not dispatch natively
+        // (there is no select.change() DOM method).
+        $(document).on('change', '.labor-select', function() {
+            const row = this.closest('.labor-row');
+            const rateInput = row ? row.querySelector('.labor-rate') : null;
+            if (rateInput) {
+                rateInput.value = '';
+                delete rateInput.dataset.manual;
+            }
+            updatePriceDisplay();
+        });
+
         function initLaborSelect2() {
             $('.labor-select').not('.select2-hidden-accessible').each(function() {
-                const savedVal = $(this).val();
                 $(this).select2({
                     theme: 'bootstrap4',
                     placeholder: '-- Pilih Labor --',
                     allowClear: true,
                     width: '100%'
-                }).on('change', function() {
-                    if (typeof window.updatePriceDisplay === 'function') window.updatePriceDisplay();
                 });
-                if (savedVal) {
-                    $(this).val(savedVal).trigger('change');
-                }
+                // No .trigger('change') here — the stored selection is already
+                // rendered via the `selected` attribute, and triggering change
+                // would clear the stored manual rate back to the master price.
             });
         }
     </script>

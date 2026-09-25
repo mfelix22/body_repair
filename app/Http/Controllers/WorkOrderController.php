@@ -301,7 +301,7 @@ class WorkOrderController extends Controller
                 ->with('error', 'Only on progress or in progress Work Orders can be edited.');
         }
 
-        $workOrder->load('items', 'labors');
+        $workOrder->load('items', 'labors.panel');
         $customers = Customer::where('is_active', true)
             ->with(['vehicles' => function ($q) {
                 $q->where('is_active', true)->orderBy('plate_number');
@@ -319,9 +319,26 @@ class WorkOrderController extends Controller
             ->get(['id', 'wo_number', 'customer_id', 'vehicle_plate', 'work_date']);
 
         $insurances   = Insurance::where('is_active', true)->orderBy('name')->get();
-        $masterLabors = Labor::where('is_active', true)->orderBy('labor_code')->get();
 
-        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors', 'insurances'));
+        // Base labor rows may still point to panel_id (created before Panel was
+        // merged into Labor). Resolve each row to a Labor master record via the
+        // panel code so it renders in the panel select and keeps its stored rate.
+        $baseLabors = $workOrder->labors->where('is_extra', false)->values();
+        $panelLaborMap = Labor::whereIn('labor_code', $baseLabors->whereNull('labor_id')
+            ->map(fn($wol) => $wol->panel?->panel_code)->filter())
+            ->get()->keyBy('labor_code');
+        foreach ($baseLabors as $wol) {
+            $wol->effective_labor_id = $wol->labor_id
+                ?? $panelLaborMap->get($wol->panel?->panel_code)?->id;
+        }
+
+        // Include inactive labors already referenced by this WO so existing rows still display correctly
+        $woLaborIds  = $baseLabors->pluck('effective_labor_id')->filter()->all();
+        $masterLabors = Labor::where(function ($q) use ($woLaborIds) {
+            $q->where('is_active', true)->orWhereIn('id', $woLaborIds);
+        })->orderBy('labor_code')->get();
+
+        return view('work_orders.edit', compact('workOrder', 'customers', 'items', 'completedWos', 'masterLabors', 'insurances', 'baseLabors'));
     }
 
     public function update(Request $request, WorkOrder $workOrder)
@@ -365,7 +382,9 @@ class WorkOrderController extends Controller
             'labors.*.is_special_repair' => 'nullable|boolean',
         ]);
 
-        $priceTier = $validated['vehicle_price_tier'] ?? null;
+        // Keep the existing tier when the form submits an empty value so an
+        // edit never silently wipes it (the tier drives panel pricing).
+        $priceTier = $validated['vehicle_price_tier'] ?? $workOrder->vehicle_price_tier;
 
         // Auto-save vehicle to master data if checkbox is ticked
         $vehicleId = $validated['vehicle_id'] ?? $workOrder->vehicle_id;
