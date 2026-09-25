@@ -11,62 +11,84 @@
                     <h3 class="card-title">Work Orders</h3>
                     <div class="card-tools">
                         @if (\App\Helpers\PermissionHelper::canCreate('work_orders'))
-                            <a href="{{ route('work_orders.create') }}" class="btn btn-primary btn-sm">
+                            <a href="{{ route('work_orders.create') }}" class="btn btn-primary btn-sm mr-1">
                                 <i class="fas fa-plus"></i> Create Work Order
                             </a>
                         @endif
+                        <a href="{{ route('work_orders.export_excel', request()->only(['month', 'year', 'status'])) }}"
+                            class="btn btn-tool d-inline-flex align-items-center text-success">
+                            <i class="fas fa-file-excel mr-1"></i>Export Excel
+                        </a>
+                        <button type="button" class="btn btn-tool d-inline-flex align-items-center" data-toggle="collapse" data-target="#filterCollapse">
+                            <i class="fas fa-filter mr-1"></i>Filter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Form -->
+                <div id="filterCollapse"
+                    class="collapse {{ $month || $year || $status ? 'show' : '' }}">
+                    <div class="card-body border-bottom">
+                        <form method="GET" action="{{ route('work_orders.index') }}">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Month</label>
+                                        <select name="month" class="form-control">
+                                            <option value="">All Months</option>
+                                            @for ($m = 1; $m <= 12; $m++)
+                                                <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>
+                                                    {{ DateTime::createFromFormat('!m', $m)->format('F') }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Year</label>
+                                        <select name="year" class="form-control">
+                                            <option value="">All Years</option>
+                                            @foreach ($allYears as $y)
+                                                <option value="{{ $y }}" {{ (int) $year === (int) $y ? 'selected' : '' }}>
+                                                    {{ $y }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="status" class="form-control">
+                                            <option value="">All Statuses</option>
+                                            @foreach ($statuses as $value => $label)
+                                                <option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>
+                                                    {{ $label }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-search mr-1"></i>Search
+                                    </button>
+                                    @if ($month || $year || $status)
+                                        <a href="{{ route('work_orders.index') }}" class="btn btn-secondary btn-sm ml-1">
+                                            <i class="fas fa-times mr-1"></i>Clear
+                                        </a>
+                                        <span class="ml-2 text-muted small">{{ $wos->count() }} result(s)</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
                 <div class="card-body">
-                    <form method="GET" action="{{ route('work_orders.index') }}" class="form-inline mb-3">
-                        <div class="form-group mr-2 mb-2">
-                            <label for="month" class="mr-1 font-weight-bold">Month</label>
-                            <select name="month" id="month" class="form-control form-control-sm">
-                                <option value="">-- All Months --</option>
-                                @for ($m = 1; $m <= 12; $m++)
-                                    <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>
-                                        {{ DateTime::createFromFormat('!m', $m)->format('F') }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div class="form-group mr-2 mb-2">
-                            <label for="year" class="mr-1 font-weight-bold">Year</label>
-                            <select name="year" id="year" class="form-control form-control-sm">
-                                <option value="">-- All Years --</option>
-                                @foreach ($allYears as $y)
-                                    <option value="{{ $y }}" {{ (int) $year === (int) $y ? 'selected' : '' }}>
-                                        {{ $y }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group mr-2 mb-2">
-                            <label for="status" class="mr-1 font-weight-bold">Status</label>
-                            <select name="status" id="status" class="form-control form-control-sm">
-                                <option value="">-- All Statuses --</option>
-                                @foreach ($statuses as $value => $label)
-                                    <option value="{{ $value }}" {{ $status === $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-2">
-                            <button type="submit" class="btn btn-info btn-sm mr-1 d-inline-flex align-items-center">
-                                <i class="fas fa-filter mr-1"></i>Filter
-                            </button>
-                            @if ($month || $year || $status)
-                                <a href="{{ route('work_orders.index') }}" class="btn btn-secondary btn-sm mr-1 d-inline-flex align-items-center">
-                                    <i class="fas fa-times mr-1"></i>Clear
-                                </a>
-                            @endif
-                            <a href="{{ route('work_orders.export_excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center">
-                                <i class="fas fa-file-excel mr-1"></i>Export Excel
-                            </a>
-                        </div>
-                    </form>
 
                     <table id="work-orders-table" class="table table-bordered table-striped">
                         <thead>
