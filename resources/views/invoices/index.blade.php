@@ -93,7 +93,13 @@
                             @foreach ($invoices as $invoice)
                                 <tr>
                                     <td><strong>{{ $invoice->invoice_number }}</strong></td>
-                                    <td>{{ $invoice->customer->name }}</td>
+                                    <td>
+                                        @if ($invoice->workOrder?->account_code === 'ASURANSI' && $invoice->workOrder?->insurance)
+                                            {{ $invoice->workOrder->insurance->name }} - {{ $invoice->customer->name ?? '-' }}
+                                        @else
+                                            {{ $invoice->customer->name ?? '-' }}
+                                        @endif
+                                    </td>
                                     <td>{{ $invoice->invoice_date->format('M d, Y') }}</td>
                                     <td>{{ $invoice->due_date?->format('M d, Y') ?? '-' }}</td>
                                     <td><strong>Rp {{ number_format($invoice->grand_total, 0, ',', '.') }}</strong></td>

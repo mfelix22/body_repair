@@ -47,7 +47,7 @@ class InvoiceController extends Controller
         $month  = request('month');
         $year   = request('year');
         $status = request('status');
-        $query = Invoice::with(['customer', 'workOrder', 'creator']);
+        $query = Invoice::with(['customer', 'workOrder.insurance', 'creator']);
         if ($month) {
             $query->whereMonth('invoice_date', (int) $month);
         }
