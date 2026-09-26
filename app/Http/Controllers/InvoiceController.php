@@ -39,10 +39,9 @@ class InvoiceController extends Controller
             return PermissionHelper::denyAccess('invoices', 'view');
         }
 
-        $user = $this->currentUser();
         $canChangeStatus = PermissionHelper::canUpdate('invoices');
         $canModify = PermissionHelper::canUpdate('invoices');
-        $canEdit = $user->hasAnyRole(['admin', 'super_admin']);
+        $canEdit = PermissionHelper::canUpdate('invoices');
 
         $month  = request('month');
         $year   = request('year');
@@ -335,11 +334,6 @@ class InvoiceController extends Controller
     {
         if (!PermissionHelper::canUpdate('invoices')) {
             return PermissionHelper::denyAccess('invoices', 'update');
-        }
-
-        if (!$this->currentUser()?->hasAnyRole(['admin', 'super_admin'])) {
-            return redirect()->route('invoices.show', $invoice)
-                ->with('error', 'Only admins can edit invoices.');
         }
 
         if ($invoice->status !== 'on_progress') {

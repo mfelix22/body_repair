@@ -29,7 +29,7 @@
                         @endif
                         @if (
                             $invoice->status === 'on_progress' &&
-                                auth()->user()->hasAnyRole(['admin', 'super_admin']))
+                                \App\Helpers\PermissionHelper::canUpdate('invoices'))
                             <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-warning btn-sm">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
