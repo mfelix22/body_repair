@@ -40,3 +40,4 @@ body_repair.sql
 *.txt
 *.sql
 *.py
+*.xlsx
