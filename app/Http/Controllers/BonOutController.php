@@ -481,6 +481,7 @@ class BonOutController extends Controller
                     $item = Item::with('smallestUom')->findOrFail($itemData['item_id']);
 
                     $demandQty = 0;
+                    $woItem = null;
                     if (!empty($itemData['work_order_item_id'])) {
                         $woItem = WorkOrderItem::find($itemData['work_order_item_id']);
                         $demandQty = $woItem ? $woItem->demand_quantity : 0;
