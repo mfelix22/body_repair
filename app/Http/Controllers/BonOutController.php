@@ -188,6 +188,17 @@ class BonOutController extends Controller
             'items.*.remark'             => 'nullable|string|max:255',
         ]);
 
+        // Section E only accepts sparepart (SP) items
+        $eItemIds = collect($validated['items'])
+            ->filter(fn($i) => ($i['bon_out_section'] ?? null) === 'E')
+            ->pluck('item_id');
+        if ($eItemIds->isNotEmpty()) {
+            $nonSparepart = Item::whereIn('id', $eItemIds)->where('item_type', '!=', 'SP')->first();
+            if ($nonSparepart) {
+                return back()->withInput()->with('error', "Item {$nonSparepart->code} is not a sparepart — only sparepart (SP) items are allowed in Section E.");
+            }
+        }
+
         // Sparepart section (E) items must be billed — require a selling price
         foreach ($validated['items'] as $itemData) {
             if (($itemData['bon_out_section'] ?? null) === 'E' && (float) ($itemData['actual_quantity'] ?? 0) > 0) {
@@ -426,6 +437,17 @@ class BonOutController extends Controller
             'items.*.remark'             => 'nullable|string|max:255',
         ]);
 
+        // Section E only accepts sparepart (SP) items
+        $eItemIds = collect($validated['items'])
+            ->filter(fn($i) => ($i['bon_out_section'] ?? null) === 'E')
+            ->pluck('item_id');
+        if ($eItemIds->isNotEmpty()) {
+            $nonSparepart = Item::whereIn('id', $eItemIds)->where('item_type', '!=', 'SP')->first();
+            if ($nonSparepart) {
+                return back()->withInput()->with('error', "Item {$nonSparepart->code} is not a sparepart — only sparepart (SP) items are allowed in Section E.");
+            }
+        }
+
         // Sparepart section (E) items must be billed — require a selling price
         foreach ($validated['items'] as $itemData) {
             if (($itemData['bon_out_section'] ?? null) === 'E' && (float) ($itemData['actual_quantity'] ?? 0) > 0) {
@@ -589,11 +611,15 @@ class BonOutController extends Controller
                 }
             }
 
-            // Push items with selling price into WO billing
+            // Push items with selling price into WO billing — Section E (sparepart) only
             if (!$isStandalone && $bonOut->work_order_id) {
                 $woNeedsRecalc = false;
                 foreach ($bonOut->items as $bonOutItem) {
-                    if ((float) $bonOutItem->actual_quantity <= 0 || (float) $bonOutItem->unit_price <= 0) {
+                    if (
+                        $bonOutItem->bon_out_section !== 'E'
+                        || (float) $bonOutItem->actual_quantity <= 0
+                        || (float) $bonOutItem->unit_price <= 0
+                    ) {
                         continue;
                     }
 
@@ -727,6 +753,16 @@ class BonOutController extends Controller
                         $qty   = (float) $bonOutItem->actual_quantity;
                         $price = (float) ($bonOutItem->unit_price ?? 0);
                         if ($qty <= 0 || $price <= 0) {
+                            continue;
+                        }
+
+                        // Only Section E lines are billed — but still reverse rows that
+                        // were billed before this rule and keep a link to this item.
+                        if (
+                            $bonOutItem->bon_out_section !== 'E'
+                            && !$bonOutItem->work_order_item_id
+                            && !WorkOrderItem::where('bon_out_item_id', $bonOutItem->id)->exists()
+                        ) {
                             continue;
                         }
 

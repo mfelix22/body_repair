@@ -220,6 +220,7 @@
                 'id'    => $item->id,
                 'code'  => $item->code,
                 'name'  => $item->name,
+                'type'  => $item->item_type,
                 'price' => $defaultStock ? $defaultStock->avg_cost : 0,
             ];
         })->values();
@@ -262,6 +263,14 @@
                     .text(`No item found for scanned code: "${decodedText}"`);
                 return;
             }
+
+            // Section E only allows sparepart (SP) items
+            if (currentScanSection === 'E' && item.type !== 'SP') {
+                statusEl.removeClass('text-muted').addClass('text-danger')
+                    .text(`Section E only accepts sparepart items. Scanned code is not a sparepart.`);
+                return;
+            }
+
             statusEl.removeClass('text-danger').addClass('text-muted')
                 .text(`Matched: [${item.code}] ${item.name}`);
 
