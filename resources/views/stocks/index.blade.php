@@ -223,8 +223,8 @@
                 ], // Sort by item name by default
                 columnDefs: [{
                         orderable: false,
-                        targets: [7]
-                    } // Disable sorting on Alternative UOMs column
+                        targets: -1
+                    } // Disable sorting on Alternative UOMs column (always last)
                 ],
                 language: {
                     search: "Search:",
