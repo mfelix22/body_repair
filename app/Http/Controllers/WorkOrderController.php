@@ -433,26 +433,35 @@ class WorkOrderController extends Controller
             'grand_total'       => 0,
         ]);
 
-        // Delete old items and base labors/panels (extra labors added via addLabor are preserved)
-        $workOrder->items()->delete();
-        $workOrder->labors()->where('is_extra', false)->delete();
+        // Delete old items and base labors/panels (extra labors added via addLabor are preserved).
+        // Items are only synced when the form actually submits them — the sparepart
+        // section is disabled in the edit view, and rows billed via completed Bon
+        // Outs (bon_out_item_id) or referenced by bon_out_items must never be wiped.
+        if ($request->has('items')) {
+            $workOrder->items()
+                ->whereNull('bon_out_item_id')
+                ->whereNotIn('id', function ($q) {
+                    $q->select('work_order_item_id')->from('bon_out_items')->whereNotNull('work_order_item_id');
+                })
+                ->delete();
 
-        // Add new items
-        if (!empty($validated['items'])) {
-            foreach ($validated['items'] as $itemData) {
-                if (empty($itemData['item_id'])) {
-                    continue;
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $itemData) {
+                    if (empty($itemData['item_id'])) {
+                        continue;
+                    }
+                    WorkOrderItem::create([
+                        'work_order_id'   => $workOrder->id,
+                        'item_id'         => $itemData['item_id'],
+                        'demand_quantity' => $itemData['demand_quantity'],
+                        'remark'          => $itemData['remark'] ?? null,
+                        'unit_price'      => null,
+                        'total_price'     => null,
+                    ]);
                 }
-                WorkOrderItem::create([
-                    'work_order_id'   => $workOrder->id,
-                    'item_id'         => $itemData['item_id'],
-                    'demand_quantity' => $itemData['demand_quantity'],
-                    'remark'          => $itemData['remark'] ?? null,
-                    'unit_price'      => null,
-                    'total_price'     => null,
-                ]);
             }
         }
+        $workOrder->labors()->where('is_extra', false)->delete();
 
         // Add new labors
         if (!empty($validated['labors'])) {
