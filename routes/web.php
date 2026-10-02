@@ -28,6 +28,7 @@ use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\SparepartReportController;
+use App\Http\Controllers\WsOmzetReportController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -227,6 +228,10 @@ Route::middleware('auth')->group(function () {
     // Sparepart Report
     Route::get('reports/sparepart', [SparepartReportController::class, 'index'])->name('reports.sparepart');
     Route::get('reports/sparepart/export', [SparepartReportController::class, 'export'])->name('reports.sparepart.export');
+
+    // Laporan Omzet WS
+    Route::get('reports/ws-omzet', [WsOmzetReportController::class, 'index'])->name('reports.ws_omzet');
+    Route::get('reports/ws-omzet/export', [WsOmzetReportController::class, 'export'])->name('reports.ws_omzet.export');
 
     // Sales Orders
     Route::get('sales-orders/export-excel', [SalesOrderController::class, 'exportExcel'])->name('sales_orders.export_excel');

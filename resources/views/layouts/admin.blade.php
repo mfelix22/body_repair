@@ -512,6 +512,13 @@
                                             <p>Sparepart Usage</p>
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('reports.ws_omzet') }}"
+                                            class="nav-link {{ request()->routeIs('reports.ws_omzet*') ? 'active' : '' }}">
+                                            <i class="fas fa-desktop nav-icon"></i>
+                                            <p>Laporan Omzet WS</p>
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
                         @endif
