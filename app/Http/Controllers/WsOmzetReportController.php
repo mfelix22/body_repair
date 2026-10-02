@@ -151,9 +151,11 @@ class WsOmzetReportController extends Controller
                 'Part Name',
                 'UOM',
                 'Qty',
-                'Disc %',
-                'Total Selling',
                 'Unit Price',
+                'Disc %',
+                'Selling Price',
+                'Cost',
+                'Gross Profit',
                 'Invoice No',
                 'Invoice Date',
                 'Account No.',
@@ -167,15 +169,17 @@ class WsOmzetReportController extends Controller
                 $r['part_name'],
                 $r['uom'],
                 $r['qty'],
+                $r['unit_price'],
                 $r['disc_pct'],
                 $r['total_selling'],
                 $r['cost'],
+                $r['gp'],
                 $r['invoice_no'],
                 $r['invoice_date'],
                 $r['account_no'],
                 $r['customer'],
                 $r['address'],
-            ], $data['parts']), [9, 10], [9, 10], [7]);
+            ], $data['parts']), [8, 10, 11, 12], [10, 11], [7], [8]);
         }
 
         $this->writeSheet($spreadsheet, 'Detail Labor', 'Detail Labor — ' . $period, [
@@ -319,7 +323,13 @@ class WsOmzetReportController extends Controller
                     if ($qty <= 0) {
                         continue;
                     }
-                    $price = (float) $boi->unit_price;
+                    // Items with no selling price were issued from stock but not billed to the customer
+                    $billed = (float) $boi->unit_price > 0;
+                    $price  = (float) $boi->unit_price;
+                    $cost   = round($qty * (float) $boi->unit_cost, 2);
+                    // Unbilled materials (issued to the WO but not sold) count as revenue equal
+                    // to their cost, so Gross Profit stays 0 instead of showing a loss.
+                    $selling = $billed ? round($qty * $price * (1 - $partDiscPct / 100), 2) : $cost;
                     $parts[] = [
                         'doc_date'      => $bonOut->issued_date?->format('d/m/Y') ?? $docDate,
                         'doc_no'        => $bonOut->bon_out_number,
@@ -328,10 +338,12 @@ class WsOmzetReportController extends Controller
                         'part_name'     => $boi->item?->name,
                         'uom'           => $boi->uom?->code ?? $boi->item?->smallestUom?->code,
                         'qty'           => $qty,
-                        'unit_price'    => $price,
-                        'disc_pct'      => $partDiscPct,
-                        'total_selling' => round($qty * $price * (1 - $partDiscPct / 100), 2),
-                        'cost'          => round($qty * (float) $boi->unit_cost, 2),
+                        'billed'        => $billed,
+                        'unit_price'    => $billed ? $price : null,
+                        'disc_pct'      => $billed ? $partDiscPct : null,
+                        'total_selling' => $selling,
+                        'cost'          => $cost,
+                        'gp'            => round($selling - $cost, 2),
                         'invoice_id'    => $invoice->id,
                         'invoice_no'    => $docNo,
                         'invoice_date'  => $docDate,

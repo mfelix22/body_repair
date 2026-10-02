@@ -282,9 +282,11 @@
                                     <th>Part Name</th>
                                     <th>UOM</th>
                                     <th>Qty</th>
+                                    <th>Unit Price</th>
                                     <th>Disc %</th>
                                     <th class="hpp-col">Selling Price</th>
-                                    <th class="hpp-col">Unit Price</th>
+                                    <th class="hpp-col">Cost</th>
+                                    <th>Gross Profit</th>
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
                                     <th>Account No.</th>
@@ -302,9 +304,11 @@
                                         <td>{{ $p['part_name'] }}</td>
                                         <td>{{ $p['uom'] }}</td>
                                         <td class="text-right">{{ number_format($p['qty'], 2) }}</td>
-                                        <td class="text-right">{{ number_format($p['disc_pct'], 2) }}</td>
+                                        <td class="text-right">{{ $p['billed'] ? $rp($p['unit_price']) : '—' }}</td>
+                                        <td class="text-right">{{ $p['billed'] ? number_format($p['disc_pct'], 2) : '—' }}</td>
                                         <td class="text-right hpp-cell">{{ $rp($p['total_selling']) }}</td>
                                         <td class="text-right hpp-cell">{{ $rp($p['cost']) }}</td>
+                                        <td class="text-right {{ $p['gp'] < 0 ? 'text-danger' : '' }}">{{ $rp($p['gp']) }}</td>
                                         <td><a href="{{ route('invoices.show', $p['invoice_id']) }}" target="_blank">{{ $p['invoice_no'] }}</a></td>
                                         <td>{{ $p['invoice_date'] }}</td>
                                         <td>{{ $p['account_no'] }}</td>
@@ -317,9 +321,10 @@
                                 <tr class="font-weight-bold bg-light">
                                     <td colspan="6" class="text-right">TOTAL</td>
                                     <td class="text-right">{{ number_format(array_sum(array_column($parts, 'qty')), 2) }}</td>
-                                    <td></td>
+                                    <td colspan="2"></td>
                                     <td class="text-right">{{ $rp(array_sum(array_column($parts, 'total_selling'))) }}</td>
                                     <td class="text-right">{{ $rp(array_sum(array_column($parts, 'cost'))) }}</td>
+                                    <td class="text-right">{{ $rp(array_sum(array_column($parts, 'gp'))) }}</td>
                                     <td colspan="5"></td>
                                 </tr>
                             </tfoot>
