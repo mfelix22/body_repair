@@ -114,24 +114,21 @@ class InvoiceController extends Controller
         }
 
         // Show WOs that are ready to invoice:
-        // - ASURANSI WOs: no Estimasi pending approval (either no Estimasi, or its latest one is approved/rejected/no_discount)
+        // - Any WO: no Estimasi pending approval
+        // - Estimasi-driven WOs (ASURANSI, or any WO with an applied Estimasi): ready
         // - Other account codes: no proforma, or an approved/no_discount proforma
         $workOrders = WorkOrder::where('status', 'completed')
             ->whereDoesntHave('invoice', function ($q) {
                 $q->where('status', '!=', 'cancelled');
             })
+            ->whereDoesntHave('estimasis', function ($eq) {
+                $eq->where('status', 'pending_approval');
+            })
             ->where(function ($q) {
                 $q->where('account_code', 'ASURANSI')
-                    ->whereDoesntHave('estimasis', function ($eq) {
-                        $eq->where('status', 'pending_approval');
-                    })
-                    ->orWhere(function ($q2) {
-                        $q2->where('account_code', '!=', 'ASURANSI')
-                            ->where(function ($q3) {
-                                $q3->whereDoesntHave('proformaInvoice')
-                                    ->orWhereHas('approvedProforma');
-                            });
-                    });
+                    ->orWhereNotNull('active_estimasi_id')
+                    ->orWhereDoesntHave('proformaInvoice')
+                    ->orWhereHas('approvedProforma');
             })
             ->with(['customer', 'approvedProforma', 'activeEstimasi'])
             ->get();
@@ -172,12 +169,11 @@ class InvoiceController extends Controller
                 }
 
                 $proforma = null;
-                if ($workOrder->usesEstimasiDiscount()) {
-                    // Re-check Estimasi state: block if its discount is not yet approved
-                    if ($workOrder->estimasis()->where('status', 'pending_approval')->exists()) {
-                        throw new \RuntimeException('This Work Order has an Estimasi with a discount that is not yet approved.');
-                    }
-                } else {
+                // Re-check Estimasi state: a pending-approval Estimasi blocks invoicing on any WO
+                if ($workOrder->estimasis()->where('status', 'pending_approval')->exists()) {
+                    throw new \RuntimeException('This Work Order has an Estimasi with a discount that is not yet approved.');
+                }
+                if (!$workOrder->usesEstimasiDiscount()) {
                     // Re-check proforma state: block if a discount proforma is not yet approved
                     $proforma = $workOrder->proformaInvoice;
                     if ($proforma && in_array($proforma->status, ['pending_approval', 'rejected'])) {
@@ -205,8 +201,8 @@ class InvoiceController extends Controller
         $subtotal = $workOrder->grand_total;
 
         if ($workOrder->usesEstimasiDiscount()) {
-            // ASURANSI Work Orders: discount comes from the approved Estimasi's
-            // panel/sparepart percentages instead of the ProformaInvoice flow.
+            // Estimasi-driven Work Orders: discount comes from the approved
+            // Estimasi's panel/sparepart percentages instead of the ProformaInvoice flow.
             $discountAmount = $workOrder->estimasiDiscountAmount();
         } else {
             // Discount comes from the proforma if it exists, otherwise 0.

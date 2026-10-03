@@ -138,11 +138,10 @@
                                 </a>
                             @endif
 
-                            {{-- Finance: Create Invoice — locked by proforma state and ASURANSI estimasi state --}}
+                            {{-- Finance: Create Invoice — locked by proforma state and estimasi state --}}
                             @if (\App\Helpers\PermissionHelper::canCreate('invoices') && !$inv)
                                 @php
-                                    $hasPendingEstimasi = $workOrder->usesEstimasiDiscount()
-                                        && $workOrder->estimasis()->where('status', 'pending_approval')->exists();
+                                    $hasPendingEstimasi = $workOrder->estimasis()->where('status', 'pending_approval')->exists();
                                 @endphp
                                 @if ($hasPendingEstimasi)
                                     <button type="button" class="btn btn-secondary btn-sm" disabled
@@ -150,8 +149,8 @@
                                         <i class="fas fa-file-invoice-dollar"></i> Create Invoice
                                         <span class="badge badge-warning">Awaiting Estimasi</span>
                                     </button>
-                                @elseif (!$pf || in_array($pf->status, ['approved', 'no_discount']))
-                                    {{-- No proforma (no discount) OR proforma approved: Finance can invoice --}}
+                                @elseif ($workOrder->usesEstimasiDiscount() || !$pf || in_array($pf->status, ['approved', 'no_discount']))
+                                    {{-- Estimasi-driven WO, no proforma (no discount) OR proforma approved: Finance can invoice --}}
                                     <a href="{{ route('invoices.create', ['work_order_id' => $workOrder->id]) }}"
                                         class="btn btn-success btn-sm">
                                         <i class="fas fa-file-invoice-dollar"></i> Create Invoice

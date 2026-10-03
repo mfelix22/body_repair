@@ -65,15 +65,15 @@ class Estimasi extends Model
     }
 
     /**
-     * Propagate this Estimasi's discount to its Work Order (ASURANSI account
-     * code only). Called once the Estimasi reaches a final state ('approved'
-     * or 'no_discount'). A later Estimasi that is approved will overwrite the
-     * Work Order's discount fields, since pricing follows the newest Estimasi.
+     * Propagate this Estimasi's discount to its Work Order. Called once the
+     * Estimasi reaches a final state ('approved' or 'no_discount'). A later
+     * Estimasi that is approved will overwrite the Work Order's discount
+     * fields, since pricing follows the newest Estimasi.
      */
     public function applyToWorkOrder(): void
     {
         $wo = $this->workOrder;
-        if (!$wo || $wo->account_code !== 'ASURANSI') {
+        if (!$wo) {
             return;
         }
 

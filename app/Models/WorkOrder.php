@@ -165,7 +165,7 @@ class WorkOrder extends Model
 
     /**
      * The most recently approved Estimasi whose discount is currently applied
-     * to this Work Order (only relevant for account_code === 'ASURANSI').
+     * to this Work Order.
      */
     public function activeEstimasi(): BelongsTo
     {
@@ -245,16 +245,17 @@ class WorkOrder extends Model
 
     /**
      * Whether this Work Order's discount is governed by an approved Estimasi
-     * (Insurance jobs) rather than the ProformaInvoice flow (Cash/Internal jobs).
+     * rather than the ProformaInvoice flow. True for ASURANSI jobs, and for
+     * any other Work Order that has an Estimasi applied to it.
      */
     public function usesEstimasiDiscount(): bool
     {
-        return $this->account_code === 'ASURANSI';
+        return $this->account_code === 'ASURANSI' || !is_null($this->active_estimasi_id);
     }
 
     /**
      * Labor total after applying the active Estimasi's approved panel
-     * discount percentage (ASURANSI Work Orders only).
+     * discount percentage.
      */
     public function discountedLaborTotal(): float
     {
@@ -267,7 +268,7 @@ class WorkOrder extends Model
 
     /**
      * Material total after applying the active Estimasi's approved sparepart
-     * discount percentage (ASURANSI Work Orders only).
+     * discount percentage.
      */
     public function discountedMaterialTotal(): float
     {
@@ -279,10 +280,9 @@ class WorkOrder extends Model
     }
 
     /**
-     * Grand total after applying the active Estimasi's approved discounts
-     * (ASURANSI Work Orders only). Falls back to the plain grand_total for
-     * every other account code, which continues to rely on ProformaInvoice
-     * at Invoice-creation time instead.
+     * Grand total after applying the active Estimasi's approved discounts.
+     * Falls back to the plain grand_total for Work Orders that rely on the
+     * ProformaInvoice flow at Invoice-creation time instead.
      */
     public function discountedGrandTotal(): float
     {
@@ -299,7 +299,7 @@ class WorkOrder extends Model
 
     /**
      * Panel/labor discount amount (Rp) currently applied via the active
-     * Estimasi's approved panel discount percentage (ASURANSI WOs only).
+     * Estimasi's approved panel discount percentage.
      */
     public function panelDiscountAmount(): float
     {
@@ -308,8 +308,7 @@ class WorkOrder extends Model
 
     /**
      * Sparepart/material discount amount (Rp) currently applied via the
-     * active Estimasi's approved sparepart discount percentage (ASURANSI
-     * WOs only).
+     * active Estimasi's approved sparepart discount percentage.
      */
     public function sparepartDiscountAmount(): float
     {

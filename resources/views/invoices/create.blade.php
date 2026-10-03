@@ -208,7 +208,7 @@
             }
 
             let pctDisplay;
-            if (accountCode === 'ASURANSI' && (panelPct > 0 || sparepartPct > 0 || estimasiNumber)) {
+            if (estimasiNumber) {
                 const parts = [];
                 if (panelPct > 0) parts.push(`Panel ${panelPct.toFixed(2)}%`);
                 if (sparepartPct > 0) parts.push(`Sparepart ${sparepartPct.toFixed(2)}%`);
@@ -223,7 +223,7 @@
             document.getElementById('materai_amount').value = fmt(materai);
             document.getElementById('grand_total').value = fmt(total);
 
-            if (accountCode === 'ASURANSI' && estimasiNumber) {
+            if (estimasiNumber) {
                 document.getElementById('proformaNumber').textContent = estimasiNumber;
                 document.getElementById('proformaDiscount').textContent =
                     discountAmt > 0 ? (fmt(discountAmt) + ' (' + pctDisplay + ')') : 'No discount';

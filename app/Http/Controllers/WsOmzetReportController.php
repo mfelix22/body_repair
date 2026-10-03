@@ -312,7 +312,7 @@ class WsOmzetReportController extends Controller
                 'parts_gp_pct' => $partsAmt > 0 ? round(($partsAmt - $partsCost) / $partsAmt * 100, 2) : 0.0,
             ];
 
-            // Insurance jobs carry a sparepart-specific discount; other jobs use the invoice-wide percentage.
+            // Estimasi-driven jobs carry a sparepart-specific discount; other jobs use the invoice-wide percentage.
             $partDiscPct = $wo->usesEstimasiDiscount()
                 ? (float) $wo->estimasi_discount_percentage_sparepart
                 : (float) $invoice->discount_percentage;
