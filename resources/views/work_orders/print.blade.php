@@ -540,6 +540,72 @@
     </table>
     @endif
 
+    {{-- ===== TOTALS ===== --}}
+    @php $hasEstimasiDiscount = $workOrder->usesEstimasiDiscount() && $workOrder->estimasiDiscountAmount() > 0; @endphp
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+        <tr>
+            <td style="width:58%;"></td>
+            <td style="width:42%;vertical-align:top;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    @if ($workOrder->labor_total > 0)
+                        <tr>
+                            <td style="padding:2px 4px;"><strong>Total Jasa</strong></td>
+                            <td style="padding:2px 4px;text-align:right;">Rp {{ number_format($workOrder->labor_total, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($workOrder->material_total > 0)
+                        <tr>
+                            <td style="padding:2px 4px;"><strong>Sparepart</strong></td>
+                            <td style="padding:2px 4px;text-align:right;">Rp {{ number_format($workOrder->material_total, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
+                    @if ($hasEstimasiDiscount)
+                        <tr>
+                            <td style="padding:2px 4px;"><strong>Grand Total</strong></td>
+                            <td style="padding:2px 4px;text-align:right;">Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</td>
+                        </tr>
+                        @if ($workOrder->panelDiscountAmount() > 0)
+                            <tr>
+                                <td style="padding:2px 4px;">
+                                    <strong>Discount Panel</strong>
+                                    <small style="color:#666;">({{ number_format($workOrder->estimasi_discount_percentage_panel, 2) }}%)</small>
+                                </td>
+                                <td style="padding:2px 4px;text-align:right;color:#c00;">— Rp {{ number_format($workOrder->panelDiscountAmount(), 0, ',', '.') }}</td>
+                            </tr>
+                        @endif
+                        @if ($workOrder->sparepartDiscountAmount() > 0)
+                            <tr>
+                                <td style="padding:2px 4px;">
+                                    <strong>Discount Sparepart</strong>
+                                    <small style="color:#666;">({{ number_format($workOrder->estimasi_discount_percentage_sparepart, 2) }}%)</small>
+                                </td>
+                                <td style="padding:2px 4px;text-align:right;color:#c00;">— Rp {{ number_format($workOrder->sparepartDiscountAmount(), 0, ',', '.') }}</td>
+                            </tr>
+                        @endif
+                        <tr>
+                            <td style="padding:2px 4px;border-top:1.5px solid #000;">
+                                <strong>Discounted Total</strong>
+                                @if ($workOrder->activeEstimasi)
+                                    <br><small style="color:#666;">{{ $workOrder->activeEstimasi->estimasi_number }}</small>
+                                @endif
+                            </td>
+                            <td style="padding:2px 4px;text-align:right;border-top:1.5px solid #000;">
+                                <strong>Rp {{ number_format($workOrder->discountedGrandTotal(), 0, ',', '.') }}</strong>
+                            </td>
+                        </tr>
+                    @else
+                        <tr>
+                            <td style="padding:2px 4px;border-top:1.5px solid #000;"><strong>Grand Total</strong></td>
+                            <td style="padding:2px 4px;text-align:right;border-top:1.5px solid #000;">
+                                <strong>Rp {{ number_format($workOrder->grand_total, 0, ',', '.') }}</strong>
+                            </td>
+                        </tr>
+                    @endif
+                </table>
+            </td>
+        </tr>
+    </table>
+
     {{-- ===== RECEIVED BY / SA ROW ===== --}}
     <table style="width:100%;margin:6px 0;">
         <tr>

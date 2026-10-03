@@ -345,7 +345,7 @@
         $voucherAmt = $proforma ? (float) ($proforma->voucher_amount ?? 0) : 0;
         $lineDiscAmt = $discountAmount - $voucherAmt;
 
-        // Estimasi discount percentages (0 for non-ASURANSI)
+        // Estimasi discount percentages (0 for WOs not governed by an Estimasi)
         $panelPct = $wo->usesEstimasiDiscount() ? (float) ($wo->estimasi_discount_percentage_panel ?? 0) : 0;
         $sparepartPct = $wo->usesEstimasiDiscount() ? (float) ($wo->estimasi_discount_percentage_sparepart ?? 0) : 0;
 
