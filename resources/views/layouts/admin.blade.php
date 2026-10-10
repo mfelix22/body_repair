@@ -519,6 +519,13 @@
                                             <p>Laporan Omzet WS</p>
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('reports.bon_in') }}"
+                                            class="nav-link {{ request()->routeIs('reports.bon_in*') ? 'active' : '' }}">
+                                            <i class="fas fa-truck-loading nav-icon"></i>
+                                            <p>Bon In Listing</p>
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
                         @endif
