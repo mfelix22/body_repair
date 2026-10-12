@@ -526,6 +526,13 @@
                                             <p>Bon In Listing</p>
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('reports.invoiced_workshop') }}"
+                                            class="nav-link {{ request()->routeIs('reports.invoiced_workshop*') ? 'active' : '' }}">
+                                            <i class="fas fa-file-invoice-dollar nav-icon"></i>
+                                            <p>Invoiced Workshop Detail</p>
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
                         @endif

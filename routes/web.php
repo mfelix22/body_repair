@@ -30,6 +30,7 @@ use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\SparepartReportController;
 use App\Http\Controllers\WsOmzetReportController;
 use App\Http\Controllers\BonInReportController;
+use App\Http\Controllers\InvoicedWorkshopReportController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -238,6 +239,11 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/bon-in', [BonInReportController::class, 'index'])->name('reports.bon_in');
     Route::get('reports/bon-in/print', [BonInReportController::class, 'print'])->name('reports.bon_in.print');
     Route::get('reports/bon-in/export', [BonInReportController::class, 'export'])->name('reports.bon_in.export');
+
+    // Invoiced Workshop Detail
+    Route::get('reports/invoiced-workshop', [InvoicedWorkshopReportController::class, 'index'])->name('reports.invoiced_workshop');
+    Route::get('reports/invoiced-workshop/print', [InvoicedWorkshopReportController::class, 'print'])->name('reports.invoiced_workshop.print');
+    Route::get('reports/invoiced-workshop/export', [InvoicedWorkshopReportController::class, 'export'])->name('reports.invoiced_workshop.export');
 
     // Sales Orders
     Route::get('sales-orders/export-excel', [SalesOrderController::class, 'exportExcel'])->name('sales_orders.export_excel');
