@@ -23,7 +23,7 @@
         .listing th { text-align: left; font-weight: bold; padding: 4px; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         .listing td { padding: 2px 4px; }
         .listing .right { text-align: right; }
-        .listing .vendor td { padding-top: 14px; }
+        .listing .vendor td { padding-top: 22px; }
         .listing .line td.num { border-bottom: 1px solid #000; }
         .listing .subtotal td { padding-top: 4px; padding-bottom: 6px; }
         .listing .subtotal td.num { border-bottom: 3px double #000; }

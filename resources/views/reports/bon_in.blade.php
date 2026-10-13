@@ -137,6 +137,9 @@
                     </thead>
                     <tbody>
                         @forelse ($groups as $group)
+                            @unless ($loop->first)
+                                <tr class="group-spacer"><td colspan="9"></td></tr>
+                            @endunless
                             <tr class="vendor-row">
                                 <td colspan="9">Vendor : {{ $group['code'] }} - {{ $group['name'] }}</td>
                             </tr>
@@ -194,6 +197,7 @@
         .report-table { font-size: .85rem; }
         .report-table td, .report-table th { vertical-align: middle; }
         .report-table .vendor-row td { background: #f4f6f9; font-weight: 600; border-top: 2px solid #dee2e6; }
+        .report-table .group-spacer td { height: 22px; border: none; }
         .report-table .group-total td { font-weight: 600; border-top: 1px solid #343a40; border-bottom: 3px double #343a40; }
         .report-table .grand-total td { font-weight: 700; background: #fcf3cf; border-top: 2px solid #343a40; }
     </style>
