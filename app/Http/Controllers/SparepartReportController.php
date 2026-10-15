@@ -76,6 +76,8 @@ class SparepartReportController extends Controller
                 'bo.id as bon_out_id',
                 'bo.issued_date',
                 'bo.bon_out_number',
+                'bo.bon_out_type',
+                'bo.purpose',
                 'wo.id as work_order_id',
                 'wo.wo_number',
                 'wo.vehicle_id',
@@ -215,17 +217,19 @@ class SparepartReportController extends Controller
             $sheet->setTitle('Summary by Vehicle');
         } else {
             // Detailed
-            $headers = ['No', 'Date', 'Bon Out #', 'WO #', 'Vehicle', 'Merk', 'Part Code', 'Part Name', 'Qty', 'Unit Cost (Rp)', 'Total (Rp)'];
+            $headers = ['No', 'Date', 'Bon Out #', 'Type', 'WO #', 'Vehicle', 'Merk', 'Part Code', 'Part Name', 'Qty', 'Unit Cost (Rp)', 'Total (Rp)'];
             foreach ($headers as $col => $h) {
                 $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $h);
             }
             $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($headerStyle);
             $row++;
 
+            $typeLabels = [1 => 'Workshop', 2 => 'Regular', 3 => 'Adjustment'];
             $data = (clone $query)
                 ->select(
                     'bo.issued_date',
                     'bo.bon_out_number',
+                    'bo.bon_out_type',
                     'wo.wo_number',
                     'wo.vehicle_plate',
                     'wo.vehicle_merk',
@@ -242,9 +246,10 @@ class SparepartReportController extends Controller
                     $n + 1,
                     $r->issued_date,
                     $r->bon_out_number,
-                    $r->wo_number,
-                    $r->vehicle_plate,
-                    $r->vehicle_merk,
+                    $typeLabels[$r->bon_out_type] ?? '-',
+                    $r->wo_number ?? '-',
+                    $r->vehicle_plate ?? '-',
+                    $r->vehicle_merk ?? '-',
                     $r->item_code,
                     $r->item_name,
                     (float) $r->actual_quantity,
@@ -254,10 +259,10 @@ class SparepartReportController extends Controller
                 foreach ($cols as $col => $val) {
                     $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $val);
                 }
-                $sheet->getStyle("A{$row}:K{$row}")->applyFromArray($cellStyle);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($cellStyle);
                 $row++;
             }
-            foreach (range(1, 11) as $col) {
+            foreach (range(1, 12) as $col) {
                 $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
             }
             $sheet->setTitle('Detailed Transactions');
@@ -280,9 +285,10 @@ class SparepartReportController extends Controller
     {
         $q = DB::table('bon_out_items as boi')
             ->join('bon_outs as bo', 'bo.id', '=', 'boi.bon_out_id')
-            ->join('work_orders as wo', 'wo.id', '=', 'bo.work_order_id')
+            ->leftJoin('work_orders as wo', 'wo.id', '=', 'bo.work_order_id')
             ->join('items as i', 'i.id', '=', 'boi.item_id')
             ->where('bo.status', 'completed')
+            ->whereIn('bo.bon_out_type', [1, 3])
             ->whereNotNull('boi.actual_quantity')
             ->where('boi.actual_quantity', '>', 0);
 

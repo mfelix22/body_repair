@@ -211,11 +211,13 @@
                                             <a href="{{ route('vehicles.show', $row->vehicle_id) }}" target="_blank">
                                                 <strong>{{ $row->vehicle_plate }}</strong>
                                             </a>
-                                        @else
+                                        @elseif ($row->vehicle_plate)
                                             <strong>{{ $row->vehicle_plate }}</strong>
+                                        @else
+                                            <span class="text-muted font-italic">No Vehicle (Adjustment)</span>
                                         @endif
                                     </td>
-                                    <td>{{ $row->vehicle_merk }}</td>
+                                    <td>{{ $row->vehicle_merk ?: '-' }}</td>
                                     <td class="text-right">{{ number_format((float) $row->total_qty, 2) }}</td>
                                     <td class="text-right">{{ number_format((float) $row->usage_count, 2) }}</td>
                                     <td class="text-right font-weight-bold">
@@ -250,6 +252,7 @@
                                 <th>No</th>
                                 <th>Date</th>
                                 <th>Bon Out #</th>
+                                <th>Type</th>
                                 <th>WO #</th>
                                 <th>Vehicle</th>
                                 <th>Merk</th>
@@ -271,20 +274,35 @@
                                         </a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('work_orders.show', $row->work_order_id) }}" target="_blank">
-                                            {{ $row->wo_number }}
-                                        </a>
+                                        @if ($row->bon_out_type == 3)
+                                            <span class="badge badge-warning">Adjustment</span>
+                                        @elseif ($row->bon_out_type == 2)
+                                            <span class="badge badge-primary">Regular</span>
+                                        @else
+                                            <span class="badge badge-info">Workshop</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($row->work_order_id)
+                                            <a href="{{ route('work_orders.show', $row->work_order_id) }}" target="_blank">
+                                                {{ $row->wo_number }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">{{ $row->purpose ?: '-' }}</span>
+                                        @endif
                                     </td>
                                     <td>
                                         @if ($row->vehicle_id)
                                             <a href="{{ route('vehicles.show', $row->vehicle_id) }}" target="_blank">
                                                 <strong>{{ $row->vehicle_plate }}</strong>
                                             </a>
-                                        @else
+                                        @elseif ($row->vehicle_plate)
                                             <strong>{{ $row->vehicle_plate }}</strong>
+                                        @else
+                                            <span class="text-muted">-</span>
                                         @endif
                                     </td>
-                                    <td>{{ $row->vehicle_merk }}</td>
+                                    <td>{{ $row->vehicle_merk ?: '-' }}</td>
                                     <td>
                                         <a href="{{ route('items.show', $row->item_id) }}" target="_blank">
                                             <code>{{ $row->item_code }}</code>
@@ -302,14 +320,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center text-muted">No data found.</td>
+                                    <td colspan="12" class="text-center text-muted">No data found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if ($detailed->count())
                             <tfoot>
                                 <tr class="font-weight-bold bg-light">
-                                    <td colspan="8" class="text-right">Total</td>
+                                    <td colspan="9" class="text-right">Total</td>
                                     <td class="text-right">{{ number_format($detailed->sum('actual_quantity'), 2) }}</td>
                                     <td></td>
                                     <td class="text-right">{{ number_format($detailed->sum('line_cost'), 2, ',', '.') }}
