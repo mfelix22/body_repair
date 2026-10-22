@@ -19,7 +19,7 @@
                 <div class="card-body">
 
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover">
+                        <table id="users-table" class="table table-bordered table-striped">
                             <thead>
                                 <tr>
                                     <th style="width: 80px;">#</th>
@@ -32,7 +32,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($users as $user)
+                                @foreach($users as $user)
                                     <tr>
                                         <td>{{ $user->id }}</td>
                                         <td>{{ $user->name }}</td>
@@ -81,22 +81,32 @@
                                             @endif
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="7" class="text-center">No users found.</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                @if ($users->hasPages())
-                    <div class="card-footer">
-                        {{ $users->links() }}
-                    </div>
-                @endif
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+
+    <script>
+        $(document).ready(function() {
+            $('#users-table').DataTable({
+                responsive: true,
+                pageLength: 25,
+                order: [
+                    [5, 'desc']
+                ],
+                columnDefs: [{
+                    orderable: false,
+                    targets: 6
+                }]
+            });
+        });
+    </script>
+@endpush

@@ -21,7 +21,7 @@ class UserController extends Controller
             return redirect()->route('dashboard')->with('error', "You don't have permission to manage users. Please contact your administrator if you need access.");
         }
 
-        $users = User::orderBy('created_at', 'desc')->paginate(15);
+        $users = User::orderBy('created_at', 'desc')->get();
         return view('users.index', compact('users'));
     }
 
