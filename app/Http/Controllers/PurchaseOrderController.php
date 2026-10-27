@@ -931,6 +931,7 @@ class PurchaseOrderController extends Controller
                     'quantity' => $quantityInSmallest,
                     'unit_cost' => $receivedUnitCost,
                     'balance_after' => $stock->quantity,
+                    'avg_cost_after' => (float) $stock->avg_cost,
                     'location' => 'default',
                     'reference_type' => 'PO',
                     'reference_id' => $purchaseOrder->id,

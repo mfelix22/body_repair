@@ -375,6 +375,7 @@ class StockController extends Controller
             'quantity' => $newQuantity - $oldQuantity,
             'unit_cost' => (float) $stock->avg_cost,
             'balance_after' => $newQuantity,
+            'avg_cost_after' => (float) $stock->avg_cost,
             'location' => 'default',
             'reference_type' => 'Manual Adjustment',
             'reference_id' => null,

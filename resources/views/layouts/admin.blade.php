@@ -533,6 +533,13 @@
                                             <p>Invoiced Workshop Detail</p>
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('reports.stock_month_end') }}"
+                                            class="nav-link {{ request()->routeIs('reports.stock_month_end*') ? 'active' : '' }}">
+                                            <i class="fas fa-calendar-check nav-icon"></i>
+                                            <p>Month-End Stock Cost</p>
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
                         @endif

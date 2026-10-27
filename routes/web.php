@@ -31,6 +31,7 @@ use App\Http\Controllers\SparepartReportController;
 use App\Http\Controllers\WsOmzetReportController;
 use App\Http\Controllers\BonInReportController;
 use App\Http\Controllers\InvoicedWorkshopReportController;
+use App\Http\Controllers\MonthEndStockReportController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -244,6 +245,11 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/invoiced-workshop', [InvoicedWorkshopReportController::class, 'index'])->name('reports.invoiced_workshop');
     Route::get('reports/invoiced-workshop/print', [InvoicedWorkshopReportController::class, 'print'])->name('reports.invoiced_workshop.print');
     Route::get('reports/invoiced-workshop/export', [InvoicedWorkshopReportController::class, 'export'])->name('reports.invoiced_workshop.export');
+
+    // Month-End Stock Cost
+    Route::get('reports/stock-month-end', [MonthEndStockReportController::class, 'index'])->name('reports.stock_month_end');
+    Route::get('reports/stock-month-end/print', [MonthEndStockReportController::class, 'print'])->name('reports.stock_month_end.print');
+    Route::get('reports/stock-month-end/export', [MonthEndStockReportController::class, 'export'])->name('reports.stock_month_end.export');
 
     // Sales Orders
     Route::get('sales-orders/export-excel', [SalesOrderController::class, 'exportExcel'])->name('sales_orders.export_excel');

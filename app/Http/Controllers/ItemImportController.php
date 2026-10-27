@@ -301,14 +301,15 @@ class ItemImportController extends Controller
                         ]);
                         $stockCreated = true;
 
-                        // Create opening transaction if saldo > 0
-                        if ($saldo > 0) {
+                        // Create opening transaction if there is opening qty or opening cost
+                        if ($saldo > 0 || $openingAvgCost > 0) {
                             \App\Models\StockTransaction::create([
                                 'item_id'          => $item->id,
                                 'transaction_type' => \App\Models\StockTransaction::TYPE_OPENING,
                                 'quantity'         => $saldo,
                                 'unit_cost'        => $openingAvgCost,
                                 'balance_after'    => $saldo,
+                                'avg_cost_after'   => $openingAvgCost,
                                 'location'         => 'default',
                                 'reference_type'   => 'OPENING',
                                 'reference_id'     => null,
@@ -323,6 +324,21 @@ class ItemImportController extends Controller
                             $stockRecord->avg_cost = $openingAvgCost;
                             $stockRecord->save();
                             $avgCostUpdated = true;
+
+                            // Record the cost backfill so the avg cost trail stays complete
+                            \App\Models\StockTransaction::create([
+                                'item_id'          => $item->id,
+                                'transaction_type' => \App\Models\StockTransaction::TYPE_OPENING,
+                                'quantity'         => 0,
+                                'unit_cost'        => $openingAvgCost,
+                                'balance_after'    => $stockRecord->quantity,
+                                'avg_cost_after'   => $openingAvgCost,
+                                'location'         => 'default',
+                                'reference_type'   => 'OPENING',
+                                'reference_id'     => null,
+                                'notes'            => 'Opening avg cost backfilled from item import',
+                                'created_by'       => auth()->id(),
+                            ]);
                         }
                     }
                     // If stock exists, don't overwrite (use Bon In for adjustments)

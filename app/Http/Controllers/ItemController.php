@@ -6,6 +6,7 @@ use App\Helpers\PermissionHelper;
 use App\Models\Item;
 use App\Models\ItemUOM;
 use App\Models\StockCostAdjustment;
+use App\Models\StockTransaction;
 use App\Models\UOM;
 use App\Models\Stock;
 use Illuminate\Http\Request;
@@ -99,6 +100,23 @@ class ItemController extends Controller
             'location' => 'default',
         ]);
 
+        // Record opening cost so the avg cost trail stays complete
+        if ($initialCost > 0) {
+            StockTransaction::create([
+                'item_id'          => $item->id,
+                'transaction_type' => StockTransaction::TYPE_OPENING,
+                'quantity'         => 0,
+                'unit_cost'        => $initialCost,
+                'balance_after'    => 0,
+                'avg_cost_after'   => $initialCost,
+                'location'         => 'default',
+                'reference_type'   => 'OPENING',
+                'reference_id'     => null,
+                'notes'            => 'Opening avg cost set on item creation',
+                'created_by'       => Auth::id(),
+            ]);
+        }
+
         return redirect()->route('items.index')->with('success', 'Item created successfully!');
     }
 
@@ -183,16 +201,37 @@ class ItemController extends Controller
             Auth::user()->hasAnyRole(['super_admin', 'admin', 'accounting']) &&
             array_key_exists('initial_cost', $validated)
         ) {
-            Stock::updateOrCreate(
+            $newInitialCost = (float) ($validated['initial_cost'] ?? 0);
+            $existingStock  = Stock::where('item_id', $item->id)->where('location', 'default')->first();
+            $costChanged    = !$existingStock || (float) $existingStock->avg_cost !== $newInitialCost;
+
+            $stock = Stock::updateOrCreate(
                 [
                     'item_id' => $item->id,
                     'location' => 'default',
                 ],
                 [
                     'quantity' => $item->getCurrentStock('default'),
-                    'avg_cost' => $validated['initial_cost'] ?? 0,
+                    'avg_cost' => $newInitialCost,
                 ]
             );
+
+            // Record the cost change so the avg cost trail stays complete
+            if ($costChanged) {
+                StockTransaction::create([
+                    'item_id'          => $item->id,
+                    'transaction_type' => StockTransaction::TYPE_ADJUSTMENT,
+                    'quantity'         => 0,
+                    'unit_cost'        => $newInitialCost,
+                    'balance_after'    => $stock->quantity,
+                    'avg_cost_after'   => $newInitialCost,
+                    'location'         => 'default',
+                    'reference_type'   => 'COST_ADJUSTMENT',
+                    'reference_id'     => null,
+                    'notes'            => 'Avg cost set via item edit (initial cost)',
+                    'created_by'       => Auth::id(),
+                ]);
+            }
         }
 
         return redirect()->route('items.index')->with('success', 'Item updated successfully!');
@@ -238,13 +277,28 @@ class ItemController extends Controller
 
         $stock->update(['avg_cost' => $newCost]);
 
-        StockCostAdjustment::create([
+        $costAdjustment = StockCostAdjustment::create([
             'item_id'      => $item->id,
             'stock_id'     => $stock->id,
             'old_avg_cost' => $oldCost,
             'new_avg_cost' => $newCost,
             'reason'       => $validated['reason'],
             'adjusted_by'  => Auth::id(),
+        ]);
+
+        // Record the cost change in the stock ledger so the avg cost trail stays complete
+        StockTransaction::create([
+            'item_id'          => $item->id,
+            'transaction_type' => StockTransaction::TYPE_ADJUSTMENT,
+            'quantity'         => 0,
+            'unit_cost'        => $newCost,
+            'balance_after'    => $stock->quantity,
+            'avg_cost_after'   => $newCost,
+            'location'         => 'default',
+            'reference_type'   => 'COST_ADJUSTMENT',
+            'reference_id'     => $costAdjustment->id,
+            'notes'            => 'Avg cost adjusted: ' . $validated['reason'],
+            'created_by'       => Auth::id(),
         ]);
 
         return redirect()->route('items.show', $item)

@@ -33,6 +33,7 @@ class StockTransaction extends Model
         'quantity',
         'unit_cost',
         'balance_after',
+        'avg_cost_after',
         'location',
         'reference_type',
         'reference_id',
@@ -44,6 +45,7 @@ class StockTransaction extends Model
         'quantity' => 'decimal:2',
         'unit_cost' => 'decimal:2',
         'balance_after' => 'decimal:2',
+        'avg_cost_after' => 'decimal:2',
     ];
 
     public function item(): BelongsTo

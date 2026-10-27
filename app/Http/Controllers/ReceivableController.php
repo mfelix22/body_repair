@@ -691,6 +691,7 @@ class ReceivableController extends Controller
                     'quantity'         => $quantityInSmallestUom,
                     'unit_cost'        => $receivedUnitCost,
                     'balance_after'    => $stock->quantity,
+                    'avg_cost_after'   => (float) $stock->avg_cost,
                     'location'         => 'default',
                     'reference_type'   => $hasPO ? 'PO' : 'BON_IN',
                     'reference_id'     => $hasPO ? $po->id : $receivable->id,

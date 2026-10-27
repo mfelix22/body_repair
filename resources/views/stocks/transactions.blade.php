@@ -144,6 +144,7 @@
                                 <th>Quantity</th>
                                 @if ($canViewCost)
                                     <th>Unit Cost</th>
+                                    <th>Avg Cost After</th>
                                 @endif
                                 <th>Calculation</th>
                                 <th>Balance</th>
@@ -179,6 +180,13 @@
                                         <td>
                                             @if ($transaction->unit_cost > 0)
                                                 <span class="text-monospace">Rp {{ number_format($transaction->unit_cost, 2) }}</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($transaction->avg_cost_after !== null)
+                                                <span class="text-monospace">Rp {{ number_format($transaction->avg_cost_after, 2) }}</span>
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif
