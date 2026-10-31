@@ -41,16 +41,20 @@ trait Auditable
      */
     protected function auditLog(string $action, ?array $oldValues, ?array $newValues): void
     {
-        AuditLog::create([
-            'model_type'  => get_class($this),
-            'model_id'    => $this->id,
-            'action'      => $action,
-            'user_id'     => Auth::id(),
-            'old_values'  => $oldValues,
-            'new_values'  => $newValues,
-            'ip_address'  => request()->ip(),
-            'user_agent'  => request()->userAgent(),
-        ]);
+        try {
+            AuditLog::create([
+                'model_type'  => get_class($this),
+                'model_id'    => $this->id,
+                'action'      => $action,
+                'user_id'     => Auth::id(),
+                'old_values'  => $oldValues,
+                'new_values'  => $newValues,
+                'ip_address'  => request()->ip(),
+                'user_agent'  => request()->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

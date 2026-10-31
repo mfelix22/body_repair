@@ -14,6 +14,7 @@ use App\Helpers\PermissionHelper;
 use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PurchaseRequestController extends Controller
@@ -176,7 +177,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.is_custom_item'] = 'nullable|boolean';
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
-            $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
+            $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2|max:200';
             $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP,P,D';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
@@ -211,87 +212,89 @@ class PurchaseRequestController extends Controller
             ->count();
         $prNumber = $typePrefix . $yearPad . $monthPad . str_pad($countThisMonth + 1, 3, '0', STR_PAD_LEFT);
 
-        $pr = PurchaseRequest::create([
-            'pr_number' => $prNumber,
-            'request_date' => $validated['request_date'],
-            'requested_by' => auth()->id(),
-            'notes' => $validated['notes'],
-            'type' => $validated['type'],
-            'require_acknowledgement' => $request->boolean('require_acknowledgement', true),
-            'status' => 'on_progress',
-        ]);
+        DB::transaction(function () use ($validated, $type, $request, $prNumber) {
+            $pr = PurchaseRequest::create([
+                'pr_number' => $prNumber,
+                'request_date' => $validated['request_date'],
+                'requested_by' => auth()->id(),
+                'notes' => $validated['notes'],
+                'type' => $validated['type'],
+                'require_acknowledgement' => $request->boolean('require_acknowledgement', true),
+                'status' => 'on_progress',
+            ]);
 
-        // Handle multiple attachments for Jasa type
-        if ($type === 'Jasa' && $request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('ppj_attachments', 'public');
-                PurchaseRequestAttachment::create([
-                    'purchase_request_id' => $pr->id,
-                    'file_path' => $path,
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_type' => $file->getClientMimeType(),
-                    'file_size' => $file->getSize(),
-                ]);
-            }
-        }
-
-        foreach ($validated['items'] as $itemData) {
-            $detailData = [
-                'purchase_request_id' => $pr->id,
-                'quantity' => $itemData['quantity'],
-                'unit_price' => null,
-                'total_price' => null,
-                'notes' => $itemData['notes'] ?? null,
-            ];
-
-            if ($type === 'Jasa') {
-                $detailData['service_description'] = $itemData['service_description'] ?? null;
-                $detailData['item_id'] = null;
-                $detailData['uom_id'] = null;
-                $detailData['is_custom_item'] = false;
-                $detailData['custom_item_name'] = null;
-            } else {
-                $isCustom = !empty($itemData['is_custom_item']);
-
-                if ($isCustom) {
-                    // Create placeholder item for non-existing items (Odoo-style workflow)
-                    $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
-                    $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
-
-                    // Create incomplete item that needs to be completed before Bon In
-                    $placeholderItem = Item::createWithAutoCode($customType, [
-                        'name' => $customName,
-                        'smallest_uom_id' => 1, // Placeholder - must be updated
-                        'is_active' => true,
-                        'is_complete' => false, // Mark as incomplete
-                        'description' => 'Created from PPB - Complete item data before Bon In',
+            // Handle multiple attachments for Jasa type
+            if ($type === 'Jasa' && $request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $path = $file->store('ppj_attachments', 'public');
+                    PurchaseRequestAttachment::create([
+                        'purchase_request_id' => $pr->id,
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_type' => $file->getClientMimeType(),
+                        'file_size' => $file->getSize(),
                     ]);
+                }
+            }
 
-                    $detailData['is_custom_item'] = false; // Now it's a real item
-                    $detailData['custom_item_name'] = null;
-                    $detailData['item_id'] = $placeholderItem->id; // Link to placeholder
-                    $detailData['uom_id'] = $itemData['uom_id'] ?? null;
-                } else {
+            foreach ($validated['items'] as $itemData) {
+                $detailData = [
+                    'purchase_request_id' => $pr->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => null,
+                    'total_price' => null,
+                    'notes' => $itemData['notes'] ?? null,
+                ];
+
+                if ($type === 'Jasa') {
+                    $detailData['service_description'] = $itemData['service_description'] ?? null;
+                    $detailData['item_id'] = null;
+                    $detailData['uom_id'] = null;
                     $detailData['is_custom_item'] = false;
                     $detailData['custom_item_name'] = null;
-                    $detailData['item_id'] = $itemData['item_id'] ?? null;
-                    $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                } else {
+                    $isCustom = !empty($itemData['is_custom_item']);
+
+                    if ($isCustom) {
+                        // Create placeholder item for non-existing items (Odoo-style workflow)
+                        $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
+                        $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
+
+                        // Create incomplete item that needs to be completed before Bon In
+                        $placeholderItem = Item::createWithAutoCode($customType, [
+                            'name' => $customName,
+                            'smallest_uom_id' => $itemData['uom_id'], // Use selected UOM - must be updated
+                            'is_active' => true,
+                            'is_complete' => false, // Mark as incomplete
+                            'description' => 'Created from PPB - Complete item data before Bon In',
+                        ]);
+
+                        $detailData['is_custom_item'] = false; // Now it's a real item
+                        $detailData['custom_item_name'] = null;
+                        $detailData['item_id'] = $placeholderItem->id; // Link to placeholder
+                        $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                    } else {
+                        $detailData['is_custom_item'] = false;
+                        $detailData['custom_item_name'] = null;
+                        $detailData['item_id'] = $itemData['item_id'] ?? null;
+                        $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                    }
+
+                    $detailData['service_description'] = null;
                 }
 
-                $detailData['service_description'] = null;
+                PurchaseRequestDetail::create($detailData);
             }
 
-            PurchaseRequestDetail::create($detailData);
-        }
-
-        NotificationService::sendToRole(
-            ['manager', 'director', 'admin', 'super_admin'],
-            'pr_submitted',
-            'New PR Submitted',
-            "PR {$pr->pr_number} submitted by " . auth()->user()->name . ".",
-            route('purchase_requests.show', $pr),
-            auth()->id()
-        );
+            NotificationService::sendToRole(
+                ['manager', 'director', 'admin', 'super_admin'],
+                'pr_submitted',
+                'New PR Submitted',
+                "PR {$pr->pr_number} submitted by " . auth()->user()->name . ".",
+                route('purchase_requests.show', $pr),
+                auth()->id()
+            );
+        });
 
         return redirect()->route('purchase_requests.index')->with('success', 'PPB/PPJ created successfully!');
     }
@@ -605,7 +608,7 @@ class PurchaseRequestController extends Controller
             $baseRules['items.*.is_custom_item'] = 'nullable|boolean';
             $baseRules['items.*.item_id'] = 'nullable|exists:items,id';
             $baseRules['items.*.uom_id'] = 'required|exists:uoms,id';
-            $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2';
+            $baseRules['items.*.custom_item_name'] = 'nullable|string|min:2|max:200';
             $baseRules['items.*.custom_item_type'] = 'nullable|in:A,B,C,E,T,TE,SP,P,D';
             $baseRules['items.*.service_description'] = 'nullable|string';
         }
@@ -632,82 +635,84 @@ class PurchaseRequestController extends Controller
             'require_acknowledgement' => $request->boolean('require_acknowledgement', true),
         ];
 
-        $purchaseRequest->update($updateData);
+        DB::transaction(function () use ($purchaseRequest, $updateData, $type, $request, $validated) {
+            $purchaseRequest->update($updateData);
 
-        // Handle multiple attachments for Jasa type
-        if ($type === 'Jasa') {
-            // Delete old attachments
-            foreach ($purchaseRequest->attachments as $oldAttachment) {
-                Storage::disk('public')->delete($oldAttachment->file_path);
-                $oldAttachment->delete();
-            }
+            // Handle multiple attachments for Jasa type
+            if ($type === 'Jasa') {
+                // Delete old attachments
+                foreach ($purchaseRequest->attachments as $oldAttachment) {
+                    Storage::disk('public')->delete($oldAttachment->file_path);
+                    $oldAttachment->delete();
+                }
 
-            // Add new attachments if provided
-            if ($request->hasFile('attachments')) {
-                foreach ($request->file('attachments') as $file) {
-                    $path = $file->store('ppj_attachments', 'public');
-                    PurchaseRequestAttachment::create([
-                        'purchase_request_id' => $purchaseRequest->id,
-                        'file_path' => $path,
-                        'file_name' => $file->getClientOriginalName(),
-                        'file_type' => $file->getClientMimeType(),
-                        'file_size' => $file->getSize(),
-                    ]);
+                // Add new attachments if provided
+                if ($request->hasFile('attachments')) {
+                    foreach ($request->file('attachments') as $file) {
+                        $path = $file->store('ppj_attachments', 'public');
+                        PurchaseRequestAttachment::create([
+                            'purchase_request_id' => $purchaseRequest->id,
+                            'file_path' => $path,
+                            'file_name' => $file->getClientOriginalName(),
+                            'file_type' => $file->getClientMimeType(),
+                            'file_size' => $file->getSize(),
+                        ]);
+                    }
                 }
             }
-        }
 
-        // Delete old details and create new
-        $purchaseRequest->details()->delete();
+            // Delete old details and create new
+            $purchaseRequest->details()->delete();
 
-        foreach ($validated['items'] as $itemData) {
-            $detailData = [
-                'purchase_request_id' => $purchaseRequest->id,
-                'quantity' => $itemData['quantity'],
-                'unit_price' => null,
-                'total_price' => null,
-                'notes' => $itemData['notes'] ?? null,
-            ];
+            foreach ($validated['items'] as $itemData) {
+                $detailData = [
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => null,
+                    'total_price' => null,
+                    'notes' => $itemData['notes'] ?? null,
+                ];
 
-            if ($type === 'Jasa') {
-                $detailData['service_description'] = $itemData['service_description'] ?? null;
-                $detailData['item_id'] = null;
-                $detailData['uom_id'] = null;
-                $detailData['is_custom_item'] = false;
-                $detailData['custom_item_name'] = null;
-            } else {
-                $isCustom = !empty($itemData['is_custom_item']);
-
-                if ($isCustom) {
-                    // Create placeholder item for non-existing items (Odoo-style workflow)
-                    $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
-                    $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
-
-                    // Create incomplete item that needs to be completed before Bon In
-                    $placeholderItem = Item::createWithAutoCode($customType, [
-                        'name' => $customName,
-                        'smallest_uom_id' => 1, // Placeholder - must be updated
-                        'is_active' => true,
-                        'is_complete' => false, // Mark as incomplete
-                        'description' => 'Created from PPB - Complete item data before Bon In',
-                    ]);
-
-                    $detailData['is_custom_item'] = false; // Now it's a real item
-                    $detailData['custom_item_name'] = null;
-                    $detailData['item_id'] = $placeholderItem->id; // Link to placeholder
-                    $detailData['uom_id'] = $itemData['uom_id'] ?? null;
-                } else {
+                if ($type === 'Jasa') {
+                    $detailData['service_description'] = $itemData['service_description'] ?? null;
+                    $detailData['item_id'] = null;
+                    $detailData['uom_id'] = null;
                     $detailData['is_custom_item'] = false;
                     $detailData['custom_item_name'] = null;
-                    $detailData['item_id'] = $itemData['item_id'] ?? null;
-                    $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                } else {
+                    $isCustom = !empty($itemData['is_custom_item']);
+
+                    if ($isCustom) {
+                        // Create placeholder item for non-existing items (Odoo-style workflow)
+                        $customName = $itemData['custom_item_name'] ?? 'Unnamed Item';
+                        $customType = $itemData['custom_item_type'] ?? 'C'; // Use provided type
+
+                        // Create incomplete item that needs to be completed before Bon In
+                        $placeholderItem = Item::createWithAutoCode($customType, [
+                            'name' => $customName,
+                            'smallest_uom_id' => $itemData['uom_id'], // Use selected UOM - must be updated
+                            'is_active' => true,
+                            'is_complete' => false, // Mark as incomplete
+                            'description' => 'Created from PPB - Complete item data before Bon In',
+                        ]);
+
+                        $detailData['is_custom_item'] = false; // Now it's a real item
+                        $detailData['custom_item_name'] = null;
+                        $detailData['item_id'] = $placeholderItem->id; // Link to placeholder
+                        $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                    } else {
+                        $detailData['is_custom_item'] = false;
+                        $detailData['custom_item_name'] = null;
+                        $detailData['item_id'] = $itemData['item_id'] ?? null;
+                        $detailData['uom_id'] = $itemData['uom_id'] ?? null;
+                    }
+
+                    $detailData['service_description'] = null;
                 }
 
-                $detailData['service_description'] = null;
+                PurchaseRequestDetail::create($detailData);
             }
-
-            PurchaseRequestDetail::create($detailData);
-        }
+        });
 
         return redirect()->route('purchase_requests.show', $purchaseRequest)
             ->with('success', 'PPB/PPJ updated successfully!');
