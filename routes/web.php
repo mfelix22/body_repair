@@ -186,6 +186,8 @@ Route::middleware('auth')->group(function () {
     Route::get('bon-outs/create-from-wo/{workOrder}', [BonOutController::class, 'createFromWO'])->name('bon_outs.createFromWO');
     Route::get('bon-outs/create-standalone', [BonOutController::class, 'createStandalone'])->name('bon_outs.createStandalone');
     Route::get('bon-outs/export-excel', [BonOutController::class, 'exportExcel'])->name('bon_outs.export_excel');
+    Route::get('bon-outs/import-template', [BonOutController::class, 'importTemplate'])->name('bon_outs.import_template');
+    Route::post('bon-outs/parse-import', [BonOutController::class, 'parseImport'])->name('bon_outs.parse_import');
     Route::resource('bon-outs', BonOutController::class)->names('bon_outs')->except(['edit', 'update']);
     Route::get('bon-outs/{bonOut}/edit', [BonOutController::class, 'edit'])->name('bon_outs.edit');
     Route::put('bon-outs/{bonOut}', [BonOutController::class, 'update'])->name('bon_outs.update');

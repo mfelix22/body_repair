@@ -17,6 +17,12 @@ use App\Models\WorkOrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class BonOutController extends Controller
 {
@@ -108,6 +114,255 @@ class BonOutController extends Controller
             ['A' => 20, 'B' => 12, 'C' => 12, 'D' => 16, 'E' => 28, 'F' => 12, 'G' => 14, 'H' => 18],
             'Bon-Out-' . now()->format('Ymd') . '.xlsx'
         );
+    }
+
+    /**
+     * Parse an uploaded Excel file into sectioned material rows for the
+     * WO-linked create form. Creates nothing — returns JSON the create
+     * page uses to pre-fill the section cards for review.
+     */
+    public function parseImport(Request $request)
+    {
+        if (!PermissionHelper::canCreate('bon_outs')) {
+            return response()->json(['message' => 'You do not have permission to create Bon Outs.'], 403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        try {
+            $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Could not read the file: ' . $e->getMessage()], 422);
+        }
+
+        // Prefer an "Entry" sheet, fall back to the active sheet
+        $sheet = null;
+        foreach ($spreadsheet->getSheetNames() as $name) {
+            if (stripos($name, 'entry') !== false) {
+                $sheet = $spreadsheet->getSheetByName($name);
+                break;
+            }
+        }
+        $sheet = $sheet ?? $spreadsheet->getActiveSheet();
+
+        $rows = $sheet->toArray(null, true, false, false);
+
+        // Locate the header row by finding an "Item Code"-like column
+        $headerRow = null;
+        $colMap    = [];
+        foreach ($rows as $idx => $row) {
+            $map = [];
+            foreach ($row as $ci => $cell) {
+                $key = strtolower(str_replace([' ', '_', '-'], '', trim((string) $cell)));
+                if ($key === '') {
+                    continue;
+                }
+                if (in_array($key, ['section', 'sect', 'bagian']))                                $map['section']   = $ci;
+                if (in_array($key, ['itemcode', 'code', 'sku', 'kode', 'kodeitem', 'kodebarang'])) $map['item_code'] = $ci;
+                if (in_array($key, ['qty', 'quantity', 'qtyused', 'actualqty', 'jumlah']))         $map['qty']       = $ci;
+                if (in_array($key, ['price', 'unitprice', 'sellingprice', 'harga', 'hargajual']))  $map['price']     = $ci;
+                if (in_array($key, ['remark', 'remarks', 'note', 'notes', 'keterangan']))          $map['remark']    = $ci;
+            }
+            if (isset($map['item_code'])) {
+                $headerRow = $idx;
+                $colMap    = $map;
+                break;
+            }
+        }
+
+        if ($headerRow === null) {
+            return response()->json(['message' => "Could not find a header row with an 'Item Code' column."], 422);
+        }
+
+        // Section cell → section letter (accepts the letter or the section name)
+        $sectionAliases = [
+            'A' => 'A', 'DEMPUL' => 'A',
+            'B' => 'B', 'CAT'    => 'B',
+            'C' => 'C', 'VERNIS' => 'C',
+            'D' => 'D', 'POLES'  => 'D', 'POLESDANKEBERSIHANAKHIR' => 'D', 'KEBERSIHAN' => 'D',
+            'E' => 'E', 'SPAREPART' => 'E', 'SPAREPARTS' => 'E',
+        ];
+
+        $parseNumber = static function ($value, float $default = 0.0): float {
+            if ($value === null) {
+                return $default;
+            }
+            $raw = str_replace(' ', '', trim((string) $value));
+            if ($raw === '') {
+                return $default;
+            }
+            if (str_contains($raw, ',') && str_contains($raw, '.')) {
+                $raw = str_replace('.', '', $raw);
+                $raw = str_replace(',', '.', $raw);
+            } elseif (str_contains($raw, ',')) {
+                $raw = str_replace(',', '.', $raw);
+            }
+            return is_numeric($raw) ? (float) $raw : $default;
+        };
+
+        $items    = [];
+        $warnings = [];
+        $errors   = [];
+        $rowNum   = $headerRow + 1;
+
+        foreach (array_slice($rows, $headerRow + 1) as $row) {
+            $rowNum++;
+
+            $sectCell = isset($colMap['section']) ? trim((string) ($row[$colMap['section']] ?? '')) : '';
+            $code     = trim((string) ($row[$colMap['item_code']] ?? ''));
+            $qtyRaw   = isset($colMap['qty'])    ? ($row[$colMap['qty']] ?? null)    : null;
+            $priceRaw = isset($colMap['price'])  ? ($row[$colMap['price']] ?? null)  : null;
+            $remark   = isset($colMap['remark']) ? trim((string) ($row[$colMap['remark']] ?? '')) : '';
+
+            // Skip fully blank rows
+            if ($code === '' && $sectCell === '' && trim((string) $qtyRaw) === '' && $remark === '') {
+                continue;
+            }
+
+            if ($code === '') {
+                $errors[] = "Row $rowNum: Item Code is blank.";
+                continue;
+            }
+
+            $section = $sectionAliases[strtoupper(str_replace([' ', '_', '-', '.'], '', $sectCell))] ?? null;
+            if (!$section) {
+                $errors[] = "Row $rowNum ($code): invalid Section '$sectCell' — use A–E or a section name (DEMPUL, CAT, VERNIS, POLES, SPAREPART).";
+                continue;
+            }
+
+            $item = Item::with(['smallestUom', 'stocks'])->where('code', $code)->first();
+            if (!$item) {
+                $errors[] = "Row $rowNum: item code '$code' not found.";
+                continue;
+            }
+            if (!$item->is_active) {
+                $errors[] = "Row $rowNum ($code): item is inactive.";
+                continue;
+            }
+            if ($section === 'E' && $item->item_type !== 'SP') {
+                $errors[] = "Row $rowNum ($code): only sparepart (SP) items can go into Section E.";
+                continue;
+            }
+
+            $qty   = $parseNumber($qtyRaw, 0);
+            // Text prices like "150.000" are Indonesian thousand separators, not decimals
+            if (is_string($priceRaw) && preg_match('/^\s*\d{1,3}(\.\d{3})+\s*$/', $priceRaw)) {
+                $priceRaw = str_replace('.', '', $priceRaw);
+            }
+            $price = $parseNumber($priceRaw, -1);
+
+            if ($qty <= 0) {
+                $warnings[] = "Row $rowNum ($code): Qty missing — please fill it in before saving.";
+                $qty = null;
+            }
+
+            $priceOut = $price > 0 ? $price : null;
+            if ($section === 'E' && $priceOut === null) {
+                $warnings[] = "Row $rowNum ($code): Section E (Sparepart) — please enter a Selling Price, spareparts are billed to the customer.";
+            }
+
+            if ($qty !== null) {
+                $available = $item->stocks->sum('quantity');
+                if ($qty > $available) {
+                    $warnings[] = "Row $rowNum ($code): qty $qty exceeds available stock ($available).";
+                }
+            }
+
+            $items[] = [
+                'section' => $section,
+                'item_id' => $item->id,
+                'code'    => $item->code,
+                'qty'     => $qty,
+                'price'   => $priceOut,
+                'remark'  => $remark,
+            ];
+        }
+
+        if (empty($items) && empty($errors) && empty($warnings)) {
+            return response()->json(['message' => 'No data rows found below the header.'], 422);
+        }
+
+        return response()->json(compact('items', 'warnings', 'errors'));
+    }
+
+    /**
+     * Download the Excel template used by the Bon Out import.
+     */
+    public function importTemplate()
+    {
+        if (!PermissionHelper::canCreate('bon_outs')) {
+            return PermissionHelper::denyAccess('bon_outs', 'create');
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Entry');
+
+        $sheet->fromArray(['Section', 'Item Code', 'Qty', 'Price', 'Remark'], null, 'A1');
+        $sheet->getStyle('A1:E1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F497D']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+        $sheet->getStyle('A1')->applyFromArray([
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '375623']],
+        ]);
+
+        $sheet->fromArray([
+            ['A', 'B0001',  200,  '',      'Day 1 - dempul'],
+            ['B', 'A0005',  0.5,  '',      ''],
+            ['C', 'A0010',  300,  '',      ''],
+            ['D', 'C0003',  1,    '',      'poles akhir'],
+            ['E', 'SP0001', 1,    250000,  'Front bumper'],
+        ], null, 'A2');
+
+        foreach ([10, 14, 10, 14, 30] as $i => $w) {
+            $sheet->getColumnDimension(chr(65 + $i))->setWidth($w);
+        }
+        $sheet->freezePane('A2');
+
+        $note = $spreadsheet->createSheet();
+        $note->setTitle('Notes');
+        $lines = [
+            'Bon Out Import — Section Codes',
+            '',
+            'A = DEMPUL',
+            'B = CAT',
+            'C = VERNIS',
+            'D = POLES dan KEBERSIHAN AKHIR',
+            'E = SPAREPART',
+            '',
+            'Rules',
+            '- Item Code must match an existing item code in the system.',
+            '- Qty is in the item\'s smallest UOM (e.g. GR, ML, PCS) and must be > 0.',
+            '- Section E: only sparepart (SP) items allowed, and Price is required (> 0)',
+            '  because spareparts are billed to the customer.',
+            '- Price is optional for sections A–D.',
+            '- Rows with a blank Item Code are skipped.',
+            '- Rows that fail validation are reported and skipped — the rest still import.',
+        ];
+        foreach ($lines as $i => $line) {
+            $note->setCellValue('A' . ($i + 1), $line);
+        }
+        $note->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $note->getStyle('A3:A7')->getFont()->setBold(true);
+        $note->getStyle('A9')->getFont()->setBold(true);
+        $note->getColumnDimension('A')->setWidth(70);
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $writer   = new Xlsx($spreadsheet);
+        $filename = 'Bon-Out-Import-Template.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**

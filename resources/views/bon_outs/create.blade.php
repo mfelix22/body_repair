@@ -89,6 +89,12 @@
                             ];
                         @endphp
 
+                        <div class="d-flex justify-content-end mb-2">
+                            <button type="button" class="btn btn-outline-success btn-sm" data-toggle="modal" data-target="#importModal">
+                                <i class="fas fa-file-excel"></i> Import from Excel
+                            </button>
+                        </div>
+
                         @foreach ($sections as $sectionKey => $sectionLabel)
                         <div class="card mb-3 section-card" id="section-card-{{ $sectionKey }}">
                             <div class="card-header py-2" style="background:{{ $sectionKey === 'E' ? '#fff3cd' : '#f8f9fa' }};">
@@ -191,6 +197,44 @@
             </div>
         </div>
     </template>
+
+    {{-- Excel Import Modal --}}
+    <div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-excel"></i> Import Materials from Excel</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">
+                        Columns: <code>Section</code> (A–E), <code>Item Code</code>, <code>Qty</code>, <code>Price</code>, <code>Remark</code>.
+                        Rows are added to the matching section below for review — nothing is saved until you click Save Bon Out.
+                    </p>
+                    <div class="alert alert-warning small py-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Section E (Sparepart):</strong> only sparepart (SP) items are allowed and a
+                        <strong>Selling Price is required</strong> — spareparts are billed to the customer.
+                    </div>
+                    <a href="{{ route('bon_outs.import_template') }}" class="btn btn-link btn-sm px-0 mb-2">
+                        <i class="fas fa-download"></i> Download template
+                    </a>
+                    <div class="form-group mb-2">
+                        <input type="file" id="importFile" class="form-control-file" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div id="importResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success btn-sm" id="importBtn">
+                        <i class="fas fa-upload"></i> Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Barcode / QR Scanner Modal --}}
     <div class="modal fade" id="scannerModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -402,6 +446,78 @@
             btn.addEventListener('click', function () {
                 addMaterialRow(this.dataset.section);
             });
+        });
+
+        // Excel import — parse server-side, then fill each section for review
+        const escHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const listHtml = (title, cls, arr) => arr.length
+            ? `<div class="alert alert-${cls} small py-2 mb-2"><strong>${title}</strong><ul class="mb-0 pl-3">${arr.map(m => `<li>${escHtml(m)}</li>`).join('')}</ul></div>`
+            : '';
+
+        function fillImportedRow(data) {
+            const row = addMaterialRow(data.section);
+            const select = $(row).find('.material-select');
+            select.val(data.item_id).trigger('change');
+            select.trigger({ type: 'select2:select', params: { data: { element: select.find(':selected')[0] } } });
+            if (data.qty) row.querySelector('.qty-input').value = data.qty;
+            const priceInput = row.querySelector('.price-input');
+            if (data.price) priceInput.value = data.price;
+            else if (data.section === 'E') {
+                // Don't leave the auto-filled avg cost as the selling price — force the user to enter one
+                priceInput.value = '';
+                priceInput.classList.add('is-invalid');
+                priceInput.addEventListener('input', () => priceInput.classList.remove('is-invalid'), { once: true });
+            }
+            if (data.remark) row.querySelector('input[name$="[remark]"]').value = data.remark;
+            updateSectionSubtotal(data.section);
+        }
+
+        document.getElementById('importBtn').addEventListener('click', async function () {
+            const fileInput = document.getElementById('importFile');
+            const result = document.getElementById('importResult');
+            if (!fileInput.files.length) {
+                result.innerHTML = '<div class="alert alert-danger small py-2">Please choose an Excel file first.</div>';
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            result.innerHTML = '<div class="text-muted small">Reading file...</div>';
+
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch('{{ route("bon_outs.parse_import") }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                    body: fd,
+                });
+                const json = await res.json();
+                if (!res.ok) {
+                    const msg = json.message || Object.values(json.errors || {}).flat().join(' ') || 'Import failed.';
+                    result.innerHTML = `<div class="alert alert-danger small py-2">${escHtml(msg)}</div>`;
+                    return;
+                }
+
+                json.items.forEach(fillImportedRow);
+
+                let html = json.items.length
+                    ? `<div class="alert alert-success small py-2 mb-2"><i class="fas fa-check"></i> ${json.items.length} item(s) added to the sections below.</div>`
+                    : '';
+                html += listHtml('Skipped rows:', 'danger', json.errors);
+                html += listHtml('Please check:', 'warning', json.warnings);
+                result.innerHTML = html;
+                fileInput.value = '';
+
+                if (json.items.length && !json.errors.length && !json.warnings.length) {
+                    $('#importModal').modal('hide');
+                }
+            } catch (err) {
+                result.innerHTML = `<div class="alert alert-danger small py-2">Import failed: ${escHtml(err.message)}</div>`;
+            } finally {
+                btn.disabled = false;
+            }
         });
 
         // Remove row
