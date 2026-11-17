@@ -186,7 +186,7 @@
                 <div class="col-md-2">
                     <label class="small mb-1">Remark</label>
                     <input type="text" class="form-control form-control-sm"
-                        name="items[__INDEX__][remark]" placeholder="e.g. RQ No">
+                        name="items[__INDEX__][remark]" placeholder="e.g. RQ No" maxlength="255">
                 </div>
                 <div class="col-md-1 text-right">
                     <label class="small mb-1">&nbsp;</label>
@@ -457,6 +457,11 @@
         function fillImportedRow(data) {
             const row = addMaterialRow(data.section);
             const select = $(row).find('.material-select');
+            if (!select.find(`option[value="${data.item_id}"]`).length) {
+                row.remove();
+                updateItemCount();
+                return `${data.code} could not be selected in section ${data.section} (not available in the material list).`;
+            }
             select.val(data.item_id).trigger('change');
             select.trigger({ type: 'select2:select', params: { data: { element: select.find(':selected')[0] } } });
             if (data.qty) row.querySelector('.qty-input').value = data.qty;
@@ -470,7 +475,14 @@
             }
             if (data.remark) row.querySelector('input[name$="[remark]"]').value = data.remark;
             updateSectionSubtotal(data.section);
+            return null;
         }
+
+        // Reset the modal state each time it opens
+        $('#importModal').on('show.bs.modal', function () {
+            document.getElementById('importFile').value = '';
+            document.getElementById('importResult').innerHTML = '';
+        });
 
         document.getElementById('importBtn').addEventListener('click', async function () {
             const fileInput = document.getElementById('importFile');
@@ -500,17 +512,23 @@
                     return;
                 }
 
-                json.items.forEach(fillImportedRow);
+                const extraErrors = [];
+                let added = 0;
+                json.items.forEach(item => {
+                    const msg = fillImportedRow(item);
+                    if (msg) extraErrors.push(msg);
+                    else added++;
+                });
 
-                let html = json.items.length
-                    ? `<div class="alert alert-success small py-2 mb-2"><i class="fas fa-check"></i> ${json.items.length} item(s) added to the sections below.</div>`
+                let html = added
+                    ? `<div class="alert alert-success small py-2 mb-2"><i class="fas fa-check"></i> ${added} item(s) added to the sections below.</div>`
                     : '';
-                html += listHtml('Skipped rows:', 'danger', json.errors);
+                html += listHtml('Skipped rows:', 'danger', [...json.errors, ...extraErrors]);
                 html += listHtml('Please check:', 'warning', json.warnings);
                 result.innerHTML = html;
                 fileInput.value = '';
 
-                if (json.items.length && !json.errors.length && !json.warnings.length) {
+                if (added && !json.errors.length && !json.warnings.length && !extraErrors.length) {
                     $('#importModal').modal('hide');
                 }
             } catch (err) {

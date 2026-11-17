@@ -134,7 +134,8 @@ class BonOutController extends Controller
         try {
             $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Could not read the file: ' . $e->getMessage()], 422);
+            report($e);
+            return response()->json(['message' => 'Could not read the Excel file. Please make sure it is a valid .xlsx, .xls or .csv file.'], 422);
         }
 
         // Prefer an "Entry" sheet, fall back to the active sheet
@@ -155,15 +156,26 @@ class BonOutController extends Controller
         foreach ($rows as $idx => $row) {
             $map = [];
             foreach ($row as $ci => $cell) {
-                $key = strtolower(str_replace([' ', '_', '-'], '', trim((string) $cell)));
+                // Strip UTF-8 BOM so a BOM-prefixed first cell still matches
+                $key = strtolower(str_replace([' ', '_', '-'], '', trim(str_replace("\xEF\xBB\xBF", '', (string) $cell))));
                 if ($key === '') {
                     continue;
                 }
-                if (in_array($key, ['section', 'sect', 'bagian']))                                $map['section']   = $ci;
-                if (in_array($key, ['itemcode', 'code', 'sku', 'kode', 'kodeitem', 'kodebarang'])) $map['item_code'] = $ci;
-                if (in_array($key, ['qty', 'quantity', 'qtyused', 'actualqty', 'jumlah']))         $map['qty']       = $ci;
-                if (in_array($key, ['price', 'unitprice', 'sellingprice', 'harga', 'hargajual']))  $map['price']     = $ci;
-                if (in_array($key, ['remark', 'remarks', 'note', 'notes', 'keterangan']))          $map['remark']    = $ci;
+                if (in_array($key, ['section', 'sect', 'bagian'])) {
+                    $map['section'] = $ci;
+                }
+                if (in_array($key, ['itemcode', 'code', 'sku', 'kode', 'kodeitem', 'kodebarang'])) {
+                    $map['item_code'] = $ci;
+                }
+                if (in_array($key, ['qty', 'quantity', 'qtyused', 'actualqty', 'jumlah'])) {
+                    $map['qty'] = $ci;
+                }
+                if (in_array($key, ['price', 'unitprice', 'sellingprice', 'harga', 'hargajual'])) {
+                    $map['price'] = $ci;
+                }
+                if (in_array($key, ['remark', 'remarks', 'note', 'notes', 'keterangan'])) {
+                    $map['remark'] = $ci;
+                }
             }
             if (isset($map['item_code'])) {
                 $headerRow = $idx;
@@ -193,14 +205,23 @@ class BonOutController extends Controller
             if ($raw === '') {
                 return $default;
             }
-            if (str_contains($raw, ',') && str_contains($raw, '.')) {
+            if (str_contains($raw, ',')) {
+                // Indonesian format: dot = thousand separator, comma = decimal
                 $raw = str_replace('.', '', $raw);
                 $raw = str_replace(',', '.', $raw);
-            } elseif (str_contains($raw, ',')) {
-                $raw = str_replace(',', '.', $raw);
+            } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $raw)) {
+                // Dot-grouped thousands like 150.000 or 1.500.000
+                $raw = str_replace('.', '', $raw);
             }
             return is_numeric($raw) ? (float) $raw : $default;
         };
+
+        // Preload active items once — avoids a query per row and makes
+        // code matching case-insensitive
+        $itemsByCode = Item::with(['smallestUom', 'stocks'])
+            ->where('is_active', true)
+            ->get()
+            ->keyBy(fn ($i) => strtoupper($i->code));
 
         $items    = [];
         $warnings = [];
@@ -210,8 +231,8 @@ class BonOutController extends Controller
         foreach (array_slice($rows, $headerRow + 1) as $row) {
             $rowNum++;
 
-            $sectCell = isset($colMap['section']) ? trim((string) ($row[$colMap['section']] ?? '')) : '';
-            $code     = trim((string) ($row[$colMap['item_code']] ?? ''));
+            $sectCell = isset($colMap['section']) ? trim(str_replace("\xEF\xBB\xBF", '', (string) ($row[$colMap['section']] ?? ''))) : '';
+            $code     = trim(str_replace("\xEF\xBB\xBF", '', (string) ($row[$colMap['item_code']] ?? '')));
             $qtyRaw   = isset($colMap['qty'])    ? ($row[$colMap['qty']] ?? null)    : null;
             $priceRaw = isset($colMap['price'])  ? ($row[$colMap['price']] ?? null)  : null;
             $remark   = isset($colMap['remark']) ? trim((string) ($row[$colMap['remark']] ?? '')) : '';
@@ -232,13 +253,9 @@ class BonOutController extends Controller
                 continue;
             }
 
-            $item = Item::with(['smallestUom', 'stocks'])->where('code', $code)->first();
+            $item = $itemsByCode->get(strtoupper($code));
             if (!$item) {
-                $errors[] = "Row $rowNum: item code '$code' not found.";
-                continue;
-            }
-            if (!$item->is_active) {
-                $errors[] = "Row $rowNum ($code): item is inactive.";
+                $errors[] = "Row $rowNum: item code '$code' not found (or inactive).";
                 continue;
             }
             if ($section === 'E' && $item->item_type !== 'SP') {
@@ -247,10 +264,6 @@ class BonOutController extends Controller
             }
 
             $qty   = $parseNumber($qtyRaw, 0);
-            // Text prices like "150.000" are Indonesian thousand separators, not decimals
-            if (is_string($priceRaw) && preg_match('/^\s*\d{1,3}(\.\d{3})+\s*$/', $priceRaw)) {
-                $priceRaw = str_replace('.', '', $priceRaw);
-            }
             $price = $parseNumber($priceRaw, -1);
 
             if ($qty <= 0) {
@@ -360,8 +373,8 @@ class BonOutController extends Controller
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, $filename, [
-            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 
