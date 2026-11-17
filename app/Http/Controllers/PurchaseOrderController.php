@@ -420,6 +420,8 @@ class PurchaseOrderController extends Controller
             $baseRules['items.*.purchase_request_detail_id'] = 'nullable|exists:purchase_request_details,id';
             $baseRules['items.*.quantity']   = 'required|numeric|min:0.01';
             $baseRules['items.*.unit_price'] = 'required|numeric|min:0';
+            $baseRules['items.*.discount']   = 'nullable|numeric|min:0';
+            $baseRules['items.*.discount_percentage'] = 'nullable|numeric|min:0';
             $baseRules['items.*.remarks']    = 'nullable|string';
             if ($poType === 'service_order') {
                 $baseRules['items.*.service_description'] = 'required|string|min:3';
